@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const parsed = loginSchema.safeParse(body);
 
     if (!parsed.success) {
-      return apiError({ statusCode: 422, code: 'VALIDATION_ERROR', message: parsed.error.errors[0].message } as any);
+      return apiError({ statusCode: 422, code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } as any);
     }
 
     const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;

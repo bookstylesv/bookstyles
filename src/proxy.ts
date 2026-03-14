@@ -1,7 +1,8 @@
 /**
- * middleware.ts — Auth + Tenant middleware para Next.js.
+ * proxy.ts — Auth + Tenant middleware para Next.js 16.
  * Se ejecuta en Edge Runtime (antes de cada request).
  * Protege rutas del dashboard y verifica el JWT.
+ * (Renombrado de middleware.ts → proxy.ts para Next.js 16)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,7 +14,7 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(process.env.JWT_SECRET ?? 'fallback-secret');
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir rutas públicas
