@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * ClientsClient — CRUD de clientes con componentes reutilizables.
- * Usa: FormField, EmptyState, ActionButtons, PageHeader.
+ * ClientsClient — CRUD de clientes.
+ * Tabla: SpeedDanTable (réplica de DataTable.tsx del ERP DTE).
  */
 
 import { useState } from 'react';
@@ -11,11 +11,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { FormField } from '@/components/shared/FormField';
-import { EmptyState } from '@/components/shared/EmptyState';
-import { ActionButtons } from '@/components/shared/ActionButtons';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SpeedDanTable, type SpeedDanColumn } from '@/components/shared/SpeedDanTable';
 import { MagnifyingGlass, UserCircle, Plus } from '@phosphor-icons/react';
 
 type Client = {
@@ -56,8 +55,8 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
     setLoading(true); setError('');
     try {
       const body = { fullName: values.fullName.trim(), email: values.email.trim().toLowerCase(), phone: values.phone.trim() || undefined };
-      const url = editing ? `/api/clients/${editing.id}` : '/api/clients';
-      const res = await fetch(url, { method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const url  = editing ? `/api/clients/${editing.id}` : '/api/clients';
+      const res  = await fetch(url, { method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json();
       if (!res.ok) { const msg = json.error?.message ?? 'Error al guardar'; setError(msg); toast.error(msg); return; }
       if (editing) {
@@ -80,75 +79,92 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
 
   async function toggleActive(c: Client) {
     const next = !c.active;
-    const res = await fetch(`/api/clients/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: next }) });
+    const res  = await fetch(`/api/clients/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: next }) });
     if (res.ok) { setClients(prev => prev.map(x => x.id === c.id ? { ...x, active: next } : x)); toast.success(`${c.fullName} ${next ? 'activado' : 'desactivado'}`); }
     else toast.error('No se pudo cambiar el estado');
   }
 
+  // ── Columnas SpeedDanTable ────────────────────────────────────────────
+  const columns: SpeedDanColumn<Client>[] = [
+    {
+      key: 'fullName', label: 'Cliente',
+      render: c => (
+        <div style={{ opacity: c.active ? 1 : 0.5 }}>
+          <div style={{ fontWeight: 500 }}>{c.fullName}</div>
+          <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 2 }}>{c.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'phone', label: 'Teléfono', muted: true,
+      render: c => c.phone ?? '—',
+    },
+    {
+      key: 'totalAppointments', label: 'Citas', align: 'center',
+      render: c => (
+        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: c.totalAppointments > 0 ? 600 : 400, color: c.totalAppointments > 0 ? 'hsl(var(--text-primary))' : 'hsl(var(--text-muted))' }}>
+          {c.totalAppointments}
+        </span>
+      ),
+    },
+    {
+      key: 'lastVisit', label: 'Última visita', muted: true,
+      render: c => formatDate(c.lastVisit),
+    },
+    {
+      key: 'active', label: 'Estado',
+      render: c => (
+        <Badge
+          variant={c.active ? 'default' : 'secondary'}
+          style={{ cursor: 'pointer' }}
+          onClick={() => toggleActive(c)}
+        >
+          {c.active ? 'Activo' : 'Inactivo'}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <>
-      {/* Barra de herramientas */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
-          <MagnifyingGlass size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))' }} />
-          <Input placeholder="Buscar por nombre, email o teléfono…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 32 }} />
-        </div>
-        <div style={{ flex: 1 }} />
-        <Button onClick={openCreate}><Plus size={15} weight="bold" /> Nuevo cliente</Button>
+      <PageHeader
+        title="Clientes"
+        description={`${clients.filter(c => c.active).length} activos · ${clients.length} total`}
+        action={<Button onClick={openCreate}><Plus size={15} weight="bold" /> Nuevo cliente</Button>}
+      />
+
+      {/* Barra de búsqueda */}
+      <div style={{ marginBottom: 16, maxWidth: 320, position: 'relative' }}>
+        <MagnifyingGlass size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))' }} />
+        <Input
+          placeholder="Buscar por nombre, email o teléfono…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ paddingLeft: 32 }}
+        />
       </div>
 
+      {/* Tabla */}
       <div className="speeddan-card" style={{ overflow: 'hidden' }}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Citas</TableHead>
-              <TableHead>Última visita</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead style={{ textAlign: 'right' }}>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} style={{ padding: 0 }}>
-                  <EmptyState icon={<UserCircle size={32} weight="thin" />} title={search ? 'Sin resultados' : 'Sin clientes'} description={search ? 'Intenta con otro término de búsqueda' : 'Agrega el primer cliente de tu barbería'} action={!search ? <Button size="sm" onClick={openCreate}>Nuevo cliente</Button> : undefined} />
-                </TableCell>
-              </TableRow>
-            ) : filtered.map(c => (
-              <TableRow key={c.id} style={{ opacity: c.active ? 1 : 0.55 }}>
-                <TableCell>
-                  <div style={{ fontWeight: 500 }}>{c.fullName}</div>
-                  <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 2 }}>{c.email}</div>
-                </TableCell>
-                <TableCell style={{ color: 'hsl(var(--text-secondary))' }}>{c.phone ?? '—'}</TableCell>
-                <TableCell>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: c.totalAppointments > 0 ? 600 : 400, color: c.totalAppointments > 0 ? 'hsl(var(--text-primary))' : 'hsl(var(--text-muted))' }}>
-                    {c.totalAppointments}
-                  </span>
-                </TableCell>
-                <TableCell style={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>{formatDate(c.lastVisit)}</TableCell>
-                <TableCell>
-                  <Badge variant={c.active ? 'default' : 'secondary'} style={{ cursor: 'pointer' }} onClick={() => toggleActive(c)}>
-                    {c.active ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </TableCell>
-                <TableCell style={{ textAlign: 'right' }}>
-                  <ActionButtons onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <SpeedDanTable
+          items={filtered}
+          columns={columns}
+          emptyIcon={<UserCircle size={36} weight="thin" />}
+          emptyTitle={search ? 'Sin resultados' : 'Sin clientes'}
+          emptyDesc={search ? 'Intenta con otro término de búsqueda.' : 'Agrega el primer cliente de tu barbería.'}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
       </div>
 
       {clients.length > 0 && (
         <p style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 8, textAlign: 'right' }}>
-          {clients.filter(c => c.active).length} activos · {clients.length} total{search && ` · ${filtered.length} mostrados`}
+          {clients.filter(c => c.active).length} activos · {clients.length} total
+          {search && ` · ${filtered.length} mostrados`}
         </p>
       )}
 
+      {/* Dialog */}
       <Dialog open={open} onOpenChange={v => { if (!v) setOpen(false); }}>
         <DialogContent>
           <DialogHeader>
