@@ -1,20 +1,29 @@
 'use client';
 
-/**
- * BarbersClient — Grid de barberos con componentes reutilizables.
- * Usa: FormField, EmptyState, Dialog propio, Phosphor Icons.
- */
+// ══════════════════════════════════════════════════════════
+// BARBEROS — CRUD COMPLETO (patrón Speeddansys ERP)
+// ══════════════════════════════════════════════════════════
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {
+  Table, Card, Button, Space, Row, Col,
+  Statistic, Tag, Tooltip, Typography, Avatar,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import {
+  PlusOutlined, EditOutlined, UserOutlined,
+  CheckCircleOutlined, ScissorOutlined, ClockCircleOutlined,
+} from '@ant-design/icons';
+
+// Componentes internos del formulario
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { FormField } from '@/components/shared/FormField';
-import { EmptyState } from '@/components/shared/EmptyState';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { Users, Clock, PencilSimple, Eye, EyeSlash, Plus, Scissors } from '@phosphor-icons/react';
+import { Button as SdButton }  from '@/components/ui/button';
+import { Input as SdInput }    from '@/components/ui/input';
+import { FormField }           from '@/components/shared/FormField';
+import { Eye, EyeSlash }       from '@phosphor-icons/react';
+
+const { Title, Text } = Typography;
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 type Schedule   = { dayOfWeek: number; startTime: string; endTime: string; active: boolean };
@@ -25,22 +34,14 @@ type Barber = {
 };
 type CreateForm = { fullName: string; email: string; password: string; phone: string; bio: string; specialtiesInput: string };
 
+// Iniciales para el Avatar de antd
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function AvatarInitials({ name, size = 44 }: { name: string; size?: number }) {
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: '#fff', fontWeight: 700, fontSize: Math.round(size * 0.35), userSelect: 'none',
-    }}>
-      {getInitials(name)}
-    </div>
-  );
-}
+// Color de fondo del Avatar según índice (variedad visual)
+const AVATAR_COLORS = ['#0d9488', '#7c3aed', '#0284c7', '#b45309', '#be123c', '#065f46'];
+function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length]; }
 
 // ── Componente principal ───────────────────────────────────────────────────
 export default function BarbersClient({ initialBarbers }: { initialBarbers: Barber[] }) {
@@ -59,36 +60,39 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
   const [specialtiesInput, setSpecialtiesInput] = useState('');
   const [editLoading,      setEditLoading]      = useState(false);
 
-  function openCreate() {
-    setForm({ fullName: '', email: '', password: '', phone: '', bio: '', specialtiesInput: '' });
-    setCreateError(''); setShowPass(false); setCreating(true);
-  }
-
   function setField(field: keyof CreateForm, value: string) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
+  // ── Crear ──────────────────────────────────────────────
   async function handleCreate() {
     if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
-      setCreateError('Nombre, email y contraseña son obligatorios.');
-      return;
+      setCreateError('Nombre, email y contraseña son obligatorios.'); return;
     }
     setCreateLoading(true); setCreateError('');
     try {
       const specialties = form.specialtiesInput.split(',').map(s => s.trim()).filter(Boolean);
       const res = await fetch('/api/barbers', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), password: form.password, phone: form.phone.trim() || undefined, bio: form.bio.trim() || undefined, specialties }),
+        body: JSON.stringify({
+          fullName:   form.fullName.trim(),
+          email:      form.email.trim().toLowerCase(),
+          password:   form.password,
+          phone:      form.phone.trim()  || undefined,
+          bio:        form.bio.trim()    || undefined,
+          specialties,
+        }),
       });
       const json = await res.json();
       if (!res.ok) { const msg = json.error?.message ?? 'Error al crear barbero'; setCreateError(msg); toast.error(msg); return; }
       setBarbers(prev => [...prev, json.data]);
       setCreating(false);
-      toast.success(`✂️ Barbero "${form.fullName.trim()}" creado`);
+      toast.success(`Barbero "${form.fullName.trim()}" creado`);
     } catch { const msg = 'Error de red'; setCreateError(msg); toast.error(msg); }
     finally { setCreateLoading(false); }
   }
 
+  // ── Editar ─────────────────────────────────────────────
   function openEdit(b: Barber) {
     setEditing(b); setBio(b.bio ?? ''); setSpecialtiesInput(b.specialties.join(', '));
   }
@@ -98,7 +102,10 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
     setEditLoading(true);
     try {
       const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(Boolean);
-      const res = await fetch(`/api/barbers/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bio, specialties }) });
+      const res = await fetch(`/api/barbers/${editing.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio, specialties }),
+      });
       const json = await res.json();
       if (res.ok) {
         setBarbers(prev => prev.map(b => b.id === editing.id ? { ...b, ...json.data } : b));
@@ -107,70 +114,173 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
     } catch { toast.error('Error de red'); } finally { setEditLoading(false); }
   }
 
+  // ── Columnas de la tabla (patrón Speeddansys) ──────────
+  const columns: ColumnsType<Barber> = [
+    {
+      title:  'Barbero',
+      key:    'barbero',
+      render: (_, r) => (
+        <Space>
+          <Avatar
+            size={36}
+            style={{ backgroundColor: avatarColor(r.id), flexShrink: 0, fontWeight: 700 }}
+          >
+            {getInitials(r.user.fullName)}
+          </Avatar>
+          <div>
+            <div style={{ fontWeight: 500 }}>{r.user.fullName}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{r.user.email}</Text>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      title:     'Teléfono',
+      key:       'phone',
+      width:     140,
+      render:    (_, r) => r.user.phone
+        ? <Text style={{ fontSize: 12 }}>{r.user.phone}</Text>
+        : <Text type="secondary">—</Text>,
+    },
+    {
+      title:  'Especialidades',
+      key:    'specialties',
+      render: (_, r) => r.specialties.length === 0
+        ? <Text type="secondary">—</Text>
+        : (
+          <Space size={2} wrap>
+            {r.specialties.slice(0, 3).map(sp => (
+              <Tag key={sp} style={{ fontSize: 11 }}>{sp}</Tag>
+            ))}
+            {r.specialties.length > 3 && (
+              <Tooltip title={r.specialties.slice(3).join(', ')}>
+                <Tag style={{ fontSize: 11 }}>+{r.specialties.length - 3}</Tag>
+              </Tooltip>
+            )}
+          </Space>
+        ),
+    },
+    {
+      title:  'Horario',
+      key:    'schedule',
+      render: (_, r) => (
+        <Tooltip title={r.scheduleText || 'Sin horario definido'}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {r.scheduleText
+              ? (r.scheduleText.length > 45 ? r.scheduleText.slice(0, 45) + '…' : r.scheduleText)
+              : '—'}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title:  'Estado',
+      key:    'active',
+      width:  100,
+      render: (_, r) => (
+        <Tag color={r.active ? 'success' : 'default'}>
+          {r.active ? 'Activo' : 'Inactivo'}
+        </Tag>
+      ),
+    },
+    {
+      title:  'Acciones',
+      key:    'actions',
+      width:  80,
+      fixed:  'right',
+      render: (_, record) => (
+        <Tooltip title="Editar perfil">
+          <Button
+            size="small"
+            type="primary"
+            ghost
+            icon={<EditOutlined />}
+            onClick={() => openEdit(record)}
+          />
+        </Tooltip>
+      ),
+    },
+  ];
+
+  // ── KPIs ───────────────────────────────────────────────
+  const activeCount      = barbers.filter(b => b.active).length;
+  const allSpecialties   = [...new Set(barbers.flatMap(b => b.specialties))].length;
+
   return (
     <>
-      <PageHeader
-        title="Barberos"
-        description={`${barbers.length} barbero${barbers.length !== 1 ? 's' : ''} registrado${barbers.length !== 1 ? 's' : ''}`}
-        action={<Button onClick={openCreate}><Plus size={15} weight="bold" /> Nuevo barbero</Button>}
-      />
+      {/* ── Estadísticas rápidas ─────────────────────── */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={12} md={8}>
+          <Card size="small">
+            <Statistic
+              title="Total Barberos"
+              value={barbers.length}
+              prefix={<UserOutlined style={{ color: '#0d9488' }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} md={8}>
+          <Card size="small">
+            <Statistic
+              title="Activos"
+              value={activeCount}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} md={8}>
+          <Card size="small">
+            <Statistic
+              title="Especialidades"
+              value={allSpecialties}
+              prefix={<ScissorOutlined style={{ color: '#722ed1' }} />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-      {barbers.length === 0 ? (
-        <EmptyState
-          icon={<Users size={36} weight="thin" />}
-          title="Sin barberos registrados"
-          description="Agrega el primer barbero de tu equipo"
-          action={<Button onClick={openCreate}><Plus size={15} weight="bold" /> Agregar barbero</Button>}
+      {/* ── Tabla principal ───────────────────────────── */}
+      <Card
+        title={<Title level={5} style={{ margin: 0 }}>Barberos</Title>}
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setForm({ fullName: '', email: '', password: '', phone: '', bio: '', specialtiesInput: '' });
+              setCreateError(''); setShowPass(false); setCreating(true);
+            }}
+          >
+            Nuevo barbero
+          </Button>
+        }
+      >
+        <Table
+          dataSource={barbers}
+          columns={columns}
+          rowKey="id"
+          size="small"
+          scroll={{ x: 700 }}
+          pagination={{
+            pageSize:        10,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20'],
+            showTotal:       (t, range) => `${range[0]}–${range[1]} de ${t} barberos`,
+          }}
+          locale={{
+            emptyText: (
+              <div style={{ padding: 40, textAlign: 'center' }}>
+                <ClockCircleOutlined style={{ fontSize: 32, color: '#bfbfbf' }} />
+                <div style={{ marginTop: 8, color: '#8c8c8c' }}>
+                  No hay barberos registrados. Usa &quot;+ Nuevo barbero&quot;.
+                </div>
+              </div>
+            ),
+          }}
         />
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16, marginTop: 20 }}>
-          {barbers.map(b => (
-            <div key={b.id} className="speeddan-card" style={{ opacity: b.active ? 1 : 0.6, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Cabecera */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <AvatarInitials name={b.user.fullName} size={46} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: 'hsl(var(--text-primary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {b.user.fullName}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {b.user.email}
-                  </div>
-                  {b.user.phone && (
-                    <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 1 }}>{b.user.phone}</div>
-                  )}
-                </div>
-                <Badge variant={b.active ? 'default' : 'secondary'}>{b.active ? 'Activo' : 'Inactivo'}</Badge>
-              </div>
+      </Card>
 
-              {b.bio && (
-                <p style={{ fontSize: 13, color: 'hsl(var(--text-secondary))', margin: 0, lineHeight: 1.5 }}>{b.bio}</p>
-              )}
-
-              {b.specialties.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {b.specialties.map(sp => (
-                    <Badge key={sp} variant="outline" style={{ fontSize: 11 }}>{sp}</Badge>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'hsl(var(--text-muted))' }}>
-                <Clock size={13} style={{ flexShrink: 0 }} />
-                <span>{b.scheduleText}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 10, borderTop: '1px solid hsl(var(--border-default))', marginTop: 'auto' }}>
-                <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
-                  <PencilSimple size={13} weight="bold" /> Editar perfil
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Diálogo CREAR */}
+      {/* ── Modal CREAR ──────────────────────────────── */}
       <Dialog open={creating} onOpenChange={v => { if (!v) setCreating(false); }}>
         <DialogContent>
           <DialogHeader>
@@ -178,38 +288,48 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
             <FormField label="Nombre completo *">
-              <Input value={form.fullName} onChange={e => setField('fullName', e.target.value)} placeholder="Carlos López" autoFocus />
+              <SdInput value={form.fullName} onChange={e => setField('fullName', e.target.value)} placeholder="Carlos López" autoFocus />
             </FormField>
             <FormField label="Email *">
-              <Input type="email" value={form.email} onChange={e => setField('email', e.target.value)} placeholder="carlos@barberia.com" />
+              <SdInput type="email" value={form.email} onChange={e => setField('email', e.target.value)} placeholder="carlos@barberia.com" />
             </FormField>
             <FormField label="Contraseña *">
               <div style={{ position: 'relative' }}>
-                <Input type={showPass ? 'text' : 'password'} value={form.password} onChange={e => setField('password', e.target.value)} placeholder="Mínimo 6 caracteres" style={{ paddingRight: 40 }} />
-                <button type="button" onClick={() => setShowPass(p => !p)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', padding: 0, display: 'flex' }}>
+                <SdInput
+                  type={showPass ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={e => setField('password', e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(p => !p)}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', padding: 0, display: 'flex' }}
+                >
                   {showPass ? <EyeSlash size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </FormField>
             <FormField label="Teléfono">
-              <Input value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="+503 7000-0000" />
+              <SdInput value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="+503 7000-0000" />
             </FormField>
             <FormField label="Biografía">
-              <Input value={form.bio} onChange={e => setField('bio', e.target.value)} placeholder="Especialista en fades…" />
+              <SdInput value={form.bio} onChange={e => setField('bio', e.target.value)} placeholder="Especialista en fades…" />
             </FormField>
             <FormField label="Especialidades (separadas por coma)">
-              <Input value={form.specialtiesInput} onChange={e => setField('specialtiesInput', e.target.value)} placeholder="Fade, Barba, Diseño" />
+              <SdInput value={form.specialtiesInput} onChange={e => setField('specialtiesInput', e.target.value)} placeholder="Fade, Barba, Diseño" />
             </FormField>
             {createError && <p style={{ color: 'hsl(var(--status-error))', fontSize: 13, margin: 0 }}>{createError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreating(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={createLoading}>{createLoading ? 'Creando...' : 'Crear barbero'}</Button>
+            <SdButton variant="outline" onClick={() => setCreating(false)}>Cancelar</SdButton>
+            <SdButton onClick={handleCreate} disabled={createLoading}>{createLoading ? 'Creando...' : 'Crear barbero'}</SdButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo EDITAR */}
+      {/* ── Modal EDITAR ─────────────────────────────── */}
       <Dialog open={!!editing} onOpenChange={v => { if (!v) setEditing(null); }}>
         <DialogContent>
           <DialogHeader>
@@ -217,15 +337,15 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
             <FormField label="Biografía">
-              <Input value={bio} onChange={e => setBio(e.target.value)} placeholder="Descripción del barbero…" autoFocus />
+              <SdInput value={bio} onChange={e => setBio(e.target.value)} placeholder="Descripción del barbero…" autoFocus />
             </FormField>
             <FormField label="Especialidades (separadas por coma)">
-              <Input value={specialtiesInput} onChange={e => setSpecialtiesInput(e.target.value)} placeholder="Fade, Barba, Diseño…" />
+              <SdInput value={specialtiesInput} onChange={e => setSpecialtiesInput(e.target.value)} placeholder="Fade, Barba, Diseño…" />
             </FormField>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button onClick={saveEdit} disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar cambios'}</Button>
+            <SdButton variant="outline" onClick={() => setEditing(null)}>Cancelar</SdButton>
+            <SdButton onClick={saveEdit} disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar cambios'}</SdButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
