@@ -13,7 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--bg-page))' }}>
-      <DashboardSidebar role={user.role} slug={user.slug} />
+      <DashboardSidebar role={user.role} slug={user.slug} name={user.name} />
       <main style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
         {children}
       </main>

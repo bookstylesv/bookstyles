@@ -7,7 +7,7 @@
    ARQUITECTURA DEL SISTEMA (3 capas):
 
    CAPA 1 — PALETA CRUDA (raw palette)
-   Valores HSL de la Paleta #4798.
+   Valores HSL de la Paleta Ártica (ARCTIC/PREMIUM).
    NUNCA usar directamente en componentes.
    Solo referenciados por tokens semánticos.
 
@@ -27,42 +27,26 @@
    ═══════════════════════════════════════════════════════════ */
 
 /* ─────────────────────────────────────────────────────────
-   CAPA 1 — Paleta Cruda #4798
+   CAPA 1 — Paleta Cruda ARCTIC/PREMIUM
    Formato HSL sin hsl() — para usar con alpha:
-   background: hsl(var(--palette-crimson) / 0.1)
+   background: hsl(var(--palette-primary) / 0.1)
    ───────────────────────────────────────────────────────── */
 :root {
-  /* Blancos y grises (nieve → acero) */
-  --palette-snow:       0 0% 98%;          /* #FAFAFA  blanco suave */
-  --palette-white:      0 0% 100%;         /* #FFFFFF  blanco puro */
-  --palette-steel:      200 12% 70%;       /* #A8B8C0  gris azulado claro */
-  --palette-slate:      200 10% 45%;       /* #637880  gris azulado medio */
+  /* Paleta ártica principal */
+  --palette-primary:        198 32% 54%;   /* #6498AF  teal — PRIMARY brand color */
+  --palette-primary-dark:   198 40% 42%;   /* teal oscuro */
+  --palette-primary-light:  198 40% 92%;   /* teal muy claro */
 
-  /* Color principal — Rojo intenso */
-  --palette-crimson:    358 64% 46%;       /* #C0302D  rojo intenso */
-  --palette-crimson-dark: 358 64% 36%;     /* #962422  rojo oscuro */
-  --palette-crimson-light: 358 64% 94%;   /* #FAE8E8  rojo muy claro */
+  --palette-slate:          222 11% 41%;   /* #5D6474  slate dark */
+  --palette-slate-dark:     222 15% 28%;   /* slate para sidebar active */
+  --palette-slate-deeper:   222 18% 18%;   /* slate más profundo para sidebar bg */
 
-  /* Color secundario — Marrón oscuro (espresso) */
-  --palette-espresso:   22 52% 17%;        /* #3E2614  marrón profundo */
-  --palette-espresso-mid: 22 30% 28%;      /* #5C3D25  marrón medio */
+  --palette-mauve:          246 6%  67%;   /* #A7A6B0  mauve — texto apagado, bordes */
+  --palette-snow:           69  16% 92%;   /* #ECEDE6  snow cream — fondo de página */
+  --palette-steel:          204 27% 64%;   /* #8CA9BD  steel blue — acento, secundario */
 
-  /* Color acento — Verde oliva oscuro */
-  --palette-moss:       82 20% 22%;        /* #374521  verde oliva */
-  --palette-moss-light: 82 16% 35%;        /* #526634  verde oliva medio */
-
-  /* Escala neutral derivada de espresso + steel */
-  --palette-neutral-50:  200 8% 97%;
-  --palette-neutral-100: 200 8% 93%;
-  --palette-neutral-200: 200 8% 86%;
-  --palette-neutral-300: 200 8% 75%;
-  --palette-neutral-400: 200 8% 60%;
-  --palette-neutral-500: 200 6% 47%;
-  --palette-neutral-600: 22 8% 36%;
-  --palette-neutral-700: 22 10% 26%;
-  --palette-neutral-800: 22 18% 18%;
-  --palette-neutral-900: 22 28% 12%;
-  --palette-neutral-950: 22 35% 8%;
+  --palette-white:          0 0% 100%;
+  --palette-off-white:      0 0% 98%;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -72,70 +56,68 @@
    ───────────────────────────────────────────────────────── */
 :root {
   /* ── Fondos ── */
-  --bg-page:            var(--palette-neutral-50);
-  --bg-surface:         var(--palette-white);
-  --bg-surface-raised:  var(--palette-white);
-  --bg-subtle:          var(--palette-neutral-100);
-  --bg-muted:           var(--palette-neutral-200);
-  --bg-inverse:         var(--palette-neutral-900);
+  --bg-page:            69 16% 92%;        /* snow cream */
+  --bg-surface:         0 0% 100%;         /* blanco puro */
+  --bg-surface-raised:  0 0% 100%;
+  --bg-subtle:          69 10% 96%;        /* snow ligeramente más claro */
+  --bg-muted:           246 6% 88%;
+  --bg-inverse:         222 18% 18%;       /* slate profundo */
 
   /* ── Textos ── */
-  --text-primary:       var(--palette-neutral-900);
-  --text-secondary:     var(--palette-neutral-600);
-  --text-muted:         var(--palette-neutral-400);
-  --text-disabled:      var(--palette-neutral-300);
-  --text-inverse:       var(--palette-snow);
-  --text-brand:         var(--palette-crimson);
+  --text-primary:       222 11% 41%;       /* slate */
+  --text-secondary:     222 8%  52%;       /* slate medio */
+  --text-muted:         246 6%  67%;       /* mauve */
+  --text-disabled:      246 6%  78%;
+  --text-inverse:       0 0% 100%;
+  --text-brand:         198 32% 54%;       /* teal */
 
   /* ── Marca (cambia por tenant) ── */
-  --brand-primary:      var(--palette-crimson);
-  --brand-primary-dark: var(--palette-crimson-dark);
-  --brand-primary-light: var(--palette-crimson-light);
-  --brand-secondary:    var(--palette-espresso);
-  --brand-accent:       var(--palette-moss);
+  --brand-primary:      198 32% 54%;       /* teal */
+  --brand-primary-dark: 198 40% 42%;
+  --brand-primary-light: 198 40% 92%;
+  --brand-secondary:    204 27% 64%;       /* steel */
+  --brand-accent:       222 11% 41%;       /* slate */
 
   /* ── Botones e interacción ── */
-  --btn-primary-bg:     var(--palette-crimson);
-  --btn-primary-bg-hover: var(--palette-crimson-dark);
-  --btn-primary-fg:     var(--palette-snow);
-  --btn-secondary-bg:   var(--palette-neutral-100);
-  --btn-secondary-bg-hover: var(--palette-neutral-200);
-  --btn-secondary-fg:   var(--palette-neutral-900);
+  --btn-primary-bg:         198 32% 54%;   /* teal */
+  --btn-primary-bg-hover:   198 40% 42%;
+  --btn-primary-fg:         0 0% 100%;
+  --btn-secondary-bg:       69 10% 96%;
+  --btn-secondary-bg-hover: 246 6% 88%;
+  --btn-secondary-fg:       222 11% 41%;
 
   /* ── Bordes ── */
-  --border-default:     var(--palette-neutral-200);
-  --border-strong:      var(--palette-neutral-300);
-  --border-brand:       var(--palette-crimson);
-  --border-focus:       var(--palette-crimson);
+  --border-default:     246 8%  88%;
+  --border-strong:      246 6%  67%;       /* mauve */
+  --border-brand:       198 32% 54%;       /* teal */
+  --border-focus:       198 32% 54%;       /* teal */
 
   /* ── Inputs ── */
-  --input-bg:           var(--palette-white);
-  --input-bg-focus:     var(--palette-white);
-  --input-border:       var(--palette-neutral-300);
-  --input-border-focus: var(--palette-crimson);
-  --input-text:         var(--palette-neutral-900);
-  --input-placeholder:  var(--palette-neutral-400);
+  --input-bg:           0 0% 100%;
+  --input-bg-focus:     0 0% 100%;
+  --input-border:       246 8%  88%;
+  --input-border-focus: 198 32% 54%;       /* teal */
+  --input-text:         222 11% 41%;       /* slate */
+  --input-placeholder:  246 6%  67%;       /* mauve */
 
   /* ── Estados semánticos ── */
   --status-success:     142 71% 35%;
   --status-success-bg:  142 71% 94%;
-  --status-warning:     38 92% 44%;
-  --status-warning-bg:  38 92% 94%;
-  --status-error:       var(--palette-crimson);
-  --status-error-bg:    var(--palette-crimson-light);
-  --status-info:        213 94% 47%;
-  --status-info-bg:     213 94% 94%;
+  --status-warning:     38  92% 44%;
+  --status-warning-bg:  38  92% 94%;
+  --status-error:       358 64% 46%;
+  --status-error-bg:    358 64% 94%;
+  --status-info:        198 32% 54%;       /* teal como info */
+  --status-info-bg:     198 40% 92%;
 
   /* ── Sidebar ── */
-  --sidebar-bg:         var(--palette-espresso);
-  --sidebar-fg:         var(--palette-neutral-200);
-  --sidebar-fg-muted:   var(--palette-neutral-400);
-  --sidebar-item-hover: 22 30% 24%;
-  --sidebar-item-active: var(--palette-crimson);
-  --sidebar-border:     22 25% 22%;
+  --sidebar-bg:         222 18% 18%;       /* slate deeper */
+  --sidebar-fg:         0 0% 92%;
+  --sidebar-muted:      246 6%  60%;       /* mauve ligeramente más oscuro */
+  --sidebar-border:     222 12% 25%;
 
-  /* ── Sombras (usa espresso con alpha) ── */
-  --shadow-color:       var(--palette-espresso);
+  /* ── Sombras ── */
+  --shadow-color:       222 18% 18%;
   --shadow-sm:          0 1px 2px hsl(var(--shadow-color) / 0.06);
   --shadow-md:          0 4px 8px hsl(var(--shadow-color) / 0.08);
   --shadow-lg:          0 10px 20px hsl(var(--shadow-color) / 0.12);
@@ -147,6 +129,14 @@
   --radius-lg:          12px;
   --radius-xl:          16px;
   --radius-full:        9999px;
+
+  /* ── Gradientes KPI (paleta ártica) ── */
+  --gradient-kpi-1: linear-gradient(135deg, #5D6474 0%, #3d4454 100%);  /* slate */
+  --gradient-kpi-2: linear-gradient(135deg, #6498AF 0%, #4a7a9b 100%);  /* teal  */
+  --gradient-kpi-3: linear-gradient(135deg, #8CA9BD 0%, #6498AF 100%);  /* steel→teal */
+  --gradient-kpi-4: linear-gradient(135deg, #5D6474 0%, #6498AF 100%);  /* slate→teal */
+  --gradient-hero:  linear-gradient(135deg, #5D6474 0%, #6498AF 100%);  /* login left */
+  --gradient-brand: linear-gradient(135deg, #6498AF 0%, #8CA9BD 100%);  /* accents */
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -155,7 +145,7 @@
    su propio tema. El JSON themeConfig se convierte en:
 
    [data-tenant="mi-barberia"] {
-     --brand-primary: 213 94% 47%;   ← azul en lugar de rojo
+     --brand-primary: 213 94% 47%;   ← azul en lugar de teal
      --sidebar-bg: 220 14% 10%;
    }
 
@@ -165,20 +155,20 @@
 
 /* Ejemplo de preset: tema "Dark Steel" */
 [data-theme="dark-steel"] {
-  --bg-page:           var(--palette-neutral-950);
-  --bg-surface:        var(--palette-neutral-900);
-  --bg-surface-raised: var(--palette-neutral-800);
-  --bg-subtle:         var(--palette-neutral-800);
-  --bg-muted:          var(--palette-neutral-700);
-  --bg-inverse:        var(--palette-snow);
-  --text-primary:      var(--palette-snow);
-  --text-secondary:    var(--palette-neutral-300);
-  --text-muted:        var(--palette-neutral-500);
-  --border-default:    var(--palette-neutral-700);
-  --border-strong:     var(--palette-neutral-600);
-  --input-bg:          var(--palette-neutral-800);
-  --input-border:      var(--palette-neutral-600);
-  --input-text:        var(--palette-snow);
+  --bg-page:           222 18% 12%;
+  --bg-surface:        222 15% 18%;
+  --bg-surface-raised: 222 12% 22%;
+  --bg-subtle:         222 12% 22%;
+  --bg-muted:          222 10% 28%;
+  --bg-inverse:        0 0% 100%;
+  --text-primary:      0 0% 92%;
+  --text-secondary:    246 6% 75%;
+  --text-muted:        246 6% 55%;
+  --border-default:    222 12% 28%;
+  --border-strong:     222 10% 35%;
+  --input-bg:          222 15% 18%;
+  --input-border:      222 12% 32%;
+  --input-text:        0 0% 92%;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -189,10 +179,10 @@
 :root {
   --primary:              var(--brand-primary);
   --primary-foreground:   var(--btn-primary-fg);
-  --secondary:            var(--palette-neutral-100);
-  --secondary-foreground: var(--palette-neutral-900);
-  --muted:                var(--palette-neutral-100);
-  --muted-foreground:     var(--palette-neutral-500);
+  --secondary:            var(--bg-subtle);
+  --secondary-foreground: var(--text-primary);
+  --muted:                var(--bg-subtle);
+  --muted-foreground:     var(--text-muted);
   --background:           var(--bg-page);
   --foreground:           var(--text-primary);
   --card:                 var(--bg-surface);
@@ -204,8 +194,8 @@
   --ring:                 var(--border-focus);
   --destructive:          var(--status-error);
   --destructive-foreground: var(--text-inverse);
-  --accent:               var(--palette-neutral-100);
-  --accent-foreground:    var(--palette-neutral-900);
+  --accent:               var(--bg-subtle);
+  --accent-foreground:    var(--text-primary);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -230,6 +220,7 @@
   --color-destructive:        hsl(var(--destructive));
   --color-accent:             hsl(var(--accent));
   --color-accent-foreground:  hsl(var(--accent-foreground));
+
   /* Fondos */
   --color-bg-page:           hsl(var(--bg-page));
   --color-bg-surface:        hsl(var(--bg-surface));
@@ -269,7 +260,7 @@
   /* Sidebar */
   --color-sidebar:           hsl(var(--sidebar-bg));
   --color-sidebar-fg:        hsl(var(--sidebar-fg));
-  --color-sidebar-muted:     hsl(var(--sidebar-fg-muted));
+  --color-sidebar-muted:     hsl(var(--sidebar-muted));
 
   /* Tipografía */
   --font-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -318,8 +309,8 @@ body {
 /* Scrollbar personalizada */
 ::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: hsl(var(--bg-subtle)); }
-::-webkit-scrollbar-thumb  { background: hsl(var(--palette-neutral-300)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--palette-neutral-400)); }
+::-webkit-scrollbar-thumb  { background: hsl(var(--palette-mauve) / 0.5); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--palette-mauve)); }
 
 /* Selección de texto */
 ::selection {

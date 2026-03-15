@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set('x-tenant-id',  String(payload.tenantId));
     response.headers.set('x-user-role',  String(payload.role));
     response.headers.set('x-tenant-slug', String(payload.slug));
+    response.headers.set('x-user-name',  String(payload.name ?? ''));
     return response;
   } catch {
     if (pathname.startsWith('/api/')) {

@@ -26,7 +26,7 @@ export const authService = {
     if (!valid)                               throw new UnauthorizedError('Credenciales inválidas');
 
     // 4. Generar tokens
-    const payload = { sub: String(user.id), tenantId: tenant.id, role: user.role, slug: tenant.slug };
+    const payload = { sub: String(user.id), tenantId: tenant.id, role: user.role, slug: tenant.slug, name: user.fullName };
     const [accessToken, refreshToken] = await Promise.all([
       signAccessToken(payload),
       signRefreshToken(user.id),

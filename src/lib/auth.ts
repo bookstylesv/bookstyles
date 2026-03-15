@@ -14,6 +14,7 @@ export type JwtPayload = {
   tenantId: number;
   role:     BarberUserRole;
   slug:     string;
+  name:     string;   // fullName del usuario (para avatar con iniciales)
 };
 
 const ACCESS_TOKEN_NAME  = 'barber_access_token';
