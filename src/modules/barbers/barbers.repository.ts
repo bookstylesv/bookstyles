@@ -41,6 +41,52 @@ export type BarberUpdateInput = {
   active?: boolean;
 };
 
+export type BarberCreateInput = {
+  fullName:    string;
+  email:       string;
+  password:    string;
+  phone?:      string;
+  bio?:        string;
+  specialties?: string[];
+};
+
+export async function createBarber(tenantId: number, data: BarberCreateInput) {
+  const bcrypt = await import('bcryptjs');
+  const hashed = await bcrypt.hash(data.password, 10);
+
+  return prisma.$transaction(async tx => {
+    const user = await tx.barberUser.create({
+      data: {
+        tenantId,
+        email:    data.email.toLowerCase().trim(),
+        fullName: data.fullName.trim(),
+        phone:    data.phone?.trim(),
+        password: hashed,
+        role:     'BARBER',
+        active:   true,
+      },
+    });
+
+    const barber = await tx.barber.create({
+      data: {
+        tenantId,
+        userId:      user.id,
+        bio:         data.bio?.trim(),
+        specialties: data.specialties ?? [],
+        active:      true,
+      },
+      include: {
+        user: {
+          select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true, active: true },
+        },
+        schedules: { orderBy: { dayOfWeek: 'asc' } },
+      },
+    });
+
+    return barber;
+  });
+}
+
 export async function updateBarber(id: number, tenantId: number, data: BarberUpdateInput) {
   return prisma.barber.update({
     where: { id },

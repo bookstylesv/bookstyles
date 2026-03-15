@@ -317,3 +317,8 @@ body {
   background: hsl(var(--brand-primary-light));
   color: hsl(var(--brand-primary-dark));
 }
+
+/* ─── Tabla — hover de filas ──────────────────────────────── */
+[data-slot="table-row"]:hover {
+  background: hsl(var(--brand-primary) / 0.04);
+}

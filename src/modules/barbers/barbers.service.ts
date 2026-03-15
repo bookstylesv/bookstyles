@@ -2,7 +2,7 @@
  * barbers.service.ts — Lógica de negocio para barberos.
  */
 
-import { NotFoundError } from '@/lib/errors';
+import { ConflictError, NotFoundError, ValidationError } from '@/lib/errors';
 import * as repo from './barbers.repository';
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -26,6 +26,23 @@ export async function getBarber(id: number, tenantId: number) {
   const barber = await repo.findBarberById(id, tenantId);
   if (!barber) throw new NotFoundError('Barbero');
   return { ...barber, scheduleText: formatSchedule(barber.schedules) };
+}
+
+export async function createBarber(tenantId: number, body: unknown) {
+  const data = body as repo.BarberCreateInput;
+  if (!data.fullName?.trim()) throw new ValidationError('El nombre es obligatorio');
+  if (!data.email?.trim())    throw new ValidationError('El email es obligatorio');
+  if (!data.password?.trim()) throw new ValidationError('La contraseña es obligatoria');
+
+  try {
+    const barber = await repo.createBarber(tenantId, data);
+    return { ...barber, scheduleText: formatSchedule(barber.schedules) };
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2002') {
+      throw new ConflictError('El email ya está registrado');
+    }
+    throw err;
+  }
 }
 
 export async function updateBarber(id: number, tenantId: number, body: unknown) {

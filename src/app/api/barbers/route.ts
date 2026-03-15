@@ -1,11 +1,12 @@
 /**
- * GET /api/barbers — Listar barberos del tenant
+ * GET  /api/barbers — Listar barberos del tenant
+ * POST /api/barbers — Crear nuevo barbero (con usuario)
  */
 
 import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
+import { created, ok, apiError } from '@/lib/response';
 import { UnauthorizedError } from '@/lib/errors';
-import { listBarbers } from '@/modules/barbers/barbers.service';
+import { listBarbers, createBarber } from '@/modules/barbers/barbers.service';
 
 export async function GET() {
   try {
@@ -14,6 +15,19 @@ export async function GET() {
 
     const barbers = await listBarbers(user.tenantId);
     return ok(barbers);
+  } catch (err) {
+    return apiError(err);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new UnauthorizedError();
+
+    const body = await request.json();
+    const barber = await createBarber(user.tenantId, body);
+    return created(barber);
   } catch (err) {
     return apiError(err);
   }
