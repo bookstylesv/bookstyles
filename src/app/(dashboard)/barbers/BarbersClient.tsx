@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,11 +120,19 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
         }),
       });
       const json = await res.json();
-      if (!res.ok) { setCreateError(json.error?.message ?? 'Error al crear barbero'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al crear barbero';
+        setCreateError(msg);
+        toast.error(msg);
+        return;
+      }
       setBarbers(prev => [...prev, json.data]);
       setCreating(false);
+      toast.success(`✂️ Barbero "${form.fullName.trim()}" creado correctamente`);
     } catch {
-      setCreateError('Error de red. Verifica tu conexión.');
+      const msg = 'Error de red. Verifica tu conexión.';
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setCreateLoading(false);
     }
@@ -150,7 +159,12 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
       if (res.ok) {
         setBarbers(prev => prev.map(b => b.id === editing.id ? { ...b, ...json.data } : b));
         setEditing(null);
+        toast.success('Perfil actualizado correctamente');
+      } else {
+        toast.error(json.error?.message ?? 'Error al guardar cambios');
       }
+    } catch {
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setEditLoading(false);
     }

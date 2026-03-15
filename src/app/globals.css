@@ -411,3 +411,86 @@ body {
   border-left-color: hsl(var(--brand-primary));
   font-weight: 600;
 }
+
+/* ─── Sonner Toasts — Paleta Arctic ──────────────────────── */
+[data-sonner-toaster] {
+  --width: 360px !important;
+}
+
+[data-sonner-toast] {
+  font-family: var(--font-sans) !important;
+  font-size: 13.5px !important;
+  border-radius: 10px !important;
+  border: 1px solid hsl(var(--border-default)) !important;
+  box-shadow: 0 4px 24px rgba(93,100,116,0.14), 0 1px 4px rgba(93,100,116,0.08) !important;
+  padding: 14px 16px !important;
+  background: hsl(var(--bg-surface)) !important;
+  color: hsl(var(--text-primary)) !important;
+}
+
+/* Toast title */
+[data-sonner-toast] [data-title] {
+  font-weight: 600 !important;
+  font-size: 13.5px !important;
+  color: hsl(var(--text-primary)) !important;
+  line-height: 1.4 !important;
+}
+
+/* Toast description */
+[data-sonner-toast] [data-description] {
+  font-size: 12.5px !important;
+  color: hsl(var(--text-muted)) !important;
+  margin-top: 2px !important;
+}
+
+/* SUCCESS */
+[data-sonner-toast][data-type="success"] {
+  background: hsl(var(--status-success-bg)) !important;
+  border-color: hsl(var(--status-success) / 0.30) !important;
+}
+[data-sonner-toast][data-type="success"] [data-title] {
+  color: hsl(var(--status-success)) !important;
+}
+[data-sonner-toast][data-type="success"] [data-icon] svg {
+  color: hsl(var(--status-success)) !important;
+}
+
+/* ERROR */
+[data-sonner-toast][data-type="error"] {
+  background: hsl(var(--status-error-bg)) !important;
+  border-color: hsl(var(--status-error) / 0.30) !important;
+}
+[data-sonner-toast][data-type="error"] [data-title] {
+  color: hsl(var(--status-error)) !important;
+}
+[data-sonner-toast][data-type="error"] [data-icon] svg {
+  color: hsl(var(--status-error)) !important;
+}
+
+/* WARNING */
+[data-sonner-toast][data-type="warning"] {
+  background: hsl(var(--status-warning-bg)) !important;
+  border-color: hsl(var(--status-warning) / 0.30) !important;
+}
+[data-sonner-toast][data-type="warning"] [data-title] {
+  color: hsl(var(--status-warning)) !important;
+}
+
+/* INFO / LOADING */
+[data-sonner-toast][data-type="info"],
+[data-sonner-toast][data-type="loading"] {
+  background: hsl(var(--status-info-bg)) !important;
+  border-color: hsl(var(--brand-primary) / 0.25) !important;
+}
+[data-sonner-toast][data-type="info"] [data-title],
+[data-sonner-toast][data-type="loading"] [data-title] {
+  color: hsl(var(--brand-primary-dark)) !important;
+}
+
+/* Close button */
+[data-sonner-toast] [data-close-button] {
+  background: hsl(var(--bg-subtle)) !important;
+  border: 1px solid hsl(var(--border-default)) !important;
+  color: hsl(var(--text-muted)) !important;
+  border-radius: 50% !important;
+}

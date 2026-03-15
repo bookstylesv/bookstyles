@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -140,7 +141,12 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
         }),
       });
       const json = await res.json();
-      if (!res.ok) { setError(json.error?.message ?? 'Error'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al registrar pago';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
 
       setPayments(prev => [json.data, ...prev]);
       setUnpaid(prev => prev.filter(a => a.id !== Number(values.appointmentId)));
@@ -152,8 +158,10 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
         pendienteCount: Math.max(0, prev.pendienteCount - 1),
       }));
       setOpen(false);
+      toast.success(`💳 Pago de $${parseFloat(values.amount).toFixed(2)} registrado`);
     } catch {
       setError('Error de red');
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }

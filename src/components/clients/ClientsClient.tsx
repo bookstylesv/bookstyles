@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -89,19 +90,24 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok) { setError(json.error?.message ?? 'Error al guardar'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al guardar';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
 
       if (editing) {
-        setClients(prev => prev.map(c => c.id === editing.id
-          ? { ...c, ...json.data }
-          : c,
-        ));
+        setClients(prev => prev.map(c => c.id === editing.id ? { ...c, ...json.data } : c));
+        toast.success(`Cliente "${values.fullName.trim()}" actualizado`);
       } else {
         setClients(prev => [{ ...json.data, totalAppointments: 0, lastVisit: null }, ...prev]);
+        toast.success(`Cliente "${values.fullName.trim()}" creado`);
       }
       setOpen(false);
     } catch {
       setError('Error de red. Verifica tu conexión.');
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -112,6 +118,9 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
     const res = await fetch(`/api/clients/${client.id}`, { method: 'DELETE' });
     if (res.ok) {
       setClients(prev => prev.filter(c => c.id !== client.id));
+      toast.success(`"${client.fullName}" eliminado`);
+    } else {
+      toast.error('No se pudo eliminar el cliente');
     }
   }
 
@@ -124,6 +133,9 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
     });
     if (res.ok) {
       setClients(prev => prev.map(c => c.id === client.id ? { ...c, active: newActive } : c));
+      toast.success(`${client.fullName} ${newActive ? 'activado' : 'desactivado'}`);
+    } else {
+      toast.error('No se pudo cambiar el estado');
     }
   }
 

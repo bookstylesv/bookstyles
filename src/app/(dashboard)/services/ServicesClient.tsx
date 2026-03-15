@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -106,16 +107,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok) { setError(json.error?.message ?? 'Error'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al guardar';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
 
       if (editing) {
         setServices(prev => prev.map(s => s.id === editing.id ? json.data : s));
+        toast.success(`Servicio "${values.name}" actualizado`);
       } else {
         setServices(prev => [json.data, ...prev]);
+        toast.success(`Servicio "${values.name}" creado`);
       }
       setOpen(false);
     } catch {
       setError('Error de red');
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -126,6 +135,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const res = await fetch(`/api/services/${service.id}`, { method: 'DELETE' });
     if (res.ok) {
       setServices(prev => prev.filter(s => s.id !== service.id));
+      toast.success(`Servicio "${service.name}" eliminado`);
+    } else {
+      toast.error('No se pudo eliminar el servicio');
     }
   }
 

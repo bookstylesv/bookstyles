@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -108,11 +109,18 @@ export default function SettingsPage() {
         body:    JSON.stringify(values),
       });
       const json = await res.json();
-      if (!res.ok) { setInfoError(json.error?.message ?? 'Error'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al guardar';
+        setInfoError(msg);
+        toast.error(msg);
+        return;
+      }
       setTenant(json.data);
       setInfoMsg('Cambios guardados ✓');
+      toast.success('Información actualizada correctamente');
     } catch {
       setInfoError('Error de red');
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setInfoLoading(false);
     }
@@ -120,6 +128,7 @@ export default function SettingsPage() {
 
   async function onThemeSubmit(values: ThemeForm) {
     const hsl = values.brandPrimary.trim();
+    const id  = toast.loading('Aplicando color…');
     const res = await fetch('/api/settings', {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -130,6 +139,9 @@ export default function SettingsPage() {
       setTenant(prev => prev ? { ...prev, themeConfig: json.data.themeConfig } : prev);
       // Aplicar cambio en tiempo real
       document.documentElement.style.setProperty('--brand-primary', hsl);
+      toast.success('Color principal aplicado', { id });
+    } else {
+      toast.error(json.error?.message ?? 'Error al cambiar color', { id });
     }
   }
 

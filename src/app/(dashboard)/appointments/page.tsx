@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -112,11 +113,18 @@ export default function AppointmentsPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) { setFormError(json.error?.message ?? 'Error'); return; }
+      if (!res.ok) {
+        const msg = json.error?.message ?? 'Error al crear cita';
+        setFormError(msg);
+        toast.error(msg);
+        return;
+      }
       setAppointments(prev => [...prev, json.data]);
       setCreateOpen(false);
+      toast.success('📅 Cita agendada correctamente');
     } catch {
       setFormError('Error de red');
+      toast.error('Error de red. Verifica tu conexión.');
     } finally {
       setFormLoading(false);
     }
@@ -124,6 +132,7 @@ export default function AppointmentsPage() {
 
   async function handleCancel(appt: Appointment) {
     if (!confirm('¿Cancelar esta cita?')) return;
+    const id = toast.loading('Cancelando cita…');
     const res = await fetch(`/api/appointments/${appt.id}/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,6 +142,9 @@ export default function AppointmentsPage() {
     if (res.ok) {
       setAppointments(prev => prev.map(a => a.id === appt.id ? json.data : a));
       setDetailAppt(null);
+      toast.success('Cita cancelada', { id });
+    } else {
+      toast.error(json.error?.message ?? 'No se pudo cancelar la cita', { id });
     }
   }
 
