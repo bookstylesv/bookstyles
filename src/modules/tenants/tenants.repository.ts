@@ -40,6 +40,20 @@ export const tenantsRepository = {
     });
   },
 
+  async updateInfo(tenantId: number, data: {
+    name?:    string;
+    email?:   string;
+    phone?:   string;
+    address?: string;
+    city?:    string;
+    logoUrl?: string;
+  }) {
+    return prisma.barberTenant.update({
+      where: { id: tenantId },
+      data,
+    });
+  },
+
   async suspend(tenantId: number) {
     return prisma.barberTenant.update({
       where: { id: tenantId },
