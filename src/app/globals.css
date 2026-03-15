@@ -740,43 +740,43 @@ body {
 }
 
 /* ─── speeddan-action-btns ───────────────────────────────── */
+/* Layout: siempre flex. Opacity manejada por la tabla (oculta hasta hover) */
 .speeddan-action-btns {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
-/* ─── speeddan-icon-btn ──────────────────────────────────── */
+/* ─── speeddan-icon-btn — estilo exacto DTE DataTable ───── */
 .speeddan-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: transparent;
+  border-radius: 8px;                        /* igual que DTE radius.sm */
+  border: 1px solid hsl(var(--border-default)); /* #e5e5e5 equivalente */
+  background: hsl(var(--bg-surface));        /* blanco */
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
   padding: 0;
   color: hsl(var(--text-muted));
 }
-.speeddan-icon-btn:hover {
-  border-color: hsl(var(--border-default));
-}
+/* Edit — hover gris neutro (igual que DTE btn-eye/btn-edit) */
 .speeddan-icon-btn--edit {
   color: hsl(var(--brand-primary));
 }
 .speeddan-icon-btn--edit:hover {
-  background: hsl(var(--brand-primary) / 0.08);
-  border-color: hsl(var(--brand-primary) / 0.3);
+  background: rgba(128, 128, 128, 0.12);
+  border-color: rgba(128, 128, 128, 0.30);
 }
+/* Delete — hover rojo suave (igual que DTE btn-del) */
 .speeddan-icon-btn--delete {
   color: hsl(var(--status-error));
 }
 .speeddan-icon-btn--delete:hover {
-  background: hsl(var(--status-error) / 0.08);
-  border-color: hsl(var(--status-error) / 0.2);
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 /* ─── Sidebar — hover & interactive states ───────────────── */
@@ -804,8 +804,11 @@ body {
 
 /* ══════════════════════════════════════════════════════════
    TABLA PROFESIONAL — speeddan-table
-   Estilo limpio tipo DTE/ERP: sin uppercase, sin fondo en header,
-   separadores muy sutiles, hover suave.
+   Copiado de DataTable.tsx del ERP DTE:
+   • Header: gradiente sutil #fafbfd → #f4f5f8, uppercase 11px bold
+   • Separadores de fila: #f0f0f4 (muy claro)
+   • Hover de fila: #fafafa
+   • Acciones: ocultas por defecto, visibles al hover de fila
    ══════════════════════════════════════════════════════════ */
 
 .speeddan-table {
@@ -814,56 +817,81 @@ body {
   font-size: 13.5px;
 }
 
-/* ── Header: sin fondo, solo borde inferior fino ── */
+/* ── Header: gradiente sutil igual que DTE DataTable ── */
 .speeddan-table__header {
-  background: transparent;
-  border-bottom: 1.5px solid hsl(var(--border-default));
+  background: linear-gradient(to bottom, #fafbfd, #f4f5f8);
 }
 
 .speeddan-table__head {
-  padding: 12px 16px;
+  padding: 13px 20px;
   text-align: left;
-  font-size: 13px;
-  font-weight: 600;
-  color: hsl(var(--text-secondary));
-  text-transform: none;
-  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.65px;
   white-space: nowrap;
   vertical-align: middle;
+  border-bottom: 2px solid hsl(var(--border-default));
+  user-select: none;
 }
 
-/* ── Body: separador muy sutil entre filas ── */
+/* ── Body: separador muy tenue ── */
 .speeddan-table__body .speeddan-table__row {
-  border-bottom: 1px solid hsl(var(--border-default) / 0.7);
+  border-bottom: 1px solid #f0f0f4;
 }
 .speeddan-table__body .speeddan-table__row:last-child {
   border-bottom: none;
 }
 
-/* ── Row hover: gris suavísimo ── */
+/* ── Row + hover ── */
 .speeddan-table__row {
-  transition: background 0.1s;
+  transition: background 0.12s;
 }
 .speeddan-table__body .speeddan-table__row:hover {
-  background: hsl(var(--bg-subtle));
+  background: #fafafa !important;
+}
+
+/* ── Acciones ocultas → visibles al hover (igual que DTE) ── */
+.speeddan-action-btns {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.speeddan-table__row:hover .speeddan-action-btns {
+  opacity: 1;
 }
 
 /* ── Cell ── */
 .speeddan-table__cell {
-  padding: 13px 16px;
+  padding: 15px 20px;
   vertical-align: middle;
   color: hsl(var(--text-primary));
   white-space: nowrap;
+  font-size: 14px;
 }
 
 /* ── Footer ── */
 .speeddan-table__footer {
-  background: hsl(var(--bg-subtle));
-  border-top: 1.5px solid hsl(var(--border-default));
+  background: linear-gradient(to bottom, #fafbfd, #f4f5f8);
+  border-top: 2px solid hsl(var(--border-default));
   font-weight: 500;
 }
 .speeddan-table__footer .speeddan-table__cell {
   color: hsl(var(--text-secondary));
+}
+
+/* ── Skeleton shimmer (para futura carga) ── */
+@keyframes speeddan-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.speeddan-skeleton-cell {
+  background: linear-gradient(90deg, #efefef 25%, #e2e2e2 50%, #efefef 75%);
+  background-size: 600px 100%;
+  animation: speeddan-shimmer 1.4s ease-in-out infinite;
+  border-radius: 5px;
+  display: block;
+  height: 14px;
 }
 
 /* ── Caption ── */
