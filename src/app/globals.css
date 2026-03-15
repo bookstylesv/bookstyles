@@ -801,3 +801,70 @@ body {
   border-color: hsl(var(--status-error) / 0.5) !important;
   color: hsl(var(--status-error)) !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   TABLA PROFESIONAL — speeddan-table
+   ══════════════════════════════════════════════════════════ */
+
+.speeddan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+/* ── Header ── */
+.speeddan-table__header {
+  background: hsl(var(--bg-subtle));
+  border-bottom: 2px solid hsl(var(--border-default));
+}
+
+.speeddan-table__head {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* ── Body ── */
+.speeddan-table__body tr:not(:last-child) {
+  border-bottom: 1px solid hsl(var(--border-default));
+}
+
+/* ── Row ── */
+.speeddan-table__row {
+  transition: background 0.12s;
+}
+.speeddan-table__body .speeddan-table__row:hover {
+  background: hsl(var(--brand-primary) / 0.04);
+}
+
+/* ── Cell ── */
+.speeddan-table__cell {
+  padding: 12px 16px;
+  vertical-align: middle;
+  color: hsl(var(--text-primary));
+  white-space: nowrap;
+}
+
+/* ── Footer ── */
+.speeddan-table__footer {
+  background: hsl(var(--bg-subtle));
+  border-top: 2px solid hsl(var(--border-default));
+  font-weight: 500;
+}
+.speeddan-table__footer .speeddan-table__cell {
+  color: hsl(var(--text-secondary));
+}
+
+/* ── Caption ── */
+.speeddan-table__caption {
+  margin-top: 10px;
+  font-size: 12px;
+  color: hsl(var(--text-muted));
+  text-align: right;
+}
