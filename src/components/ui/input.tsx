@@ -1,20 +1,21 @@
-import * as React from "react"
-import { Input as InputPrimitive } from "@base-ui/react/input"
+/**
+ * Input — Componente propio sin @base-ui.
+ * Estilo profesional con borde teal en foco.
+ */
 
-import { cn } from "@/lib/utils"
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({ className, type, style, ...props }: React.ComponentProps<'input'>) {
   return (
-    <InputPrimitive
+    <input
       type={type}
       data-slot="input"
-      className={cn(
-        "w-full min-w-0 file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive",
-        className
-      )}
+      className={cn('speeddan-input', className)}
+      style={style}
       {...props}
     />
-  )
+  );
 }
 
-export { Input }
+export { Input };

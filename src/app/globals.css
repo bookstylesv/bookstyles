@@ -494,3 +494,310 @@ body {
   color: hsl(var(--text-muted)) !important;
   border-radius: 50% !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   SPEEDDAN COMPONENT CLASSES — Design System
+   Usados por: FormField, EmptyState, PageHeader, ActionButtons,
+               Dialog (custom), Input, Label, Sidebar.
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── speeddan-input ─────────────────────────────────────── */
+.speeddan-input {
+  display: block;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  background: hsl(var(--input-bg));
+  border: 1.5px solid hsl(var(--input-border));
+  border-radius: var(--radius-md);
+  color: hsl(var(--input-text));
+  font-size: 14px;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  box-sizing: border-box;
+}
+.speeddan-input:focus,
+.speeddan-input:focus-visible {
+  border-color: hsl(var(--input-border-focus));
+  box-shadow: 0 0 0 3px hsl(var(--input-border-focus) / 0.15);
+}
+.speeddan-input::placeholder {
+  color: hsl(var(--input-placeholder));
+}
+.speeddan-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: hsl(var(--bg-subtle));
+}
+
+/* ─── speeddan-label ─────────────────────────────────────── */
+.speeddan-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  margin-bottom: 6px;
+  letter-spacing: 0.15px;
+  line-height: 1.4;
+  cursor: default;
+}
+
+/* ─── speeddan-form-field ────────────────────────────────── */
+.speeddan-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── speeddan-field-hint / speeddan-field-error ─────────── */
+.speeddan-field-hint {
+  font-size: 12px;
+  color: hsl(var(--text-muted));
+  margin: 5px 0 0;
+  line-height: 1.4;
+}
+.speeddan-field-error {
+  font-size: 12px;
+  color: hsl(var(--status-error));
+  margin: 5px 0 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ─── speeddan-card ──────────────────────────────────────── */
+.speeddan-card {
+  background: hsl(var(--bg-surface));
+  border: 1px solid hsl(var(--border-default));
+  border-radius: var(--radius-lg);
+}
+
+/* ─── speeddan-dialog-overlay ───────────────────────────── */
+.speeddan-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 34, 46, 0.48);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 49;
+}
+
+/* ─── speeddan-dialog ────────────────────────────────────── */
+.speeddan-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: calc(100% - 32px);
+  max-width: 480px;
+  background: hsl(var(--bg-surface));
+  border: 1px solid hsl(var(--border-default));
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 8px 40px rgba(93, 100, 116, 0.18), 0 2px 8px rgba(93, 100, 116, 0.08);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+/* ─── speeddan-dialog-x (close X button) ────────────────── */
+.speeddan-dialog-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: hsl(var(--bg-subtle));
+  border: 1px solid hsl(var(--border-default));
+  border-radius: 50%;
+  cursor: pointer;
+  color: hsl(var(--text-muted));
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+}
+.speeddan-dialog-x:hover {
+  background: hsl(var(--bg-muted));
+  color: hsl(var(--text-primary));
+}
+
+/* ─── speeddan-dialog-header ─────────────────────────────── */
+.speeddan-dialog-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid hsl(var(--border-default));
+  margin-bottom: 16px;
+}
+
+/* ─── speeddan-dialog-title ──────────────────────────────── */
+.speeddan-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* ─── speeddan-dialog-footer ─────────────────────────────── */
+.speeddan-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  background: hsl(var(--bg-subtle));
+  border-top: 1px solid hsl(var(--border-default));
+  margin: 16px -24px -24px;
+  padding: 14px 24px;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* ─── speeddan-dialog-close-btn ──────────────────────────── */
+.speeddan-dialog-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 36px;
+  background: transparent;
+  border: 1.5px solid hsl(var(--border-default));
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--text-secondary));
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-sans);
+}
+.speeddan-dialog-close-btn:hover {
+  background: hsl(var(--bg-subtle));
+  border-color: hsl(var(--border-strong));
+}
+
+/* ─── speeddan-empty-state ───────────────────────────────── */
+.speeddan-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 24px;
+  text-align: center;
+  gap: 10px;
+}
+.speeddan-empty-state__icon {
+  color: hsl(var(--text-muted));
+  opacity: 0.55;
+  margin-bottom: 2px;
+}
+.speeddan-empty-state__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  margin: 0;
+}
+.speeddan-empty-state__desc {
+  font-size: 13px;
+  color: hsl(var(--text-muted));
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+.speeddan-empty-state__action {
+  margin-top: 6px;
+}
+
+/* ─── speeddan-page-header ───────────────────────────────── */
+.speeddan-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.speeddan-page-header__text {
+  flex: 1;
+  min-width: 0;
+}
+.speeddan-page-header__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+  margin: 0 0 3px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+.speeddan-page-header__desc {
+  font-size: 13.5px;
+  color: hsl(var(--text-muted));
+  margin: 0;
+  line-height: 1.4;
+}
+.speeddan-page-header__action {
+  flex-shrink: 0;
+}
+
+/* ─── speeddan-action-btns ───────────────────────────────── */
+.speeddan-action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── speeddan-icon-btn ──────────────────────────────────── */
+.speeddan-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+  color: hsl(var(--text-muted));
+}
+.speeddan-icon-btn:hover {
+  border-color: hsl(var(--border-default));
+}
+.speeddan-icon-btn--edit {
+  color: hsl(var(--brand-primary));
+}
+.speeddan-icon-btn--edit:hover {
+  background: hsl(var(--brand-primary) / 0.08);
+  border-color: hsl(var(--brand-primary) / 0.3);
+}
+.speeddan-icon-btn--delete {
+  color: hsl(var(--status-error));
+}
+.speeddan-icon-btn--delete:hover {
+  background: hsl(var(--status-error) / 0.08);
+  border-color: hsl(var(--status-error) / 0.2);
+}
+
+/* ─── Sidebar — hover & interactive states ───────────────── */
+.sidebar-nav-link {
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-nav-link:hover {
+  background: hsl(var(--brand-primary) / 0.10) !important;
+  color: hsl(var(--brand-primary)) !important;
+}
+.sidebar-toggle-btn {
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-toggle-btn:hover {
+  background: hsl(var(--brand-primary) / 0.10);
+  color: hsl(var(--brand-primary));
+}
+.sidebar-logout-btn {
+  transition: border-color 0.15s, color 0.15s;
+}
+.sidebar-logout-btn:hover {
+  border-color: hsl(var(--status-error) / 0.5) !important;
+  color: hsl(var(--status-error)) !important;
+}

@@ -8,7 +8,7 @@
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/shared/FormField';
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select';
@@ -47,8 +47,7 @@ export default function AppointmentForm({ barbers, services, clients, onSubmit, 
     <form onSubmit={handleSubmit(onSubmit)}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
 
-        <div>
-          <Label>Cliente *</Label>
+        <FormField label="Cliente *">
           <Select value={clientId} onValueChange={v => setValue('clientId', v ?? '')}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seleccionar cliente" />
@@ -59,10 +58,9 @@ export default function AppointmentForm({ barbers, services, clients, onSubmit, 
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
-        <div>
-          <Label>Barbero *</Label>
+        <FormField label="Barbero *">
           <Select value={barberId} onValueChange={v => setValue('barberId', v ?? '')}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seleccionar barbero" />
@@ -73,10 +71,9 @@ export default function AppointmentForm({ barbers, services, clients, onSubmit, 
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
-        <div>
-          <Label>Servicio *</Label>
+        <FormField label="Servicio *">
           <Select value={serviceId} onValueChange={v => setValue('serviceId', v ?? '')}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seleccionar servicio" />
@@ -89,21 +86,19 @@ export default function AppointmentForm({ barbers, services, clients, onSubmit, 
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
-        <div>
-          <Label htmlFor="appt-start">Fecha y hora *</Label>
+        <FormField label="Fecha y hora *" id="appt-start">
           <Input
             id="appt-start"
             type="datetime-local"
             {...register('startTime', { required: true })}
           />
-        </div>
+        </FormField>
 
-        <div>
-          <Label htmlFor="appt-notes">Notas</Label>
+        <FormField label="Notas" id="appt-notes">
           <Input id="appt-notes" {...register('notes')} placeholder="Observaciones opcionales..." />
-        </div>
+        </FormField>
 
         {error && <p style={{ color: 'hsl(var(--destructive))', fontSize: 13 }}>{error}</p>}
       </div>

@@ -10,8 +10,9 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const PLAN_LABELS: Record<string, string> = {
   TRIAL: 'Prueba', BASIC: 'Básico', PRO: 'Pro', ENTERPRISE: 'Empresarial',
@@ -64,7 +65,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function SettingsPage() {
-  const [tenant, setTenant]         = useState<Tenant | null>(null);
+  const [tenant, setTenant]           = useState<Tenant | null>(null);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoMsg, setInfoMsg]         = useState('');
   const [infoError, setInfoError]     = useState('');
@@ -80,7 +81,6 @@ export default function SettingsPage() {
     handleSubmit: handleTheme,
   } = useForm<ThemeForm>();
 
-  // Cargar datos del tenant
   useEffect(() => {
     fetch('/api/settings')
       .then(r => r.json())
@@ -137,7 +137,6 @@ export default function SettingsPage() {
     const json = await res.json();
     if (res.ok) {
       setTenant(prev => prev ? { ...prev, themeConfig: json.data.themeConfig } : prev);
-      // Aplicar cambio en tiempo real
       document.documentElement.style.setProperty('--brand-primary', hsl);
       toast.success('Color principal aplicado', { id });
     } else {
@@ -157,14 +156,10 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'hsl(var(--text-primary))', margin: '0 0 4px' }}>
-          Configuración
-        </h1>
-        <p style={{ color: 'hsl(var(--text-secondary))', margin: 0, fontSize: 14 }}>
-          Datos y apariencia de tu barbería
-        </p>
-      </div>
+      <PageHeader
+        title="Configuración"
+        description="Datos y apariencia de tu barbería"
+      />
 
       {/* Plan actual */}
       <Section title="Plan y estado">
@@ -198,25 +193,22 @@ export default function SettingsPage() {
       <Section title="Información del negocio">
         <form onSubmit={handleInfo(onInfoSubmit)}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
-            <div>
-              <Label htmlFor="cfg-name">Nombre del negocio *</Label>
+            <FormField label="Nombre del negocio *" id="cfg-name">
               <Input id="cfg-name" {...regInfo('name', { required: true })} placeholder="Speeddan Barbería" />
-            </div>
-            <div>
-              <Label htmlFor="cfg-email">Email de contacto</Label>
+            </FormField>
+            <FormField label="Email de contacto" id="cfg-email">
               <Input id="cfg-email" type="email" {...regInfo('email')} placeholder="info@barberia.com" />
-            </div>
-            <div>
-              <Label htmlFor="cfg-phone">Teléfono</Label>
+            </FormField>
+            <FormField label="Teléfono" id="cfg-phone">
               <Input id="cfg-phone" {...regInfo('phone')} placeholder="+503 2222-0000" />
-            </div>
-            <div>
-              <Label htmlFor="cfg-city">Ciudad</Label>
+            </FormField>
+            <FormField label="Ciudad" id="cfg-city">
               <Input id="cfg-city" {...regInfo('city')} placeholder="San Salvador" />
-            </div>
+            </FormField>
             <div style={{ gridColumn: '1 / -1' }}>
-              <Label htmlFor="cfg-address">Dirección</Label>
-              <Input id="cfg-address" {...regInfo('address')} placeholder="Calle Principal #123, Col. Centro" />
+              <FormField label="Dirección" id="cfg-address">
+                <Input id="cfg-address" {...regInfo('address')} placeholder="Calle Principal #123, Col. Centro" />
+              </FormField>
             </div>
           </div>
 
@@ -236,13 +228,14 @@ export default function SettingsPage() {
         <form onSubmit={handleTheme(onThemeSubmit)}>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 240 }}>
-              <Label htmlFor="cfg-primary">Color primario (HSL sin hsl())</Label>
-              <Input
-                id="cfg-primary"
-                {...regTheme('brandPrimary')}
-                defaultValue={primaryHSL}
-                placeholder="213 94% 47%"
-              />
+              <FormField label="Color primario (HSL sin hsl())" id="cfg-primary">
+                <Input
+                  id="cfg-primary"
+                  {...regTheme('brandPrimary')}
+                  defaultValue={primaryHSL}
+                  placeholder="213 94% 47%"
+                />
+              </FormField>
               <p style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 4 }}>
                 Formato: <code>H S% L%</code> · Ej: <code>213 94% 47%</code> (azul)
                 · <code>142 70% 45%</code> (verde) · <code>0 72% 51%</code> (rojo)

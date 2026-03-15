@@ -16,7 +16,8 @@ import {
 import AppointmentForm from '@/components/appointments/AppointmentForm';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { PlusIcon, CalendarIcon, ListIcon } from 'lucide-react';
+import { Plus, CalendarDots, List } from '@phosphor-icons/react';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const AppointmentCalendar = dynamic(
   () => import('@/components/appointments/AppointmentCalendar'),
@@ -150,28 +151,23 @@ export default function AppointmentsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'hsl(var(--text-primary))', margin: '0 0 4px' }}>
-            Citas
-          </h1>
-          <p style={{ color: 'hsl(var(--text-secondary))', margin: 0, fontSize: 14 }}>
-            {appointments.length} cita{appointments.length !== 1 ? 's' : ''} total
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant={view === 'calendar' ? 'default' : 'outline'} size="sm" onClick={() => setView('calendar')}>
-            <CalendarIcon /> Calendario
-          </Button>
-          <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')}>
-            <ListIcon /> Lista
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon /> Nueva cita
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Citas"
+        description={`${appointments.length} cita${appointments.length !== 1 ? 's' : ''} total`}
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant={view === 'calendar' ? 'default' : 'outline'} size="sm" onClick={() => setView('calendar')}>
+              <CalendarDots size={15} weight={view === 'calendar' ? 'bold' : 'regular'} /> Calendario
+            </Button>
+            <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')}>
+              <List size={15} weight={view === 'list' ? 'bold' : 'regular'} /> Lista
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus size={15} weight="bold" /> Nueva cita
+            </Button>
+          </div>
+        }
+      />
 
       {loading ? (
         <div style={{ padding: 48, textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Cargando...</div>

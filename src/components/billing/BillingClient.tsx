@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
@@ -21,7 +20,9 @@ import {
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select';
-import { PlusIcon } from 'lucide-react';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { Plus } from '@phosphor-icons/react';
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
         pendienteCount: Math.max(0, prev.pendienteCount - 1),
       }));
       setOpen(false);
-      toast.success(`💳 Pago de $${parseFloat(values.amount).toFixed(2)} registrado`);
+      toast.success(`Pago de $${parseFloat(values.amount).toFixed(2)} registrado`);
     } catch {
       setError('Error de red');
       toast.error('Error de red. Verifica tu conexión.');
@@ -173,8 +174,19 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
 
   return (
     <>
+      <PageHeader
+        title="Caja"
+        description={`${formatMoney(stats.ingresosMes)} este mes · ${stats.pendienteCount} pendiente${stats.pendienteCount !== 1 ? 's' : ''}`}
+        action={unpaid.length > 0 ? (
+          <Button onClick={openRegister}>
+            <Plus size={15} weight="bold" />
+            Registrar pago ({unpaid.length} pendiente{unpaid.length > 1 ? 's' : ''})
+          </Button>
+        ) : undefined}
+      />
+
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Ingresos hoy',   value: formatMoney(stats.ingresosHoy),    color: 'var(--color-success)' },
           { label: 'Ingresos mes',   value: formatMoney(stats.ingresosMes),    color: 'var(--color-success)' },
@@ -197,10 +209,10 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
         ))}
       </div>
 
-      {/* Barra */}
+      {/* Barra de filtros */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <Select value={filterStatus} onValueChange={v => setFilterStatus(v ?? '')}>
-          <SelectTrigger style={{ width: 180 }}>
+          <SelectTrigger style={{ width: 200 }}>
             <SelectValue placeholder="Todos los estados" />
           </SelectTrigger>
           <SelectContent>
@@ -210,21 +222,10 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
             <SelectItem value="REFUNDED">Reembolsados</SelectItem>
           </SelectContent>
         </Select>
-        <div style={{ flex: 1 }} />
-        {unpaid.length > 0 && (
-          <Button onClick={openRegister}>
-            <PlusIcon /> Registrar pago ({unpaid.length} pendiente{unpaid.length > 1 ? 's' : ''})
-          </Button>
-        )}
       </div>
 
       {/* Tabla */}
-      <div style={{
-        background:   'hsl(var(--bg-surface))',
-        border:       '1px solid hsl(var(--border-default))',
-        borderRadius: 'var(--radius-lg)',
-        overflow:     'hidden',
-      }}>
+      <div className="speeddan-card" style={{ overflow: 'hidden' }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -297,8 +298,7 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
           <form onSubmit={handleSubmit(onSubmit)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
 
-              <div>
-                <Label>Cita *</Label>
+              <FormField label="Cita *">
                 <Select value={apptIdVal} onValueChange={onApptSelect}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar cita" />
@@ -311,11 +311,10 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <Label htmlFor="pay-amount">Monto ($) *</Label>
+                <FormField label="Monto ($) *" id="pay-amount">
                   <Input
                     id="pay-amount"
                     type="number"
@@ -324,9 +323,8 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
                     {...register('amount', { required: true })}
                     placeholder="10.00"
                   />
-                </div>
-                <div>
-                  <Label>Método *</Label>
+                </FormField>
+                <FormField label="Método *">
                   <Select value={methodVal} onValueChange={v => setValue('method', v ?? 'CASH')}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Método" />
@@ -338,13 +336,12 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
                       <SelectItem value="QR">QR</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <Label htmlFor="pay-notes">Notas</Label>
+              <FormField label="Notas" id="pay-notes">
                 <Input id="pay-notes" {...register('notes')} placeholder="Observaciones opcionales" />
-              </div>
+              </FormField>
 
               {error && <p style={{ color: 'hsl(var(--destructive))', fontSize: 13 }}>{error}</p>}
             </div>

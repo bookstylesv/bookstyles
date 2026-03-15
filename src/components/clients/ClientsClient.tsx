@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * ClientsClient — CRUD interactivo de clientes.
- * Tabla con historial de citas + diálogo crear/editar.
+ * ClientsClient — CRUD de clientes con componentes reutilizables.
+ * Usa: FormField, EmptyState, ActionButtons, PageHeader.
  */
 
 import { useState } from 'react';
@@ -11,31 +11,18 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
-} from '@/components/ui/table';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
-import { PlusIcon, PencilIcon, TrashIcon, UserIcon } from 'lucide-react';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FormField } from '@/components/shared/FormField';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { ActionButtons } from '@/components/shared/ActionButtons';
+import { MagnifyingGlass, UserCircle, Plus } from '@phosphor-icons/react';
 
 type Client = {
-  id:                number;
-  fullName:          string;
-  email:             string;
-  phone:             string | null;
-  active:            boolean;
-  createdAt:         string;
-  totalAppointments: number;
-  lastVisit:         string | null;
+  id: number; fullName: string; email: string; phone: string | null;
+  active: boolean; createdAt: string; totalAppointments: number; lastVisit: string | null;
 };
-
-type FormValues = {
-  fullName: string;
-  email:    string;
-  phone:    string;
-};
+type FormValues = { fullName: string; email: string; phone: string };
 
 function formatDate(iso: string | null) {
   if (!iso) return '—';
@@ -43,12 +30,12 @@ function formatDate(iso: string | null) {
 }
 
 export default function ClientsClient({ initialClients }: { initialClients: Client[] }) {
-  const [clients, setClients]  = useState<Client[]>(initialClients);
-  const [open, setOpen]         = useState(false);
-  const [editing, setEditing]   = useState<Client | null>(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [search, setSearch]     = useState('');
+  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [open,    setOpen]    = useState(false);
+  const [editing, setEditing] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+  const [search,  setSearch]  = useState('');
 
   const { register, handleSubmit, reset } = useForm<FormValues>();
 
@@ -59,109 +46,58 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
   );
 
   function openCreate() {
-    setEditing(null);
-    reset({ fullName: '', email: '', phone: '' });
-    setError('');
-    setOpen(true);
+    setEditing(null); reset({ fullName: '', email: '', phone: '' }); setError(''); setOpen(true);
   }
-
   function openEdit(c: Client) {
-    setEditing(c);
-    reset({ fullName: c.fullName, email: c.email, phone: c.phone ?? '' });
-    setError('');
-    setOpen(true);
+    setEditing(c); reset({ fullName: c.fullName, email: c.email, phone: c.phone ?? '' }); setError(''); setOpen(true);
   }
 
   async function onSubmit(values: FormValues) {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
-      const body = {
-        fullName: values.fullName.trim(),
-        email:    values.email.trim().toLowerCase(),
-        phone:    values.phone.trim() || undefined,
-      };
-
-      const url    = editing ? `/api/clients/${editing.id}` : '/api/clients';
-      const method = editing ? 'PATCH' : 'POST';
-      const res    = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const body = { fullName: values.fullName.trim(), email: values.email.trim().toLowerCase(), phone: values.phone.trim() || undefined };
+      const url = editing ? `/api/clients/${editing.id}` : '/api/clients';
+      const res = await fetch(url, { method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json();
-      if (!res.ok) {
-        const msg = json.error?.message ?? 'Error al guardar';
-        setError(msg);
-        toast.error(msg);
-        return;
-      }
-
+      if (!res.ok) { const msg = json.error?.message ?? 'Error al guardar'; setError(msg); toast.error(msg); return; }
       if (editing) {
         setClients(prev => prev.map(c => c.id === editing.id ? { ...c, ...json.data } : c));
-        toast.success(`Cliente "${values.fullName.trim()}" actualizado`);
+        toast.success(`"${values.fullName.trim()}" actualizado`);
       } else {
         setClients(prev => [{ ...json.data, totalAppointments: 0, lastVisit: null }, ...prev]);
         toast.success(`Cliente "${values.fullName.trim()}" creado`);
       }
       setOpen(false);
-    } catch {
-      setError('Error de red. Verifica tu conexión.');
-      toast.error('Error de red. Verifica tu conexión.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Error de red'); toast.error('Error de red'); } finally { setLoading(false); }
   }
 
-  async function handleDelete(client: Client) {
-    if (!confirm(`¿Eliminar a "${client.fullName}"?\nSi tiene citas se desactivará en lugar de borrarse.`)) return;
-    const res = await fetch(`/api/clients/${client.id}`, { method: 'DELETE' });
-    if (res.ok) {
-      setClients(prev => prev.filter(c => c.id !== client.id));
-      toast.success(`"${client.fullName}" eliminado`);
-    } else {
-      toast.error('No se pudo eliminar el cliente');
-    }
+  async function handleDelete(c: Client) {
+    if (!confirm(`¿Eliminar a "${c.fullName}"?\nSi tiene citas se desactivará.`)) return;
+    const res = await fetch(`/api/clients/${c.id}`, { method: 'DELETE' });
+    if (res.ok) { setClients(prev => prev.filter(x => x.id !== c.id)); toast.success(`"${c.fullName}" eliminado`); }
+    else toast.error('No se pudo eliminar');
   }
 
-  async function handleToggleActive(client: Client) {
-    const newActive = !client.active;
-    const res = await fetch(`/api/clients/${client.id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ active: newActive }),
-    });
-    if (res.ok) {
-      setClients(prev => prev.map(c => c.id === client.id ? { ...c, active: newActive } : c));
-      toast.success(`${client.fullName} ${newActive ? 'activado' : 'desactivado'}`);
-    } else {
-      toast.error('No se pudo cambiar el estado');
-    }
+  async function toggleActive(c: Client) {
+    const next = !c.active;
+    const res = await fetch(`/api/clients/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: next }) });
+    if (res.ok) { setClients(prev => prev.map(x => x.id === c.id ? { ...x, active: next } : x)); toast.success(`${c.fullName} ${next ? 'activado' : 'desactivado'}`); }
+    else toast.error('No se pudo cambiar el estado');
   }
 
   return (
     <>
       {/* Barra de herramientas */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-        <Input
-          placeholder="Buscar por nombre, email o teléfono…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ maxWidth: 320 }}
-        />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+          <MagnifyingGlass size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--text-muted))' }} />
+          <Input placeholder="Buscar por nombre, email o teléfono…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 32 }} />
+        </div>
         <div style={{ flex: 1 }} />
-        <Button onClick={openCreate}>
-          <PlusIcon /> Nuevo cliente
-        </Button>
+        <Button onClick={openCreate}><Plus size={15} weight="bold" /> Nuevo cliente</Button>
       </div>
 
-      {/* Tabla */}
-      <div style={{
-        background:    'hsl(var(--bg-surface))',
-        border:        '1px solid hsl(var(--border-default))',
-        borderRadius:  'var(--radius-lg)',
-        overflow:      'hidden',
-      }}>
+      <div className="speeddan-card" style={{ overflow: 'hidden' }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -174,59 +110,32 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
+            {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} style={{ textAlign: 'center', color: 'hsl(var(--text-muted))', padding: '40px 0' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <UserIcon size={32} style={{ opacity: 0.3 }} />
-                    <span>{search ? 'Sin resultados para esa búsqueda' : 'Sin clientes registrados'}</span>
-                  </div>
+                <TableCell colSpan={6} style={{ padding: 0 }}>
+                  <EmptyState icon={<UserCircle size={32} weight="thin" />} title={search ? 'Sin resultados' : 'Sin clientes'} description={search ? 'Intenta con otro término de búsqueda' : 'Agrega el primer cliente de tu barbería'} action={!search ? <Button size="sm" onClick={openCreate}>Nuevo cliente</Button> : undefined} />
                 </TableCell>
               </TableRow>
-            )}
-            {filtered.map(c => (
+            ) : filtered.map(c => (
               <TableRow key={c.id} style={{ opacity: c.active ? 1 : 0.55 }}>
                 <TableCell>
                   <div style={{ fontWeight: 500 }}>{c.fullName}</div>
-                  <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 2 }}>
-                    {c.email}
-                  </div>
+                  <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 2 }}>{c.email}</div>
                 </TableCell>
-                <TableCell style={{ color: 'hsl(var(--text-secondary))' }}>
-                  {c.phone ?? '—'}
-                </TableCell>
+                <TableCell style={{ color: 'hsl(var(--text-secondary))' }}>{c.phone ?? '—'}</TableCell>
                 <TableCell>
-                  <span style={{
-                    fontVariantNumeric: 'tabular-nums',
-                    fontWeight: c.totalAppointments > 0 ? 600 : 400,
-                    color: c.totalAppointments > 0
-                      ? 'hsl(var(--text-primary))'
-                      : 'hsl(var(--text-muted))',
-                  }}>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: c.totalAppointments > 0 ? 600 : 400, color: c.totalAppointments > 0 ? 'hsl(var(--text-primary))' : 'hsl(var(--text-muted))' }}>
                     {c.totalAppointments}
                   </span>
                 </TableCell>
-                <TableCell style={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>
-                  {formatDate(c.lastVisit)}
-                </TableCell>
+                <TableCell style={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>{formatDate(c.lastVisit)}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant={c.active ? 'default' : 'secondary'}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleToggleActive(c)}
-                  >
+                  <Badge variant={c.active ? 'default' : 'secondary'} style={{ cursor: 'pointer' }} onClick={() => toggleActive(c)}>
                     {c.active ? 'Activo' : 'Inactivo'}
                   </Badge>
                 </TableCell>
                 <TableCell style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <Button variant="ghost" size="icon-sm" onClick={() => openEdit(c)} title="Editar">
-                      <PencilIcon />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(c)} title="Eliminar">
-                      <TrashIcon className="text-destructive" />
-                    </Button>
-                  </div>
+                  <ActionButtons onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
                 </TableCell>
               </TableRow>
             ))}
@@ -234,62 +143,33 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
         </Table>
       </div>
 
-      {/* Stats footer */}
       {clients.length > 0 && (
-        <p style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 10, textAlign: 'right' }}>
-          {clients.filter(c => c.active).length} activos · {clients.length} total
-          {search && ` · ${filtered.length} mostrados`}
+        <p style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 8, textAlign: 'right' }}>
+          {clients.filter(c => c.active).length} activos · {clients.length} total{search && ` · ${filtered.length} mostrados`}
         </p>
       )}
 
-      {/* Diálogo crear / editar */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={open} onOpenChange={v => { if (!v) setOpen(false); }}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar cliente' : 'Nuevo cliente'}</DialogTitle>
           </DialogHeader>
-
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
-              <div>
-                <Label htmlFor="cli-name">Nombre completo *</Label>
-                <Input
-                  id="cli-name"
-                  {...register('fullName', { required: true })}
-                  placeholder="Juan Pérez"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cli-email">Email *</Label>
-                <Input
-                  id="cli-email"
-                  type="email"
-                  {...register('email', { required: true })}
-                  placeholder="juan@ejemplo.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cli-phone">Teléfono</Label>
-                <Input
-                  id="cli-phone"
-                  {...register('phone')}
-                  placeholder="+503 7000-0000"
-                />
-              </div>
-              {error && (
-                <p style={{ color: 'hsl(var(--destructive))', fontSize: 13, margin: 0 }}>
-                  {error}
-                </p>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
+              <FormField label="Nombre completo *">
+                <Input {...register('fullName', { required: true })} placeholder="Juan Pérez" autoFocus />
+              </FormField>
+              <FormField label="Email *">
+                <Input type="email" {...register('email', { required: true })} placeholder="juan@ejemplo.com" />
+              </FormField>
+              <FormField label="Teléfono">
+                <Input {...register('phone')} placeholder="+503 7000-0000" />
+              </FormField>
+              {error && <p style={{ color: 'hsl(var(--status-error))', fontSize: 13, margin: 0 }}>{error}</p>}
             </div>
-
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear cliente'}
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear cliente'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
