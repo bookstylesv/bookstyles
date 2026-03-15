@@ -90,26 +90,8 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 20px',
-                textDecoration: 'none',
-                color: active
-                  ? 'hsl(var(--brand-primary))'
-                  : 'hsl(var(--sidebar-fg))',
-                background: active
-                  ? 'hsl(var(--brand-primary) / 0.15)'
-                  : 'transparent',
-                borderLeft: active
-                  ? '3px solid hsl(var(--brand-primary))'
-                  : '3px solid transparent',
-                fontSize: 13.5,
-                fontWeight: active ? 600 : 400,
-                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-                cursor: 'pointer',
-              }}
+              className="sidebar-nav-item"
+              data-active={active ? 'true' : undefined}
             >
               <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{item.icon}</span>
               {item.label}
