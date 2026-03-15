@@ -6,13 +6,14 @@
 // Modal nuevo/editar gasto, Drawer gestión de categorías
 // ══════════════════════════════════════════════════════════
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import React from 'react';
 import { toast } from 'sonner';
 import {
   Table, Card, Button, Row, Col,
   Statistic, Tag, Select, Modal, Input,
   Typography, Tabs, Drawer, Space,
-  DatePicker, Popconfirm, Badge, Empty,
+  DatePicker, Badge, Empty,
   Divider, ColorPicker,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -136,6 +137,7 @@ export default function GastosClient({
   const [savingCat,    setSavingCat]    = useState(false);
   const [editCat,      setEditCat]      = useState<Categoria | null>(null);
   const [catError,     setCatError]     = useState('');
+  const drawerFormRef = useRef<HTMLDivElement>(null);
 
   // ── Lista filtrada ──────────────────────────────────────────────────────────
 
@@ -277,6 +279,10 @@ export default function GastosClient({
     setCatColor(c.color);
     setCatDesc(c.descripcion ?? '');
     setCatError('');
+    // Scroll al formulario de edición en el drawer
+    setTimeout(() => {
+      drawerFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   async function handleSaveCat() {
@@ -403,15 +409,19 @@ export default function GastosClient({
             type="text" size="small" icon={<EditOutlined />}
             onClick={() => openEdit(r)}
           />
-          <Popconfirm
-            title="Eliminar gasto"
-            description="Esta acción no se puede deshacer"
-            onConfirm={() => handleDeleteGasto(r.id)}
-            okText="Eliminar" cancelText="Cancelar"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Button
+            type="text" size="small" danger icon={<DeleteOutlined />}
+            onClick={() => {
+              Modal.confirm({
+                title: 'Eliminar gasto',
+                content: 'Esta acción no se puede deshacer.',
+                okText: 'Eliminar',
+                cancelText: 'Cancelar',
+                okButtonProps: { danger: true },
+                onOk: () => handleDeleteGasto(r.id),
+              });
+            }}
+          />
         </Space>
       ),
     },
@@ -762,24 +772,22 @@ export default function GastosClient({
                     type="text" size="small" icon={<EditOutlined />}
                     onClick={() => startEditCat(c)}
                   />
-                  <Popconfirm
-                    title="Eliminar categoría"
-                    description={
-                      c.countGastos > 0
-                        ? `Tiene ${c.countGastos} gasto(s) asociado(s). No se puede eliminar.`
-                        : 'Esta acción no se puede deshacer'
-                    }
-                    onConfirm={() => c.countGastos === 0 ? handleDeleteCat(c.id) : undefined}
-                    okText="Eliminar"
-                    cancelText="Cancelar"
-                    okButtonProps={{ danger: true, disabled: c.countGastos > 0 }}
-                  >
-                    <Button
-                      type="text" size="small" danger
-                      icon={<DeleteOutlined />}
-                      disabled={c.countGastos > 0}
-                    />
-                  </Popconfirm>
+                  <Button
+                    type="text" size="small" danger
+                    icon={<DeleteOutlined />}
+                    disabled={(c.countGastos ?? 0) > 0}
+                    title={(c.countGastos ?? 0) > 0 ? `Tiene ${c.countGastos} gasto(s), no se puede eliminar` : 'Eliminar categoría'}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Eliminar categoría',
+                        content: 'Esta acción no se puede deshacer.',
+                        okText: 'Eliminar',
+                        cancelText: 'Cancelar',
+                        okButtonProps: { danger: true },
+                        onOk: () => handleDeleteCat(c.id),
+                      });
+                    }}
+                  />
                 </Space>
               </div>
             ))}
@@ -789,7 +797,7 @@ export default function GastosClient({
         <Divider />
 
         {/* Formulario nueva / editar categoría */}
-        <div>
+        <div ref={drawerFormRef}>
           <Text strong style={{ fontSize: 13 }}>
             {editCat ? 'Editar categoría' : 'Nueva categoría'}
           </Text>
