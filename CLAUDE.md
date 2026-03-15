@@ -30,7 +30,7 @@ Módulos: Citas, Clientes, Servicios, Barberos, Caja, Dashboard con gráficas.
 ## Infraestructura
 - **Deploy**: Vercel — `speeddan-barberia.vercel.app`
 - **GitHub**: `https://github.com/Developer545/Speeddan_Barber.git`
-- **BD**: Neon PostgreSQL — `ep-odd-shadow-a4dy2id5-pooler.us-east-1.aws.neon.tech/neondb`
+- **BD**: Neon PostgreSQL (connection string en .env.local, NO commitear)
 - Ruta local: `C:\ProjectosDev\Speeddan_Barbería\`
 
 ## Comandos frecuentes
