@@ -106,6 +106,12 @@ model BarberTenant {
   configPlanilla BarberConfigPlanilla[] @relation("ConfigPlanillaTenant")
   planillas      BarberPlanilla[]       @relation("PlanillaTenant")
 
+  // Módulo POS
+  turnos        BarberTurno[]
+  ventas        BarberVenta[]
+  notasCredito  BarberNotaCredito[]
+  correlativos  BarberCorrelativo[]
+
   @@map("barber_tenants")
 }
 
@@ -129,9 +135,13 @@ model BarberUser {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  barberProfile Barber?
-  appointments  BarberAppointment[] @relation("ClientAppointments")
-  sessions      BarberSession[]
+  barberProfile  Barber?
+  appointments   BarberAppointment[] @relation("ClientAppointments")
+  sessions       BarberSession[]
+  // POS
+  turnosAbiertos BarberTurno[]       @relation("TurnoApertura")
+  turnosCerrados BarberTurno[]       @relation("TurnoCierre")
+  ventasCliente  BarberVenta[]       @relation("VentaCliente")
 
   @@unique([email, tenantId])
   @@map("barber_users")
@@ -177,6 +187,7 @@ model Barber {
   appointments   BarberAppointment[]
   reviews        BarberReview[]
   configPlanilla BarberConfigBarbero?
+  detallesVenta  BarberDetalleVenta[]
 
   @@map("barbers")
 }
@@ -216,7 +227,8 @@ model BarberService {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  appointments BarberAppointment[]
+  appointments  BarberAppointment[]
+  detallesVenta BarberDetalleVenta[]
 
   @@map("barber_services")
 }
@@ -569,4 +581,166 @@ model BarberDetallePlanilla {
   insaforp         Decimal        @default(0) @db.Decimal(10, 2)
 
   @@map("barber_detalles_planilla")
+}
+
+// ══════════════════════════════════════════════════════
+// MÓDULO POS — PUNTO DE VENTA
+// ══════════════════════════════════════════════════════
+
+enum BarberTurnoEstado {
+  ABIERTO
+  CERRADO
+}
+
+enum BarberVentaEstado {
+  ACTIVA
+  ANULADA
+}
+
+// Turno de caja — controla apertura/cierre y arqueo
+model BarberTurno {
+  id                      Int               @id @default(autoincrement())
+  tenantId                Int
+  tenant                  BarberTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuarioAperturaId       Int
+  usuarioApertura         BarberUser        @relation("TurnoApertura", fields: [usuarioAperturaId], references: [id])
+  usuarioCierreId         Int?
+  usuarioCierre           BarberUser?       @relation("TurnoCierre", fields: [usuarioCierreId], references: [id])
+  fechaApertura           DateTime          @default(now())
+  fechaCierre             DateTime?
+  montoInicial            Decimal           @default(0) @db.Decimal(10, 2)
+  // Totales por método (calculados al cierre)
+  totalEfectivo           Decimal           @default(0) @db.Decimal(10, 2)
+  totalTarjeta            Decimal           @default(0) @db.Decimal(10, 2)
+  totalTransferencia      Decimal           @default(0) @db.Decimal(10, 2)
+  totalQR                 Decimal           @default(0) @db.Decimal(10, 2)
+  totalVentas             Decimal           @default(0) @db.Decimal(10, 2)
+  cantidadServicios       Int               @default(0)
+  // Arqueo de cierre
+  montoEsperado           Decimal?          @db.Decimal(10, 2) // sistema calcula
+  montoContado            Decimal?          @db.Decimal(10, 2) // cajero cuenta
+  diferencia              Decimal?          @db.Decimal(10, 2) // sobrante(+)/faltante(-)
+  arqueoCaja              Json?             // billetes y monedas: {"billetes":{"100":2,...},"monedas":{"0.25":4,...}}
+  notasCierre             String?
+  estado                  BarberTurnoEstado @default(ABIERTO)
+  createdAt               DateTime          @default(now())
+
+  ventas BarberVenta[]
+
+  @@index([tenantId])
+  @@map("barber_turnos")
+}
+
+// Venta POS — cada transacción del cajero
+model BarberVenta {
+  id               Int               @id @default(autoincrement())
+  tenantId         Int
+  tenant           BarberTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  turnoId          Int
+  turno            BarberTurno       @relation(fields: [turnoId], references: [id])
+  numero           Int               // correlativo interno del tenant
+  // DTE
+  codigoGeneracion String            @unique // UUID v4
+  numeroControl    String?           // DTE-01-XXXX-000000001
+  tipoDte          String            @default("01") // 01=Factura, 03=CCF
+  // Cliente (null = Consumidor Final)
+  clienteId        Int?
+  cliente          BarberUser?       @relation("VentaCliente", fields: [clienteId], references: [id])
+  clienteNombre    String?           // snapshot "Consumidor Final" o nombre
+  clienteDocumento String?           // DUI o NIT
+  clienteNrc       String?           // NRC (solo para CCF)
+  // Totales
+  subtotal         Decimal           @db.Decimal(10, 2)
+  descuentoTotal   Decimal           @default(0) @db.Decimal(10, 2)
+  totalGravado     Decimal           @default(0) @db.Decimal(10, 2)
+  totalExento      Decimal           @default(0) @db.Decimal(10, 2)
+  iva              Decimal           @default(0) @db.Decimal(10, 2)
+  total            Decimal           @db.Decimal(10, 2)
+  // Vínculo con cita (opcional)
+  appointmentId    Int?
+  // Estado y modo
+  estado           BarberVentaEstado @default(ACTIVA)
+  simulada         Boolean           @default(true)
+  motivoAnulacion  String?
+  // Futuro MH
+  selloRecepcion   String?
+  mhEstado         String?
+  createdAt        DateTime          @default(now())
+
+  detalles     BarberDetalleVenta[]
+  pagos        BarberPagoVenta[]
+  notasCredito BarberNotaCredito[]
+
+  @@unique([tenantId, numero])
+  @@index([tenantId])
+  @@index([turnoId])
+  @@map("barber_ventas")
+}
+
+// Línea de detalle — cada servicio con su barbero
+model BarberDetalleVenta {
+  id             Int            @id @default(autoincrement())
+  ventaId        Int
+  venta          BarberVenta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  numItem        Int            // 1, 2, 3...
+  barberoId      Int
+  barbero        Barber         @relation(fields: [barberoId], references: [id])
+  servicioId     Int?
+  servicio       BarberService? @relation(fields: [servicioId], references: [id])
+  descripcion    String         // snapshot del nombre del servicio
+  cantidad       Int            @default(1)
+  precioUnitario Decimal        @db.Decimal(10, 2)
+  descuento      Decimal        @default(0) @db.Decimal(10, 2)
+  subtotal       Decimal        @db.Decimal(10, 2)
+  esGravado      Boolean        @default(false)
+  ivaItem        Decimal        @default(0) @db.Decimal(10, 2)
+
+  @@map("barber_detalles_venta")
+}
+
+// Formas de pago por venta (puede ser mixto)
+model BarberPagoVenta {
+  id         Int                 @id @default(autoincrement())
+  ventaId    Int
+  venta      BarberVenta         @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  metodo     BarberPaymentMethod
+  monto      Decimal             @db.Decimal(10, 2)
+  recibido   Decimal?            @db.Decimal(10, 2) // solo efectivo: cuánto entregó el cliente
+  vuelto     Decimal?            @db.Decimal(10, 2) // recibido - monto
+  referencia String?             // # de tarjeta, # transferencia
+
+  @@map("barber_pagos_venta")
+}
+
+// Nota de Crédito (DTE-05)
+model BarberNotaCredito {
+  id               Int         @id @default(autoincrement())
+  tenantId         Int
+  tenant           BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ventaOriginalId  Int
+  ventaOriginal    BarberVenta @relation(fields: [ventaOriginalId], references: [id])
+  codigoGeneracion String      @unique
+  numeroControl    String?
+  motivo           String
+  total            Decimal     @db.Decimal(10, 2)
+  estado           String      @default("ACTIVA")
+  simulada         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+
+  @@index([tenantId])
+  @@map("barber_notas_credito")
+}
+
+// Correlativo DTE — numeración secuencial por tipo y año fiscal
+model BarberCorrelativo {
+  id         Int          @id @default(autoincrement())
+  tenantId   Int
+  tenant     BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipoDte    String       // "01", "03", "05", "interno"
+  anioFiscal Int
+  siguiente  Int          @default(1)
+
+  @@unique([tenantId, tipoDte, anioFiscal])
+  @@index([tenantId])
+  @@map("barber_correlativos")
 }

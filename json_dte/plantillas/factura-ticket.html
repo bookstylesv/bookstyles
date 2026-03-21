@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Ticket</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Courier New', monospace; font-size:11px; width:72mm; margin:auto; padding:4mm; }
+    .center { text-align:center; }
+    .bold { font-weight:bold; }
+    .lg { font-size:13px; }
+    .sm { font-size:9px; color:#555; }
+    hr { border:none; border-top:1px dashed #333; margin:4px 0; }
+    .linea { display:flex; justify-content:space-between; margin:2px 0; }
+    .linea .desc { flex:1; }
+    .linea .precio { text-align:right; min-width:48px; }
+    .total-row { display:flex; justify-content:space-between; font-weight:bold; font-size:13px; margin-top:4px; }
+    .simulado { text-align:center; border:1px dashed #999; padding:2px; font-size:9px; color:#666; margin:4px 0; }
+    .gracias { text-align:center; margin-top:6px; font-size:10px; }
+  </style>
+</head>
+<body>
+  <div class="center bold lg" id="emisorNombre">Speeddan Barbería</div>
+  <div class="center sm" id="emisorDireccion"></div>
+  <div class="center sm" id="emisorTelefono"></div>
+  <hr/>
+  <div class="center bold" id="tipoDocLabel">FACTURA</div>
+  <div class="center sm" id="numeroControl"></div>
+  <div class="center sm" id="fechaEmision"></div>
+  <hr/>
+  <div class="simulado" id="simuladoBadge" style="display:none">⚠️ DOC. SIMULADO — Sin validez fiscal</div>
+  <div class="sm">Cliente: <span id="receptorNombre">Consumidor Final</span></div>
+  <hr/>
+  <div id="itemsContainer"></div>
+  <hr/>
+  <div class="linea sm"><span>Exento:</span><span id="totalExento">$0.00</span></div>
+  <div class="linea sm"><span>Gravado:</span><span id="totalGravado">$0.00</span></div>
+  <div class="linea sm"><span>IVA 13%:</span><span id="totalIva">$0.00</span></div>
+  <div class="total-row"><span>TOTAL:</span><span id="totalPagar">$0.00</span></div>
+  <hr/>
+  <div id="pagosContainer"></div>
+  <hr/>
+  <div class="gracias">¡Gracias por su visita!</div>
+  <div class="center sm" id="footerFecha"></div>
+
+  <script>
+    const data = window.DTE_DATA || {};
+    function fmt(n){ return '$'+(parseFloat(n)||0).toFixed(2); }
+
+    if(data.emisor){
+      document.getElementById('emisorNombre').textContent = data.emisor.nombre || 'Speeddan Barbería';
+      document.getElementById('emisorDireccion').textContent = data.emisor.direccion || '';
+      document.getElementById('emisorTelefono').textContent = data.emisor.telefono ? 'Tel: '+data.emisor.telefono : '';
+    }
+    if(data.identificacion){
+      const tipos={'01':'FACTURA','03':'CRÉDITO FISCAL','05':'NOTA CRÉDITO'};
+      document.getElementById('tipoDocLabel').textContent = tipos[data.identificacion.tipoDte]||'FACTURA';
+      document.getElementById('numeroControl').textContent = '#'+data.identificacion.numeroControl;
+      document.getElementById('fechaEmision').textContent = data.identificacion.fecEmi+' '+data.identificacion.horEmi;
+    }
+    if(data.simulada) document.getElementById('simuladoBadge').style.display='block';
+    if(data.receptor) document.getElementById('receptorNombre').textContent = data.receptor.nombre||'Consumidor Final';
+
+    const ic = document.getElementById('itemsContainer');
+    (data.cuerpoDocumento||[]).forEach(item=>{
+      const d = document.createElement('div');
+      d.className='linea';
+      d.innerHTML=`<span class="desc">${item.cantidad}x ${item.descripcion}<br><span style="font-size:9px;color:#666">${item.barberoNombre||''}</span></span><span class="precio">${fmt((item.ventaExenta||0)+(item.ventaGravada||0))}</span>`;
+      ic.appendChild(d);
+    });
+
+    if(data.resumen){
+      document.getElementById('totalExento').textContent=fmt(data.resumen.totalExenta||0);
+      document.getElementById('totalGravado').textContent=fmt(data.resumen.totalGravada||0);
+      document.getElementById('totalIva').textContent=fmt(data.resumen.totalIva||0);
+      document.getElementById('totalPagar').textContent=fmt(data.resumen.totalPagar||0);
+    }
+
+    const metodos={'01':'Efectivo','02':'Tarjeta','03':'Transf.','04':'QR'};
+    const pc=document.getElementById('pagosContainer');
+    (data.resumen?.pagos||[]).forEach(p=>{
+      const d=document.createElement('div');
+      d.className='linea sm';
+      d.innerHTML=`<span>${metodos[p.codigo]||p.codigo}:</span><span>${fmt(p.montoPago)}</span>`;
+      if(p.vuelto) d.innerHTML+=`<br><span style="color:#0d9488">Vuelto: ${fmt(p.vuelto)}</span>`;
+      pc.appendChild(d);
+    });
+
+    document.getElementById('footerFecha').textContent='Impreso: '+new Date().toLocaleString('es-SV');
+  </script>
+</body>
+</html>

@@ -30,6 +30,9 @@ import {
   ArrowLineLeft,
   ArrowLineRight,
   SignOut,
+  CashRegister,
+  ClockClockwise,
+  FileText,
 } from '@phosphor-icons/react';
 
 type NavItem = {
@@ -40,20 +43,26 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',    label: 'Inicio',        icon: HouseSimple,  roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/appointments', label: 'Citas',          icon: CalendarDots, roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/barbers',      label: 'Barberos',       icon: Users,        roles: ['OWNER'] },
-  { href: '/services',     label: 'Servicios',      icon: Scissors,     roles: ['OWNER'] },
-  { href: '/clients',      label: 'Clientes',       icon: UserCircle,   roles: ['OWNER', 'BARBER'] },
-  { href: '/billing',      label: 'Caja',           icon: CreditCard,   roles: ['OWNER'] },
-  { href: '/compras',      label: 'Compras',        icon: ShoppingCart, roles: ['OWNER'] },
-  { href: '/proveedores',  label: 'Proveedores',    icon: Truck,        roles: ['OWNER'] },
-  { href: '/inventario',   label: 'Inventario',     icon: Package,        roles: ['OWNER'] },
-  { href: '/gastos',       label: 'Gastos',         icon: Receipt,        roles: ['OWNER'] },
-  { href: '/cxp',          label: 'Cuentas x Pagar',icon: ClockCountdown, roles: ['OWNER'] },
-  { href: '/planilla',     label: 'Planilla',        icon: Money,          roles: ['OWNER'] },
-  { href: '/reviews',      label: 'Reseñas',        icon: Star,           roles: ['OWNER', 'BARBER'] },
-  { href: '/settings',     label: 'Configuración',  icon: Gear,         roles: ['OWNER'] },
+  { href: '/dashboard',      label: 'Inicio',          icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  // ── Operación diaria ──
+  { href: '/pos',            label: 'POS',             icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',  icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-documentos', label: 'Documentos',      icon: FileText,       roles: ['OWNER'] },
+  { href: '/appointments',   label: 'Citas',           icon: CalendarDots,   roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  { href: '/billing',        label: 'Caja (Citas)',    icon: CreditCard,     roles: ['OWNER'] },
+  // ── Catálogos ──
+  { href: '/barbers',        label: 'Barberos',        icon: Users,          roles: ['OWNER'] },
+  { href: '/services',       label: 'Servicios',       icon: Scissors,       roles: ['OWNER'] },
+  { href: '/clients',        label: 'Clientes',        icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
+  // ── Administración ──
+  { href: '/compras',        label: 'Compras',         icon: ShoppingCart,   roles: ['OWNER'] },
+  { href: '/proveedores',    label: 'Proveedores',     icon: Truck,          roles: ['OWNER'] },
+  { href: '/inventario',     label: 'Inventario',      icon: Package,        roles: ['OWNER'] },
+  { href: '/gastos',         label: 'Gastos',          icon: Receipt,        roles: ['OWNER'] },
+  { href: '/cxp',            label: 'Cuentas x Pagar', icon: ClockCountdown, roles: ['OWNER'] },
+  { href: '/planilla',       label: 'Planilla',        icon: Money,          roles: ['OWNER'] },
+  { href: '/reviews',        label: 'Reseñas',         icon: Star,           roles: ['OWNER', 'BARBER'] },
+  { href: '/settings',       label: 'Configuración',   icon: Gear,           roles: ['OWNER'] },
 ];
 
 function getInitials(name: string) {
