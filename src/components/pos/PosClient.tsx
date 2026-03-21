@@ -117,9 +117,12 @@ export default function PosClient({
   // ── Cálculos ────────────────────────────────────────────────────────────────
 
   const subtotal = lineas.reduce((s, l) => s + l.precioUnitario * l.cantidad - l.descuento, 0)
-  const totalPagado = pagos.reduce((s, p) => s + (p.monto || 0), 0)
+  // Pago simple: siempre cubre el total. Pago dividido: suma de los montos ingresados
+  const totalPagado = pagos.length === 1 ? subtotal : pagos.reduce((s, p) => s + (p.monto || 0), 0)
   const diferencia = totalPagado - subtotal
-  const pagoCompleto = Math.abs(diferencia) < 0.01 || diferencia > 0
+  const pagoCompleto = pagos.length === 1
+    ? true  // pago simple siempre cubre (efectivo requiere que recibido >= total si es CASH, pero no bloqueamos el botón)
+    : Math.abs(diferencia) < 0.01 || diferencia > 0
 
   // ── Lineas de venta ─────────────────────────────────────────────────────────
 
@@ -192,6 +195,7 @@ export default function PosClient({
     const metodosUsados = pagos.map(p => p.metodo)
     const siguiente = METODOS.find(m => !metodosUsados.includes(m.key as 'CASH'))
     if (!siguiente) return
+    // El segundo método arranca en 0, el primero se ajusta al resto
     setPagos(prev => [...prev, { key: Date.now().toString(), metodo: siguiente.key as 'CASH', monto: 0 }])
   }
 
@@ -200,8 +204,15 @@ export default function PosClient({
     setPagos(prev => prev.filter(p => p.key !== key))
   }
 
+  // Los billetes establecen el monto RECIBIDO (lo que el cliente entrega físicamente)
   const usarBillete = (pagoKey: string, billete: number) => {
     updatePago(pagoKey, 'recibido', billete)
+  }
+
+  // Cuánto falta por cubrir con los demás métodos
+  const pendientePorPago = (pagoKey: string) => {
+    const otrosPagos = pagos.filter(p => p.key !== pagoKey).reduce((s, p) => s + (p.monto || 0), 0)
+    return Math.max(0, parseFloat((subtotal - otrosPagos).toFixed(2)))
   }
 
   // ── Cobrar ──────────────────────────────────────────────────────────────────
@@ -230,14 +241,18 @@ export default function PosClient({
           descuento: l.descuento,
           esGravado: l.esGravado,
         })),
-        pagos: pagos.map(p => ({
-          metodo: p.metodo,
-          monto: p.monto,
-          recibido: p.metodo === 'CASH' ? p.recibido : undefined,
-          vuelto: p.metodo === 'CASH' && p.recibido && p.recibido > p.monto
-            ? parseFloat((p.recibido - p.monto).toFixed(2)) : undefined,
-          referencia: p.referencia,
-        })),
+        pagos: pagos.map(p => {
+          // En pago simple el monto es el total, en pago dividido el monto lo ingresó el usuario
+          const montoFinal = pagos.length === 1 ? subtotal : p.monto
+          return {
+            metodo: p.metodo,
+            monto: montoFinal,
+            recibido: p.metodo === 'CASH' ? p.recibido : undefined,
+            vuelto: p.metodo === 'CASH' && p.recibido && p.recibido > montoFinal
+              ? parseFloat((p.recibido - montoFinal).toFixed(2)) : undefined,
+            referencia: p.referencia,
+          }
+        }),
       }
 
       const res = await fetch('/api/pos/venta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -517,87 +532,256 @@ export default function PosClient({
               </Col>
             </Row>
 
-            {/* Pagos */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>
-                Forma de pago
-              </div>
-              {pagos.map(p => (
-                <Card key={p.key} size="small" style={{ marginBottom: 6 }}>
-                  <Row gutter={6} align="middle">
-                    <Col span={6}>
-                      <Select size="small" style={{ width: '100%' }} value={p.metodo}
-                        onChange={v => updatePago(p.key, 'metodo', v)}
-                        options={METODOS.map(m => ({ value: m.key, label: m.label }))}
-                      />
-                    </Col>
-                    <Col span={5}>
-                      <InputNumber size="small" prefix="$" style={{ width: '100%' }}
-                        value={p.monto} min={0} precision={2}
-                        onChange={v => updatePago(p.key, 'monto', v || 0)}
-                      />
-                    </Col>
-                    {p.metodo === 'CASH' && (
-                      <>
-                        <Col span={5}>
-                          <InputNumber size="small" prefix="$" placeholder="Recibido" style={{ width: '100%' }}
-                            value={p.recibido} min={0} precision={2}
-                            onChange={v => updatePago(p.key, 'recibido', v || 0)}
-                          />
-                        </Col>
-                        <Col span={5}>
-                          {p.recibido && p.recibido > 0 && (
-                            <Tag color={p.recibido >= p.monto ? 'green' : 'red'} style={{ width: '100%', textAlign: 'center' }}>
-                              Vuelto: {fmt(Math.max(0, (p.recibido || 0) - p.monto))}
-                            </Tag>
-                          )}
-                        </Col>
-                      </>
+            {/* ── Sección de cobro ── */}
+            {(() => {
+              const esPagoSimple = pagos.length === 1
+              const p = pagos[0]
+              const esCash = p.metodo === 'CASH'
+              // Monto efectivo del pago simple = total a pagar
+              const montoEfectivo = esPagoSimple ? subtotal : p.monto
+              const vuelto = esCash && (p.recibido || 0) > 0
+                ? parseFloat((Math.max(0, (p.recibido || 0) - montoEfectivo)).toFixed(2))
+                : 0
+              const clienteEntregaMenos = esCash && (p.recibido || 0) > 0 && (p.recibido || 0) < montoEfectivo
+
+              return (
+                <div style={{ marginBottom: 10 }}>
+
+                  {/* ── Encabezado con método + botón pago dividido ── */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      3 · Cobro
+                    </div>
+                    {pagos.length < 3 && lineas.length > 0 && (
+                      <Button size="small" type="link" icon={<PlusOutlined />} onClick={addPago}
+                        style={{ fontSize: 12, padding: 0, color: '#0d9488' }}>
+                        Dividir pago
+                      </Button>
                     )}
-                    {(p.metodo === 'CARD' || p.metodo === 'TRANSFER') && (
-                      <Col span={10}>
-                        <Input size="small" placeholder="Referencia / # tarjeta"
+                  </div>
+
+                  {/* ── PAGO SIMPLE: un solo método ── */}
+                  {esPagoSimple ? (
+                    <div>
+                      {/* Selector de método — horizontal, tipo segmento */}
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                        {METODOS.map(m => (
+                          <button key={m.key} onClick={() => {
+                            updatePago(p.key, 'metodo', m.key)
+                            updatePago(p.key, 'recibido', undefined)
+                          }} style={{
+                            flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+                            border: p.metodo === m.key ? '2px solid #0d9488' : '1.5px solid #e0e0e0',
+                            background: p.metodo === m.key ? '#f0fdfa' : '#fff',
+                            color: p.metodo === m.key ? '#0d9488' : '#666',
+                            fontWeight: p.metodo === m.key ? 700 : 400,
+                            fontSize: 13, textAlign: 'center', transition: 'all 0.15s',
+                          }}>
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Total a cobrar — prominente */}
+                      {lineas.length > 0 && (
+                        <div style={{
+                          background: '#f6ffed', border: '1.5px solid #b7eb8f',
+                          borderRadius: 10, padding: '10px 16px', marginBottom: 12,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}>
+                          <span style={{ color: '#555', fontSize: 14 }}>Total a cobrar</span>
+                          <span style={{ color: '#0d9488', fontSize: 26, fontWeight: 800 }}>{fmt(subtotal)}</span>
+                        </div>
+                      )}
+
+                      {/* CASH: billetes + campo recibido + vuelto */}
+                      {esCash && lineas.length > 0 && (
+                        <>
+                          <div style={{ marginBottom: 6 }}>
+                            <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginBottom: 6 }}>
+                              ¿Con cuánto paga el cliente?
+                            </div>
+                            {/* Billetes rápidos — más grandes y claros */}
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                              {BILLETES.map(b => {
+                                const activo = p.recibido === b
+                                return (
+                                  <button key={b} onClick={() => usarBillete(p.key, b)} style={{
+                                    flex: '1 1 50px', padding: '8px 0', borderRadius: 8,
+                                    border: activo ? '2px solid #0d9488' : '1.5px solid #d9d9d9',
+                                    background: activo ? '#0d9488' : b >= subtotal ? '#f6ffed' : '#fafafa',
+                                    color: activo ? '#fff' : b >= subtotal ? '#389e0d' : '#555',
+                                    fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                  }}>
+                                    ${b}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            {/* Campo manual */}
+                            <InputNumber
+                              size="large" prefix="$" placeholder="O escribe el monto exacto"
+                              style={{ width: '100%' }}
+                              value={p.recibido || undefined} min={0} precision={2}
+                              onChange={v => updatePago(p.key, 'recibido', v || 0)}
+                            />
+                          </div>
+
+                          {/* Vuelto — la parte más importante, grande y visible */}
+                          {(p.recibido || 0) > 0 && (
+                            <div style={{
+                              borderRadius: 10, padding: '12px 16px', marginTop: 8,
+                              background: clienteEntregaMenos ? '#fff1f0' : '#f0fdfa',
+                              border: `2px solid ${clienteEntregaMenos ? '#ff4d4f' : '#0d9488'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            }}>
+                              {clienteEntregaMenos ? (
+                                <>
+                                  <span style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 14 }}>⚠️ Falta</span>
+                                  <span style={{ color: '#ff4d4f', fontSize: 24, fontWeight: 800 }}>
+                                    {fmt(montoEfectivo - (p.recibido || 0))}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span style={{ color: '#0d9488', fontWeight: 600, fontSize: 14 }}>💰 Vuelto</span>
+                                  <span style={{ color: '#0d9488', fontSize: 28, fontWeight: 800 }}>{fmt(vuelto)}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* CARD / TRANSFER / QR: referencia opcional */}
+                      {(p.metodo === 'CARD' || p.metodo === 'TRANSFER' || p.metodo === 'QR') && lineas.length > 0 && (
+                        <Input size="large" placeholder={
+                          p.metodo === 'CARD' ? 'Referencia o últimos 4 dígitos (opcional)' :
+                          p.metodo === 'TRANSFER' ? 'Número de comprobante (opcional)' :
+                          'Referencia QR (opcional)'
+                        }
+                          prefix="#"
                           value={p.referencia}
                           onChange={e => updatePago(p.key, 'referencia', e.target.value)}
                         />
-                      </Col>
-                    )}
-                    <Col span={2}>
-                      {pagos.length > 1 && (
-                        <Button size="small" type="text" danger icon={<DeleteOutlined />}
-                          onClick={() => removePago(p.key)} />
                       )}
-                    </Col>
-                  </Row>
-                  {p.metodo === 'CASH' && (
-                    <div style={{ marginTop: 6 }}>
-                      <span style={{ fontSize: 11, color: '#888' }}>Billetes: </span>
-                      <Space size={4}>
-                        {BILLETES.map(b => (
-                          <Button key={b} size="small" style={{ padding: '0 6px', fontSize: 11 }}
-                            onClick={() => usarBillete(p.key, b)}>
-                            ${b}
-                          </Button>
-                        ))}
-                      </Space>
+                    </div>
+
+                  ) : (
+                    /* ── PAGO DIVIDIDO: múltiples métodos ── */
+                    <div>
+                      {/* Barra de progreso del cubierto */}
+                      {lineas.length > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                            <span style={{ color: '#555' }}>Cubierto</span>
+                            <span style={{ fontWeight: 700, color: pagoCompleto ? '#0d9488' : '#faad14' }}>
+                              {fmt(totalPagado)} / {fmt(subtotal)}
+                              {pagoCompleto && ' ✅'}
+                            </span>
+                          </div>
+                          <div style={{ background: '#f0f0f0', borderRadius: 6, height: 8, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', borderRadius: 6, transition: 'width 0.3s',
+                              background: pagoCompleto ? '#0d9488' : '#faad14',
+                              width: `${Math.min(100, subtotal > 0 ? (totalPagado / subtotal) * 100 : 0)}%`,
+                            }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {pagos.map((pg, idx) => {
+                        const pendiente = pendientePorPago(pg.key)
+                        const pgVuelto = pg.metodo === 'CASH' && (pg.recibido || 0) > 0
+                          ? Math.max(0, (pg.recibido || 0) - pg.monto)
+                          : 0
+                        const pgFalta = pg.metodo === 'CASH' && (pg.recibido || 0) > 0 && (pg.recibido || 0) < pg.monto
+                        return (
+                          <Card key={pg.key} size="small" style={{ marginBottom: 8, borderColor: '#e8e8e8' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                              {/* Método */}
+                              <Select size="small" style={{ flex: 1 }} value={pg.metodo}
+                                onChange={v => { updatePago(pg.key, 'metodo', v); updatePago(pg.key, 'recibido', undefined) }}
+                                options={METODOS.map(m => ({ value: m.key, label: m.label }))}
+                              />
+                              {/* Monto de este método */}
+                              <InputNumber size="small" prefix="$"
+                                style={{ width: 110 }}
+                                value={pg.monto} min={0} max={subtotal} precision={2}
+                                placeholder="Monto"
+                                onChange={v => updatePago(pg.key, 'monto', v || 0)}
+                                addonAfter={
+                                  <span style={{ fontSize: 10, color: '#0d9488', cursor: 'pointer' }}
+                                    onClick={() => updatePago(pg.key, 'monto', pendiente)}
+                                    title="Usar el restante">
+                                    Resto
+                                  </span>
+                                }
+                              />
+                              {pagos.length > 1 && (
+                                <Button size="small" type="text" danger icon={<DeleteOutlined />}
+                                  onClick={() => removePago(pg.key)} />
+                              )}
+                            </div>
+
+                            {/* Cash dentro de pago dividido */}
+                            {pg.metodo === 'CASH' && (
+                              <>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>El cliente entrega:</div>
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                                  {BILLETES.map(b => (
+                                    <button key={b} onClick={() => usarBillete(pg.key, b)} style={{
+                                      flex: '1 1 36px', padding: '5px 2px', borderRadius: 6,
+                                      border: pg.recibido === b ? '2px solid #0d9488' : '1px solid #d9d9d9',
+                                      background: pg.recibido === b ? '#0d9488' : '#fafafa',
+                                      color: pg.recibido === b ? '#fff' : '#555',
+                                      fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                                    }}>
+                                      ${b}
+                                    </button>
+                                  ))}
+                                </div>
+                                <InputNumber size="small" prefix="$" placeholder="O monto exacto"
+                                  style={{ width: '100%', marginBottom: 4 }}
+                                  value={pg.recibido || undefined} min={0} precision={2}
+                                  onChange={v => updatePago(pg.key, 'recibido', v || 0)}
+                                />
+                                {(pg.recibido || 0) > 0 && (
+                                  <div style={{
+                                    padding: '6px 12px', borderRadius: 8, marginTop: 4, textAlign: 'right',
+                                    background: pgFalta ? '#fff1f0' : '#f0fdfa',
+                                    border: `1.5px solid ${pgFalta ? '#ff4d4f' : '#0d9488'}`,
+                                  }}>
+                                    <span style={{ color: pgFalta ? '#ff4d4f' : '#0d9488', fontWeight: 700 }}>
+                                      {pgFalta ? `⚠️ Falta ${fmt(pg.monto - (pg.recibido || 0))}` : `💰 Vuelto ${fmt(pgVuelto)}`}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {(pg.metodo === 'CARD' || pg.metodo === 'TRANSFER' || pg.metodo === 'QR') && (
+                              <Input size="small" prefix="#"
+                                placeholder={pg.metodo === 'CARD' ? 'Últimos 4 dígitos (opcional)' : 'Comprobante (opcional)'}
+                                value={pg.referencia}
+                                onChange={e => updatePago(pg.key, 'referencia', e.target.value)}
+                              />
+                            )}
+                          </Card>
+                        )
+                      })}
+
+                      {pagos.length < 3 && (
+                        <Button size="small" type="dashed" block icon={<PlusOutlined />} onClick={addPago}
+                          style={{ marginTop: 4 }}>
+                          + Agregar otro método
+                        </Button>
+                      )}
                     </div>
                   )}
-                </Card>
-              ))}
-
-              {pagos.length < 4 && (
-                <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addPago}>
-                  Agregar otro método
-                </Button>
-              )}
-
-              {lineas.length > 0 && (
-                <div style={{ textAlign: 'right', marginTop: 6, fontSize: 12 }}>
-                  Cubierto: <b style={{ color: pagoCompleto ? '#0d9488' : '#ff4d4f' }}>{fmt(totalPagado)}</b> / {fmt(subtotal)}
-                  {diferencia > 0.01 && <span style={{ color: '#888', marginLeft: 8 }}>(Vuelto total: {fmt(diferencia)})</span>}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             {/* Factura (opcional) */}
             <div style={{ marginBottom: 12 }}>
