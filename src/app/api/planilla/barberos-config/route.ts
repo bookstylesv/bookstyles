@@ -11,20 +11,26 @@ export async function GET() {
     salarioBase:        cfg.salarioBase.toNumber(),
     valorPorUnidad:     cfg.valorPorUnidad.toNumber(),
     porcentajeServicio: cfg.porcentajeServicio.toNumber(),
+    fechaIngreso:       cfg.fechaIngreso?.toISOString() ?? null,
   })));
 }
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== 'OWNER') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const { barberoId, tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta } = await req.json();
+
+  const { barberoId, tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta, fechaIngreso } = await req.json();
+
   const result = await upsertConfigBarbero(user.tenantId, barberoId, {
-    tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta
+    tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta,
+    fechaIngreso: fechaIngreso ? new Date(fechaIngreso) : null,
   });
+
   return NextResponse.json({
     ...result,
-    salarioBase: result.salarioBase.toNumber(),
-    valorPorUnidad: result.valorPorUnidad.toNumber(),
+    salarioBase:        result.salarioBase.toNumber(),
+    valorPorUnidad:     result.valorPorUnidad.toNumber(),
     porcentajeServicio: result.porcentajeServicio.toNumber(),
+    fechaIngreso:       result.fechaIngreso?.toISOString() ?? null,
   });
 }

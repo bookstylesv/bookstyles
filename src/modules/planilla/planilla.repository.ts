@@ -52,6 +52,7 @@ export async function upsertConfigBarbero(
     valorPorUnidad: number;
     porcentajeServicio: number;
     aplicaRenta: boolean;
+    fechaIngreso?: Date | null;
   }
 ) {
   return prisma.barberConfigBarbero.upsert({
@@ -115,15 +116,14 @@ export async function eliminarPlanilla(tenantId: number, id: number) {
   return prisma.barberPlanilla.delete({ where: { id } });
 }
 
-// ── Barberos activos con su config para generar planilla
+// ── Barberos activos con su config para generar planilla / prestaciones
 export async function getBarberosParaPlanilla(tenantId: number) {
-  const barberos = await prisma.barber.findMany({
+  return prisma.barber.findMany({
     where:   { tenantId, active: true },
     include: {
-      user:          { select: { fullName: true } },
+      user:           { select: { fullName: true } },
       configPlanilla: true,
     },
     orderBy: { user: { fullName: 'asc' } },
   });
-  return barberos;
 }

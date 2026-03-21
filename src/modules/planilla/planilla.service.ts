@@ -112,6 +112,89 @@ export function buildConfigMap(rows: Array<{ clave: string; valor: { toNumber():
   return map as unknown as ConfigPlanillaMap;
 }
 
+// ── Aguinaldo (Art. 196-202 Código de Trabajo El Salvador) ──────────────────
+// Escala: 1-3 años → 15 días | 3-10 años → 19 días | ≥10 años → 21 días
+export function calcularAguinaldo(
+  salarioMensual: number,
+  fechaIngreso: Date,
+  fechaCorte: Date,
+  otorgarCompleto = false
+): { monto: number; dias: number; esProporcional: boolean; mesesTrabajados: number; antiguedadAnios: number } {
+  const meses = mesesEntre(fechaIngreso, fechaCorte);
+  const anios  = meses / 12;
+
+  let dias = 0;
+  let esProporcional = false;
+
+  if (meses < 12 && !otorgarCompleto) {
+    // Menos de un año: proporcional a 15 días
+    dias = round2((meses / 12) * 15);
+    esProporcional = true;
+  } else {
+    if (anios < 3)       dias = 15;
+    else if (anios < 10) dias = 19;
+    else                  dias = 21;
+  }
+
+  const monto = round2((salarioMensual / 30) * dias);
+  return { monto, dias, esProporcional, mesesTrabajados: Math.floor(meses), antiguedadAnios: Math.floor(anios) };
+}
+
+// ── Vacaciones (Art. 177 Código de Trabajo El Salvador) ──────────────────────
+// 15 días de vacaciones + 30% recargo sobre el salario de esos días
+export function calcularVacaciones(
+  salarioMensual: number,
+  fechaIngreso: Date,
+  fechaCorte: Date
+): { monto: number; dias: number; esProporcional: boolean; mesesTrabajados: number } {
+  const meses = mesesEntre(fechaIngreso, fechaCorte);
+  let dias = 15;
+  let esProporcional = false;
+
+  if (meses < 12) {
+    dias = round2((meses / 12) * 15);
+    esProporcional = true;
+  }
+
+  const salarioDiario = salarioMensual / 30;
+  const monto = round2(salarioDiario * dias * 1.30); // +30% recargo
+  return { monto, dias, esProporcional, mesesTrabajados: Math.floor(meses) };
+}
+
+// ── Quincena 25 (Decreto Legislativo 499 — vigente desde enero 2027) ─────────
+// 50% del salario mensual para empleados con salario ≤ $1,500
+// Se paga el 25 de enero de cada año
+export function calcularQuincena25(
+  salarioMensual: number,
+  fechaIngreso: Date,
+  anio: number
+): { monto: number; aplica: boolean; esProporcional: boolean; mesesTrabajados: number } {
+  const TOPE_QUINCENA25 = 1500;
+  if (salarioMensual > TOPE_QUINCENA25) {
+    return { monto: 0, aplica: false, esProporcional: false, mesesTrabajados: 0 };
+  }
+
+  const fechaCorte = new Date(anio, 0, 25); // 25 de enero del año indicado
+  const meses = mesesEntre(fechaIngreso, fechaCorte);
+  let monto = round2(salarioMensual * 0.5);
+  let esProporcional = false;
+
+  if (meses < 12) {
+    monto = round2((meses / 12) * salarioMensual * 0.5);
+    esProporcional = true;
+  }
+
+  return { monto, aplica: true, esProporcional, mesesTrabajados: Math.floor(meses) };
+}
+
+// ── Helpers internos ──────────────────────────────────────────────────────────
+function mesesEntre(desde: Date, hasta: Date): number {
+  const anios  = hasta.getFullYear() - desde.getFullYear();
+  const meses  = hasta.getMonth()    - desde.getMonth();
+  const dias   = hasta.getDate()     - desde.getDate();
+  return Math.max(0, anios * 12 + meses + (dias < 0 ? -1 : 0));
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

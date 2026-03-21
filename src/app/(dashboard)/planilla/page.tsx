@@ -42,6 +42,7 @@ export default async function PlanillaPage() {
     id:                 b.id,
     nombre:             b.user.fullName,
     tipoPago:           b.configPlanilla?.tipoPago ?? null,
+    fechaIngreso:       b.configPlanilla?.fechaIngreso?.toISOString() ?? null,
     salarioBase:        b.configPlanilla?.salarioBase.toNumber() ?? 0,
     valorPorUnidad:     b.configPlanilla?.valorPorUnidad.toNumber() ?? 0,
     porcentajeServicio: b.configPlanilla?.porcentajeServicio.toNumber() ?? 0,

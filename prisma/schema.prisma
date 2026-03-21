@@ -507,17 +507,18 @@ model BarberConfigPlanilla {
 }
 
 model BarberConfigBarbero {
-  id                 Int     @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   tenantId           Int
-  barberoId          Int     @unique
-  barbero            Barber  @relation(fields: [barberoId], references: [id], onDelete: Cascade)
-  tipoPago           String  @default("FIJO")  // FIJO | POR_DIA | POR_SEMANA | POR_HORA | POR_SERVICIO
-  salarioBase        Decimal @default(0) @db.Decimal(10, 2)
-  valorPorUnidad     Decimal @default(0) @db.Decimal(10, 2)
-  porcentajeServicio Decimal @default(0) @db.Decimal(5, 2)
-  aplicaRenta        Boolean @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  barberoId          Int       @unique
+  barbero            Barber    @relation(fields: [barberoId], references: [id], onDelete: Cascade)
+  tipoPago           String    @default("FIJO")  // FIJO | POR_DIA | POR_SEMANA | POR_HORA | POR_SERVICIO
+  salarioBase        Decimal   @default(0) @db.Decimal(10, 2)
+  valorPorUnidad     Decimal   @default(0) @db.Decimal(10, 2)
+  porcentajeServicio Decimal   @default(0) @db.Decimal(5, 2)
+  aplicaRenta        Boolean   @default(true)
+  fechaIngreso       DateTime? // fecha de contratación (para aguinaldo/vacaciones/quincena25)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([tenantId])
   @@map("barber_config_barbero")
