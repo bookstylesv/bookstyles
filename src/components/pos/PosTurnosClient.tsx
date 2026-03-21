@@ -210,17 +210,17 @@ export default function PosTurnosClient({
 
       {/* KPIs turno activo */}
       {turno && (
-        <Row gutter={12} style={{ marginBottom: 16 }}>
+        <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
           {[
             { title: 'Fondo inicial', value: turno.montoInicial, prefix: '$' },
             { title: 'Ventas hoy', value: turno.totalVentasCount },
-            { title: 'Efectivo ventas', value: turno.totalEfectivo, prefix: '$' },
+            { title: 'Efectivo', value: turno.totalEfectivo, prefix: '$' },
             { title: 'Tarjeta', value: turno.totalTarjeta, prefix: '$' },
           ].map((k, i) => (
-            <Col span={6} key={i}>
+            <Col xs={12} sm={12} md={6} key={i}>
               <Card size="small">
                 <Statistic title={k.title} value={k.value} prefix={k.prefix} precision={k.prefix ? 2 : 0}
-                  valueStyle={{ color: '#0d9488' }} />
+                  valueStyle={{ color: '#0d9488', fontSize: 'clamp(16px, 4vw, 24px)' }} />
               </Card>
             </Col>
           ))}
@@ -229,13 +229,16 @@ export default function PosTurnosClient({
 
       {/* Historial */}
       <Card title="📋 Historial de Turnos" size="small">
-        <Table
-          dataSource={historial}
-          columns={columns}
-          rowKey="id"
-          size="small"
-          pagination={{ pageSize: 15 }}
-        />
+        <div style={{ overflowX: 'auto' }}>
+          <Table
+            dataSource={historial}
+            columns={columns}
+            rowKey="id"
+            size="small"
+            scroll={{ x: 700 }}
+            pagination={{ pageSize: 15, size: 'small' }}
+          />
+        </div>
       </Card>
 
       {/* Modal abrir turno */}
@@ -277,35 +280,35 @@ export default function PosTurnosClient({
           <>
             {/* Resumen sistema */}
             <Card size="small" style={{ marginBottom: 16, background: '#f0fdfa' }}>
-              <Row gutter={12}>
-                <Col span={8}>
+              <Row gutter={[8, 8]}>
+                <Col xs={12} md={8}>
                   <Statistic title="Fondo inicial" value={turno.montoInicial} prefix="$" precision={2} />
                 </Col>
-                <Col span={8}>
+                <Col xs={12} md={8}>
                   <Statistic title="+ Ventas efectivo" value={turno.totalEfectivo} prefix="$" precision={2} />
                 </Col>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Statistic title="= Esperado en caja" value={(turno.montoInicial || 0) + (turno.totalEfectivo || 0)}
                     prefix="$" precision={2} valueStyle={{ color: '#0d9488', fontWeight: 700 }} />
                 </Col>
               </Row>
               <Divider style={{ margin: '8px 0' }} />
-              <Row gutter={12}>
-                <Col span={8}>
+              <Row gutter={[8, 8]}>
+                <Col xs={8}>
                   <Statistic title="💳 Tarjeta" value={turno.totalTarjeta} prefix="$" precision={2} />
                 </Col>
-                <Col span={8}>
-                  <Statistic title="🏦 Transferencia" value={turno.totalTransferencia} prefix="$" precision={2} />
+                <Col xs={8}>
+                  <Statistic title="🏦 Transfer." value={turno.totalTransferencia} prefix="$" precision={2} />
                 </Col>
-                <Col span={8}>
+                <Col xs={8}>
                   <Statistic title="📱 QR" value={turno.totalQR} prefix="$" precision={2} />
                 </Col>
               </Row>
             </Card>
 
             {/* Arqueo físico */}
-            <Row gutter={12}>
-              <Col span={12}>
+            <Row gutter={[8, 16]}>
+              <Col xs={24} sm={12}>
                 <b>Billetes</b>
                 <table style={{ width: '100%', marginTop: 8 }}>
                   <thead>
@@ -323,7 +326,7 @@ export default function PosTurnosClient({
                           <td style={{ padding: '3px 0', fontSize: 12 }}>${b}.00</td>
                           <td style={{ textAlign: 'center' }}>
                             <InputNumber
-                              size="small" style={{ width: 60 }} min={0}
+                              size="small" style={{ width: '100%', maxWidth: 80 }} min={0}
                               value={cant || undefined}
                               onChange={v => setArqueoBilletes(prev => ({ ...prev, [String(b)]: v || 0 }))}
                             />
@@ -344,7 +347,7 @@ export default function PosTurnosClient({
                 </table>
               </Col>
 
-              <Col span={12}>
+              <Col xs={24} sm={12}>
                 <b>Monedas</b>
                 <table style={{ width: '100%', marginTop: 8 }}>
                   <thead>
@@ -362,7 +365,7 @@ export default function PosTurnosClient({
                           <td style={{ padding: '3px 0', fontSize: 12 }}>${m.toFixed(2)}</td>
                           <td style={{ textAlign: 'center' }}>
                             <InputNumber
-                              size="small" style={{ width: 60 }} min={0}
+                              size="small" style={{ width: '100%', maxWidth: 80 }} min={0}
                               value={cant || undefined}
                               onChange={v => setArqueoMonedas(prev => ({ ...prev, [String(m)]: v || 0 }))}
                             />

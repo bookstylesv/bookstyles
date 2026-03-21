@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <AntdProvider>
       <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--bg-page))' }}>
         <DashboardSidebar role={user.role} slug={user.slug} name={user.name} />
-        <main style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
+        <main style={{ flex: 1, overflow: 'auto', minWidth: 0, padding: 'clamp(12px, 3vw, 24px) clamp(12px, 3vw, 32px)' }}>
           {children}
         </main>
       </div>

@@ -269,20 +269,20 @@ export default function PosDocumentosClient({
   ]
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 'clamp(12px, 3vw, 24px)' }}>
       {/* KPIs */}
-      <Row gutter={12} style={{ marginBottom: 16 }}>
+      <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
         {[
           { title: 'Total facturado', value: totalActivas, prefix: '$', precision: 2 },
           { title: 'IVA generado', value: totalIva, prefix: '$', precision: 2 },
-          { title: 'Documentos activos', value: ventas.filter(v => v.estado === 'ACTIVA').length },
+          { title: 'Docs. activos', value: ventas.filter(v => v.estado === 'ACTIVA').length },
           { title: 'Anulados', value: countAnuladas },
           { title: 'Notas de Crédito', value: nc.length },
         ].map((k, i) => (
-          <Col span={Math.floor(24 / 5)} key={i}>
+          <Col xs={12} sm={12} md={8} lg={Math.floor(24 / 5)} key={i}>
             <Card size="small">
               <Statistic title={k.title} value={k.value} prefix={k.prefix} precision={k.precision || 0}
-                valueStyle={{ color: '#0d9488' }} />
+                valueStyle={{ color: '#0d9488', fontSize: 'clamp(16px, 4vw, 24px)' }} />
             </Card>
           </Col>
         ))}
@@ -294,13 +294,13 @@ export default function PosDocumentosClient({
             key: 'ventas',
             label: `Facturas / CCF (${ventas.length})`,
             children: (
-              <Card size="small">
-                <Row gutter={8} style={{ marginBottom: 12 }}>
-                  <Col span={10}>
+              <Card size="small" bodyStyle={{ padding: 'clamp(8px, 2vw, 16px)' }}>
+                <Row gutter={[8, 8]} style={{ marginBottom: 12 }}>
+                  <Col xs={24} md={10}>
                     <Input.Search placeholder="Buscar # venta, cliente, código..." value={search}
                       onChange={e => setSearch(e.target.value)} />
                   </Col>
-                  <Col span={6}>
+                  <Col xs={12} md={6}>
                     <Select placeholder="Tipo" allowClear style={{ width: '100%' }}
                       value={filtroTipo || undefined}
                       onChange={v => setFiltroTipo(v || '')}
@@ -310,7 +310,7 @@ export default function PosDocumentosClient({
                       ]}
                     />
                   </Col>
-                  <Col span={6}>
+                  <Col xs={12} md={6}>
                     <Select placeholder="Estado" allowClear style={{ width: '100%' }}
                       value={filtroEstado || undefined}
                       onChange={v => setFiltroEstado(v || '')}
@@ -321,26 +321,29 @@ export default function PosDocumentosClient({
                     />
                   </Col>
                 </Row>
-                <Table
-                  dataSource={ventasFiltradas}
-                  columns={columnas}
-                  rowKey="id"
-                  size="small"
-                  pagination={{ pageSize: 20 }}
-                  rowClassName={r => r.estado === 'ANULADA' ? 'opacity-50' : ''}
-                  expandable={{
-                    expandedRowRender: (r: Venta) => (
-                      <Descriptions size="small" column={3} bordered>
-                        <Descriptions.Item label="Código generación" span={3}>
-                          <code style={{ fontSize: 11 }}>{r.codigoGeneracion}</code>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="N° Control">{r.numeroControl || 'SIM'}</Descriptions.Item>
-                        <Descriptions.Item label="Tipo">{TIPO_LABEL[r.tipoDte]}</Descriptions.Item>
-                        <Descriptions.Item label="Simulado">{r.simulada ? 'Sí' : 'No'}</Descriptions.Item>
-                      </Descriptions>
-                    ),
-                  }}
-                />
+                <div style={{ overflowX: 'auto' }}>
+                  <Table
+                    dataSource={ventasFiltradas}
+                    columns={columnas}
+                    rowKey="id"
+                    size="small"
+                    scroll={{ x: 800 }}
+                    pagination={{ pageSize: 20, size: 'small' }}
+                    rowClassName={r => r.estado === 'ANULADA' ? 'opacity-50' : ''}
+                    expandable={{
+                      expandedRowRender: (r: Venta) => (
+                        <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
+                          <Descriptions.Item label="Código generación" span={3}>
+                            <code style={{ fontSize: 10, wordBreak: 'break-all' }}>{r.codigoGeneracion}</code>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="N° Control">{r.numeroControl || 'SIM'}</Descriptions.Item>
+                          <Descriptions.Item label="Tipo">{TIPO_LABEL[r.tipoDte]}</Descriptions.Item>
+                          <Descriptions.Item label="Simulado">{r.simulada ? 'Sí' : 'No'}</Descriptions.Item>
+                        </Descriptions>
+                      ),
+                    }}
+                  />
+                </div>
               </Card>
             ),
           },
@@ -349,7 +352,10 @@ export default function PosDocumentosClient({
             label: `Notas de Crédito (${nc.length})`,
             children: (
               <Card size="small">
-                <Table dataSource={nc} columns={columnasNC} rowKey="id" size="small" pagination={{ pageSize: 20 }} />
+                <div style={{ overflowX: 'auto' }}>
+                  <Table dataSource={nc} columns={columnasNC} rowKey="id" size="small"
+                    scroll={{ x: 600 }} pagination={{ pageSize: 20, size: 'small' }} />
+                </div>
               </Card>
             ),
           },

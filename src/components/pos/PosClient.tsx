@@ -297,7 +297,7 @@ export default function PosClient({
   // ── UI principal ────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: '16px', background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(8px, 2vw, 16px)', background: '#f5f5f5', minHeight: '100vh' }}>
 
       {/* Header turno */}
       <Card size="small" style={{ marginBottom: 12, borderColor: '#0d9488' }} bodyStyle={{ padding: '8px 16px' }}>
@@ -422,9 +422,9 @@ export default function PosClient({
 
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(120px, 44%), 1fr))',
                       gap: 6,
-                      maxHeight: 220,
+                      maxHeight: 'clamp(160px, 30vh, 240px)',
                       overflowY: 'auto',
                       padding: '2px 2px 4px',
                     }}>
@@ -466,11 +466,12 @@ export default function PosClient({
               <div style={{ marginBottom: 8 }}>
                 {lineas.map((l, idx) => (
                   <Card key={l.key} size="small" style={{ marginBottom: 6, background: '#fafafa' }}>
-                    <Row gutter={6} align="middle">
-                      <Col span={1}>
+                    {/* Fila 1: número + barbero + servicio */}
+                    <Row gutter={6} align="middle" style={{ marginBottom: 4 }}>
+                      <Col flex="20px">
                         <span style={{ color: '#888', fontSize: 11 }}>{idx + 1}</span>
                       </Col>
-                      <Col span={6}>
+                      <Col flex="1">
                         <Select
                           size="small" placeholder="Barbero" style={{ width: '100%' }}
                           value={l.barberoId}
@@ -482,7 +483,7 @@ export default function PosClient({
                           options={barberosProp.map(b => ({ value: b.id, label: '✂️ ' + b.nombre }))}
                         />
                       </Col>
-                      <Col span={7}>
+                      <Col flex="1">
                         <Select
                           size="small" showSearch placeholder="Servicio" style={{ width: '100%' }}
                           value={l.servicioId}
@@ -490,26 +491,30 @@ export default function PosClient({
                           options={serviciosProp.map(s => ({ value: s.id, label: s.name + ' ' + fmt(s.price) }))}
                         />
                       </Col>
-                      <Col span={4}>
+                    </Row>
+                    {/* Fila 2: precio + descuento + total + borrar */}
+                    <Row gutter={6} align="middle">
+                      <Col flex="20px" />
+                      <Col flex="1">
                         <InputNumber
                           size="small" prefix="$" style={{ width: '100%' }}
                           value={l.precioUnitario} min={0} precision={2}
                           onChange={v => updateLinea(l.key, 'precioUnitario', v || 0)}
                         />
                       </Col>
-                      <Col span={3}>
+                      <Col flex="1">
                         <InputNumber
                           size="small" prefix="$" placeholder="Desc." style={{ width: '100%' }}
                           value={l.descuento || undefined} min={0} precision={2}
                           onChange={v => updateLinea(l.key, 'descuento', v || 0)}
                         />
                       </Col>
-                      <Col span={2} style={{ textAlign: 'right' }}>
-                        <span style={{ fontWeight: 600, color: '#0d9488' }}>
+                      <Col style={{ textAlign: 'right', minWidth: 60 }}>
+                        <span style={{ fontWeight: 700, color: '#0d9488', fontSize: 13 }}>
                           {fmt(l.precioUnitario * l.cantidad - l.descuento)}
                         </span>
                       </Col>
-                      <Col span={1}>
+                      <Col flex="28px">
                         <Button size="small" type="text" danger icon={<DeleteOutlined />}
                           onClick={() => removeLinea(l.key)} />
                       </Col>
@@ -571,12 +576,13 @@ export default function PosClient({
                             updatePago(p.key, 'metodo', m.key)
                             updatePago(p.key, 'recibido', undefined)
                           }} style={{
-                            flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+                            flex: 1, padding: 'clamp(5px, 1.5vw, 8px) 2px', borderRadius: 8, cursor: 'pointer',
                             border: p.metodo === m.key ? '2px solid #0d9488' : '1.5px solid #e0e0e0',
                             background: p.metodo === m.key ? '#f0fdfa' : '#fff',
                             color: p.metodo === m.key ? '#0d9488' : '#666',
                             fontWeight: p.metodo === m.key ? 700 : 400,
-                            fontSize: 13, textAlign: 'center', transition: 'all 0.15s',
+                            fontSize: 'clamp(10px, 2.5vw, 13px)', textAlign: 'center', transition: 'all 0.15s',
+                            lineHeight: 1.2,
                           }}>
                             {m.label}
                           </button>

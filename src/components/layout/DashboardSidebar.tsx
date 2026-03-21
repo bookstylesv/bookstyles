@@ -4,7 +4,7 @@
  * DashboardSidebar — Sidebar profesional con Phosphor Icons + colapso.
  * - Phosphor Icons: Regular/Bold según estado activo
  * - Colapsable: 240px ↔ 64px con transición CSS suave
- * - Estado persistido en localStorage 'sb_collapsed'
+ * - Estado persistido en localStorage 'sb_effectiveCollapsed'
  * - Tooltips nativos (title) en modo colapsado
  */
 
@@ -78,24 +78,53 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [mounted,   setMounted]   = useState(false);
+  const [isMobile,  setIsMobile]  = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    if (localStorage.getItem('sb_collapsed') === 'true') setCollapsed(true);
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setCollapsed(true);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    if (!window.matchMedia('(max-width: 767px)').matches) {
+      if (localStorage.getItem('sb_collapsed') === 'true') setCollapsed(true);
+    }
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   function toggle() {
-    setCollapsed(prev => {
-      localStorage.setItem('sb_collapsed', String(!prev));
-      return !prev;
-    });
+    if (isMobile) {
+      setMobileOpen(prev => !prev);
+    } else {
+      setCollapsed(prev => {
+        localStorage.setItem('sb_collapsed', String(!prev));
+        return !prev;
+      });
+    }
   }
 
-  const W = collapsed ? 64 : 240;
+  // En móvil siempre colapsado; el drawer lo expande flotando sobre el contenido
+  const W = isMobile ? 64 : (collapsed ? 64 : 240);
+  const effectiveCollapsed = isMobile ? !mobileOpen : collapsed;
 
   return (
+    <>
+      {/* Overlay oscuro en móvil cuando el drawer está abierto */}
+      {isMobile && mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            zIndex: 99, backdropFilter: 'blur(1px)',
+          }}
+        />
+      )}
     <aside style={{
-      width:         W,
+      width:         isMobile && mobileOpen ? 240 : W,
       minHeight:     '100vh',
       background:    'hsl(var(--sidebar-bg))',
       borderRight:   '1px solid hsl(var(--sidebar-border))',
@@ -104,16 +133,20 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
       flexShrink:    0,
       transition:    mounted ? 'width 0.22s ease' : 'none',
       overflow:      'hidden',
+      // En móvil, el sidebar abierto flota sobre el contenido
+      ...(isMobile && mobileOpen ? {
+        position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100,
+      } : {}),
     }}>
 
       {/* ── Logo ─────────────────────────────────────────────────────────── */}
       <div style={{
-        padding:        collapsed ? '20px 0' : '18px 16px',
+        padding:        effectiveCollapsed ? '20px 0' : '18px 16px',
         borderBottom:   '1px solid hsl(var(--sidebar-border))',
         display:        'flex',
         alignItems:     'center',
         gap:            10,
-        justifyContent: collapsed ? 'center' : 'flex-start',
+        justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
       }}>
         <div style={{
           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
@@ -122,7 +155,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
         }}>
           <Scissors size={17} weight="bold" color="#fff" />
         </div>
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ overflow: 'hidden' }}>
             <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 700, fontSize: 14.5, letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
               Speeddan
@@ -143,14 +176,15 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              title={collapsed ? item.label : undefined}
+              title={effectiveCollapsed ? item.label : undefined}
               className="sidebar-nav-link"
+              onClick={() => isMobile && setMobileOpen(false)}
               style={{
                 display:        'flex',
                 alignItems:     'center',
-                gap:            collapsed ? 0 : 10,
-                padding:        collapsed ? '12px 0' : '10px 16px',
-                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap:            effectiveCollapsed ? 0 : 10,
+                padding:        effectiveCollapsed ? '12px 0' : '10px 16px',
+                justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
                 textDecoration: 'none',
                 fontSize:       13.5,
                 fontWeight:     active ? 600 : 400,
@@ -163,7 +197,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
               }}
             >
               <Icon size={18} weight={active ? 'bold' : 'regular'} style={{ flexShrink: 0 }} />
-              {!collapsed && (
+              {!effectiveCollapsed && (
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {item.label}
                 </span>
@@ -177,7 +211,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
       <button
         type="button"
         onClick={toggle}
-        title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+        title={effectiveCollapsed ? 'Expandir menú' : 'Colapsar menú'}
         className="sidebar-toggle-btn"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -188,24 +222,24 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
           transition: 'color 0.15s, background 0.15s',
         }}
       >
-        {collapsed
+        {(effectiveCollapsed && !mobileOpen)
           ? <ArrowLineRight size={16} weight="bold" />
-          : <><ArrowLineLeft size={15} weight="bold" /><span>Colapsar</span></>
+          : <><ArrowLineLeft size={15} weight="bold" />{!isMobile && <span>Colapsar</span>}</>
         }
       </button>
 
       {/* ── User Card ────────────────────────────────────────────────────── */}
       <div style={{
-        padding:        collapsed ? '12px 0' : '12px 16px',
+        padding:        effectiveCollapsed ? '12px 0' : '12px 16px',
         borderTop:      '1px solid hsl(var(--sidebar-border))',
         display:        'flex',
         alignItems:     'center',
-        gap:            collapsed ? 0 : 10,
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        flexDirection:  collapsed ? 'column' : 'row',
+        gap:            effectiveCollapsed ? 0 : 10,
+        justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+        flexDirection:  effectiveCollapsed ? 'column' : 'row',
       }}>
         <div
-          title={collapsed ? name : undefined}
+          title={effectiveCollapsed ? name : undefined}
           style={{
             width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
             background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
@@ -216,7 +250,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
           {initials}
         </div>
 
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 600, fontSize: 12.5, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {name}
@@ -228,7 +262,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
         )}
 
         {/* Logout: icono si está colapsado */}
-        {collapsed && (
+        {effectiveCollapsed && (
           <form action="/api/auth/logout" method="post" style={{ marginTop: 4 }}>
             <button type="submit" title="Cerrar sesión" style={{ display: 'flex', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--sidebar-muted))', padding: 2 }}>
               <SignOut size={16} weight="bold" />
@@ -238,7 +272,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
       </div>
 
       {/* Logout: texto si está expandido */}
-      {!collapsed && (
+      {!effectiveCollapsed && (
         <div style={{ padding: '0 16px 14px' }}>
           <form action="/api/auth/logout" method="post">
             <button type="submit" className="sidebar-logout-btn" style={{
@@ -254,5 +288,6 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
         </div>
       )}
     </aside>
+    </>
   );
 }
