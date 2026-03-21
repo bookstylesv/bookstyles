@@ -109,7 +109,7 @@ export default function PlanillaClient({
   const [quincena25,  setQuincena25]  = useState<{ items: PrestacionItem[]; total: number; anio: number; aplican: number; noAplican: number } | null>(null);
   const [loadingPrest, setLoadingPrest] = useState(false);
   const [anioAguinaldo, setAnioAguinaldo]  = useState(new Date().getFullYear());
-  const [anioQuincena,  setAnioQuincena]   = useState(new Date().getFullYear());
+  const [anioQuincena,  setAnioQuincena]   = useState(Math.max(new Date().getFullYear(), 2027));
   const [completo, setCompleto]            = useState(false);
   const [printingId, setPrintingId]        = useState<number | null>(null);
 
@@ -561,8 +561,10 @@ export default function PlanillaClient({
               type="warning" showIcon style={{ marginBottom: 16 }}
               message="La tabla ISR se aplica sobre la base imponible (Bruto − ISSS − AFP). Modifica los tramos si el gobierno actualiza las tasas."
             />
+            <div style={{ overflowX: 'auto' }}>
             <Table
               size="small"
+              scroll={{ x: 'max-content' }}
               pagination={false}
               dataSource={[
                 {
@@ -634,6 +636,7 @@ export default function PlanillaClient({
                 },
               ]}
             />
+            </div>
           </Card>
         </Col>
       </Row>
@@ -645,12 +648,12 @@ export default function PlanillaClient({
   return (
     <div>
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <Title level={3} style={{ margin: 0, color: '#0d9488' }}>Planilla</Title>
           <Text type="secondary">Gestión de salarios, deducciones y prestaciones de ley</Text>
         </div>
-        <Space>
+        <Space wrap>
           <Button icon={<ReloadOutlined />} onClick={reload} loading={loading} />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalNueva(true)}
             style={{ background: '#0d9488', borderColor: '#0d9488' }}>
@@ -702,9 +705,12 @@ export default function PlanillaClient({
             key: 'planillas',
             label: <span><CalendarOutlined /> Planillas</span>,
             children: (
-              <Table dataSource={planillas} columns={colsPlanilla} rowKey="id"
-                loading={loading} size="middle" pagination={{ pageSize: 10 }}
-                locale={{ emptyText: 'No hay planillas generadas' }} />
+              <div style={{ overflowX: 'auto' }}>
+                <Table dataSource={planillas} columns={colsPlanilla} rowKey="id"
+                  loading={loading} size="middle" pagination={{ pageSize: 10 }}
+                  scroll={{ x: 'max-content' }}
+                  locale={{ emptyText: 'No hay planillas generadas' }} />
+              </div>
             ),
           },
 
@@ -716,7 +722,7 @@ export default function PlanillaClient({
               <div>
                 <Alert type="info" showIcon style={{ marginBottom: 16 }}
                   message="Art. 196-202 Código de Trabajo — 1 a 3 años: 15 días | 3 a 10 años: 19 días | 10+ años: 21 días. Pago antes del 20 de diciembre." />
-                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                   <div>
                     <Text strong style={{ marginRight: 8 }}>Año:</Text>
                     <InputNumber value={anioAguinaldo} min={2020} max={2100}
@@ -753,8 +759,11 @@ export default function PlanillaClient({
                         </Card>
                       </Col>
                     </Row>
-                    <Table dataSource={aguinaldo.items} columns={colsAguinaldo}
-                      rowKey="barberoId" size="small" pagination={false} />
+                    <div style={{ overflowX: 'auto' }}>
+                      <Table dataSource={aguinaldo.items} columns={colsAguinaldo}
+                        rowKey="barberoId" size="small" pagination={false}
+                        scroll={{ x: 'max-content' }} />
+                    </div>
                   </>
                 )}
               </div>
@@ -797,8 +806,11 @@ export default function PlanillaClient({
                         </Card>
                       </Col>
                     </Row>
-                    <Table dataSource={vacaciones.items} columns={colsVacaciones}
-                      rowKey="barberoId" size="small" pagination={false} />
+                    <div style={{ overflowX: 'auto' }}>
+                      <Table dataSource={vacaciones.items} columns={colsVacaciones}
+                        rowKey="barberoId" size="small" pagination={false}
+                        scroll={{ x: 'max-content' }} />
+                    </div>
                   </>
                 )}
               </div>
@@ -813,7 +825,7 @@ export default function PlanillaClient({
               <div>
                 <Alert type="warning" showIcon style={{ marginBottom: 16 }}
                   message="Decreto Legislativo 499 — vigente desde enero 2027. 50% del salario mensual para empleados con salario ≤ $1,500. Se paga el 25 de enero de cada año." />
-                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                   <div>
                     <Text strong style={{ marginRight: 8 }}>Año:</Text>
                     <InputNumber value={anioQuincena} min={2027} max={2100}
@@ -827,32 +839,35 @@ export default function PlanillaClient({
                 {quincena25 && (
                   <>
                     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                      <Col xs={24} sm={6}>
+                      <Col xs={12} sm={6}>
                         <Card size="small">
                           <Statistic title="Total Quincena 25" value={quincena25.total}
                             prefix="$" precision={2} valueStyle={{ color: '#0d9488' }} />
                         </Card>
                       </Col>
-                      <Col xs={24} sm={6}>
+                      <Col xs={12} sm={6}>
                         <Card size="small">
                           <Statistic title="Aplican (≤$1,500)" value={quincena25.aplican}
                             valueStyle={{ color: '#52c41a' }} />
                         </Card>
                       </Col>
-                      <Col xs={24} sm={6}>
+                      <Col xs={12} sm={6}>
                         <Card size="small">
                           <Statistic title="No Aplican (>$1,500)" value={quincena25.noAplican}
                             valueStyle={{ color: '#f5222d' }} />
                         </Card>
                       </Col>
-                      <Col xs={24} sm={6}>
+                      <Col xs={12} sm={6}>
                         <Card size="small">
                           <Statistic title="Total Barberos" value={quincena25.aplican + quincena25.noAplican} />
                         </Card>
                       </Col>
                     </Row>
-                    <Table dataSource={quincena25.items} columns={colsQuincena}
-                      rowKey="barberoId" size="small" pagination={false} />
+                    <div style={{ overflowX: 'auto' }}>
+                      <Table dataSource={quincena25.items} columns={colsQuincena}
+                        rowKey="barberoId" size="small" pagination={false}
+                        scroll={{ x: 'max-content' }} />
+                    </div>
                   </>
                 )}
               </div>
@@ -874,9 +889,12 @@ export default function PlanillaClient({
                   key: 'barberos',
                   label: 'Tipo de Pago por Barbero',
                   children: (
-                    <Table dataSource={barberos} rowKey="id" size="middle"
-                      pagination={false} columns={colsBarberos}
-                      locale={{ emptyText: 'No hay barberos activos' }} />
+                    <div style={{ overflowX: 'auto' }}>
+                      <Table dataSource={barberos} rowKey="id" size="middle"
+                        pagination={false} columns={colsBarberos}
+                        scroll={{ x: 'max-content' }}
+                        locale={{ emptyText: 'No hay barberos activos' }} />
+                    </div>
                   ),
                 },
               ]} />
@@ -892,7 +910,8 @@ export default function PlanillaClient({
         onOk={handleGenerar} okText="Generar Planilla"
         confirmLoading={generating}
         okButtonProps={{ style: { background: '#0d9488', borderColor: '#0d9488' } }}
-        width={700}>
+        width="min(700px, 96vw)"
+        style={{ maxWidth: '96vw' }}>
         <div style={{ marginBottom: 16 }}>
           <Text strong>Período:</Text>
           <div style={{ marginTop: 8 }}>
@@ -904,8 +923,10 @@ export default function PlanillaClient({
         {barberos.length === 0 ? (
           <Alert type="warning" message="No hay barberos activos" />
         ) : (
-          <Table
+          <div style={{ overflowX: 'auto' }}>
+        <Table
             dataSource={barberos.filter(b => b.configurado)} rowKey="id" size="small" pagination={false}
+            scroll={{ x: 'max-content' }}
             locale={{ emptyText: 'Ningún barbero configurado. Ve a Configuración → Tipo de Pago por Barbero.' }}
             columns={[
               { title: 'Barbero', dataIndex: 'nombre' },
@@ -931,6 +952,7 @@ export default function PlanillaClient({
               },
             ]}
           />
+        </div>
         )}
         {!hasConfig && (
           <Alert type="error" showIcon style={{ marginTop: 16 }}
@@ -941,7 +963,7 @@ export default function PlanillaClient({
       {/* ── Drawer: Detalle planilla ── */}
       <Drawer open={!!drawerDetalle} onClose={() => setDrawerDetalle(null)}
         title={<span>Planilla — Período: <Text strong>{drawerDetalle?.periodo}</Text></span>}
-        width="90%"
+        width={typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : '90%'}
         extra={
           <Space>
             <Tag color={ESTADO_COLOR[drawerDetalle?.estado || 'BORRADOR']}>{drawerDetalle?.estado}</Tag>
@@ -1010,7 +1032,8 @@ export default function PlanillaClient({
         onCancel={() => setModalConfig(null)} onOk={handleSaveConfigBarbero}
         okText="Guardar"
         okButtonProps={{ style: { background: '#0d9488', borderColor: '#0d9488' } }}
-        width={500}>
+        width="min(500px, 96vw)"
+        style={{ maxWidth: '96vw' }}>
         <Form layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item label="Tipo de Pago">
             <Select value={formConfig.tipoPago} onChange={v => setFormConfig(p => ({ ...p, tipoPago: v }))}>
