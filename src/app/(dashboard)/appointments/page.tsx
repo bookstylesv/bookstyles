@@ -24,7 +24,7 @@ import { es } from 'date-fns/locale';
 
 const AppointmentCalendar = dynamic(
   () => import('@/components/appointments/AppointmentCalendar'),
-  { ssr: false, loading: () => <div style={{ padding: 32, textAlign: 'center', color: '#8c8c8c' }}>Cargando calendario...</div> },
+  { ssr: false, loading: () => <div style={{ padding: 32, textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Cargando calendario...</div> },
 );
 
 const { Title, Text } = Typography;
@@ -219,7 +219,7 @@ export default function AppointmentsPage() {
         <Col xs={12} md={6}>
           <Card size="small">
             <Statistic title="Total citas" value={kpis.total}
-              prefix={<CalendarOutlined style={{ color: '#0d9488' }} />} />
+              prefix={<CalendarOutlined style={{ color: 'hsl(var(--brand-primary))' }} />} />
           </Card>
         </Col>
         <Col xs={12} md={6}>
@@ -262,7 +262,7 @@ export default function AppointmentsPage() {
         }
       >
         {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: '#8c8c8c' }}>Cargando...</div>
+          <div style={{ padding: 48, textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Cargando...</div>
         ) : view === 'calendar' ? (
           <AppointmentCalendar
             appointments={appointments}
@@ -286,8 +286,8 @@ export default function AppointmentsPage() {
             }}
             locale={{ emptyText: (
               <div style={{ padding: 40, textAlign: 'center' }}>
-                <StopOutlined style={{ fontSize: 32, color: '#bfbfbf' }} />
-                <div style={{ marginTop: 8, color: '#8c8c8c' }}>No hay citas registradas.</div>
+                <StopOutlined style={{ fontSize: 32, color: 'hsl(var(--text-disabled))' }} />
+                <div style={{ marginTop: 8, color: 'hsl(var(--text-muted))' }}>No hay citas registradas.</div>
               </div>
             ) }}
           />
@@ -349,7 +349,7 @@ export default function AppointmentsPage() {
               </Tag>
             </Space>
             {detailAppt.notes && (
-              <p style={{ fontSize: 13, color: '#595959', marginTop: 8, marginBottom: 0 }}>
+              <p style={{ fontSize: 13, color: 'hsl(var(--text-secondary))', marginTop: 8, marginBottom: 0 }}>
                 <strong>Nota:</strong> {detailAppt.notes}
               </p>
             )}
