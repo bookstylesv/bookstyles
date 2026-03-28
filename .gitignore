@@ -48,3 +48,6 @@ next-env.d.ts
 
 .vercel
 json_dte/*.json
+
+# Claude Code agent skills (no trackear en git)
+.agent/
