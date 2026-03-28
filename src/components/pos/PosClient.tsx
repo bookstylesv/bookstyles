@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Row, Col, Card, Button, Select, InputNumber, Tag, Statistic,
-  Modal, Alert, Divider, Badge, Tabs, Tooltip, Space, Input, Segmented, Avatar
+  Modal, Alert, Divider, Badge, Tooltip, Space, Input, Avatar
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined,
@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { abrirFacturaCompleta, abrirTicket, type DTEJsonViewer } from '@/lib/dte-viewer'
+import { useBarberTheme } from '@/context/ThemeContext'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,24 @@ export default function PosClient({
   barberos: Barbero[]
   servicios: Servicio[]
 }) {
+  const { theme: barberTheme } = useBarberTheme()
+  const primary = barberTheme.colorPrimary
+
+  // Colores semánticos reutilizables
+  const C = {
+    bgPage:       'hsl(var(--bg-page))',
+    bgSurface:    'hsl(var(--bg-surface))',
+    bgSubtle:     'hsl(var(--bg-subtle))',
+    bgMuted:      'hsl(var(--bg-muted))',
+    bgPrimaryLow: `${primary}18`,
+    textPrimary:  'hsl(var(--text-primary))',
+    textSecondary:'hsl(var(--text-secondary))',
+    textMuted:    'hsl(var(--text-muted))',
+    textDisabled: 'hsl(var(--text-disabled))',
+    border:       'hsl(var(--border-default))',
+    borderStrong: 'hsl(var(--border-strong))',
+  }
+
   const [turno, setTurno] = useState<TurnoInfo | null>(null)
   const [barberosHoy, setBarberosHoy] = useState<BarberoHoy[]>([])
   const [ventasRecientes, setVentasRecientes] = useState<VentaReciente[]>([])
@@ -118,11 +137,10 @@ export default function PosClient({
   // ── Cálculos ────────────────────────────────────────────────────────────────
 
   const subtotal = lineas.reduce((s, l) => s + l.precioUnitario * l.cantidad - l.descuento, 0)
-  // Pago simple: siempre cubre el total. Pago dividido: suma de los montos ingresados
   const totalPagado = pagos.length === 1 ? subtotal : pagos.reduce((s, p) => s + (p.monto || 0), 0)
   const diferencia = totalPagado - subtotal
   const pagoCompleto = pagos.length === 1
-    ? true  // pago simple siempre cubre (efectivo requiere que recibido >= total si es CASH, pero no bloqueamos el botón)
+    ? true
     : Math.abs(diferencia) < 0.01 || diferencia > 0
 
   // ── Lineas de venta ─────────────────────────────────────────────────────────
@@ -140,7 +158,6 @@ export default function PosClient({
     setLineas(prev => prev.map(l => {
       if (l.key !== key) return l
       const updated = { ...l, [field]: value }
-      // Si se selecciona servicio, auto-llenar precio y descripción
       if (field === 'servicioId') {
         const svc = serviciosProp.find(s => s.id === value)
         if (svc) {
@@ -155,7 +172,6 @@ export default function PosClient({
   const removeLinea = (key: string) => setLineas(prev => prev.filter(l => l.key !== key))
 
   const selectServicioRapido = (svc: Servicio) => {
-    // Si hay barbero activo seleccionado, crear siempre una línea nueva con él
     if (barberoActivo) {
       setLineas(prev => [...prev, {
         key: Date.now().toString(),
@@ -168,7 +184,6 @@ export default function PosClient({
       }])
       return
     }
-    // Sin barbero activo: asignar al primer ítem sin servicio
     const lineaSinServicio = lineas.find(l => !l.servicioId)
     if (lineaSinServicio) {
       setLineas(prev => prev.map(l =>
@@ -196,7 +211,6 @@ export default function PosClient({
     const metodosUsados = pagos.map(p => p.metodo)
     const siguiente = METODOS.find(m => !metodosUsados.includes(m.key as 'CASH'))
     if (!siguiente) return
-    // El segundo método arranca en 0, el primero se ajusta al resto
     setPagos(prev => [...prev, { key: Date.now().toString(), metodo: siguiente.key as 'CASH', monto: 0 }])
   }
 
@@ -205,12 +219,10 @@ export default function PosClient({
     setPagos(prev => prev.filter(p => p.key !== key))
   }
 
-  // Los billetes establecen el monto RECIBIDO (lo que el cliente entrega físicamente)
   const usarBillete = (pagoKey: string, billete: number) => {
     updatePago(pagoKey, 'recibido', billete)
   }
 
-  // Cuánto falta por cubrir con los demás métodos
   const pendientePorPago = (pagoKey: string) => {
     const otrosPagos = pagos.filter(p => p.key !== pagoKey).reduce((s, p) => s + (p.monto || 0), 0)
     return Math.max(0, parseFloat((subtotal - otrosPagos).toFixed(2)))
@@ -243,7 +255,6 @@ export default function PosClient({
           esGravado: l.esGravado,
         })),
         pagos: pagos.map(p => {
-          // En pago simple el monto es el total, en pago dividido el monto lo ingresó el usuario
           const montoFinal = pagos.length === 1 ? subtotal : p.monto
           return {
             metodo: p.metodo,
@@ -284,9 +295,9 @@ export default function PosClient({
       <div style={{ maxWidth: 500, margin: '80px auto', textAlign: 'center' }}>
         <Card>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ color: '#0d9488' }}>No hay turno abierto</h2>
-          <p style={{ color: '#666', marginBottom: 24 }}>Para empezar a vender necesitas abrir un turno de caja</p>
-          <Button type="primary" size="large" href="/pos-turnos" style={{ background: '#0d9488', borderColor: '#0d9488' }}>
+          <h2 style={{ color: primary }}>No hay turno abierto</h2>
+          <p style={{ color: C.textMuted, marginBottom: 24 }}>Para empezar a vender necesitas abrir un turno de caja</p>
+          <Button type="primary" size="large" href="/pos-turnos">
             Ir a Turnos de Caja
           </Button>
         </Card>
@@ -297,17 +308,17 @@ export default function PosClient({
   // ── UI principal ────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: 'clamp(8px, 2vw, 16px)', background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(8px, 2vw, 16px)', background: C.bgPage, minHeight: '100vh' }}>
 
       {/* Header turno */}
-      <Card size="small" style={{ marginBottom: 12, borderColor: '#0d9488' }} bodyStyle={{ padding: '8px 16px' }}>
+      <Card size="small" style={{ marginBottom: 12, borderColor: primary }} bodyStyle={{ padding: '8px 16px' }}>
         <Row align="middle" justify="space-between">
           <Col>
             <Space>
-              <Badge status="processing" color="#0d9488" text={
-                <span style={{ fontWeight: 600, color: '#0d9488' }}>TURNO ABIERTO</span>
+              <Badge status="processing" color={primary} text={
+                <span style={{ fontWeight: 600, color: primary }}>TURNO ABIERTO</span>
               } />
-              <span style={{ color: '#666', fontSize: 12 }}>
+              <span style={{ color: C.textMuted, fontSize: 12 }}>
                 {turno.usuarioApertura} · Desde {new Date(turno.fechaApertura).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </Space>
@@ -331,12 +342,11 @@ export default function PosClient({
 
             {/* ── Selector de barbero activo ── */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 1 · Selecciona barbero
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {barberosProp.length <= 8 ? (
-                  // ≤8 barberos: chips compactos
                   barberosProp.map(b => {
                     const activo = barberoActivo?.id === b.id
                     const iniciales = b.nombre.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -347,15 +357,15 @@ export default function PosClient({
                         style={{
                           display: 'flex', alignItems: 'center', gap: 6,
                           padding: '4px 10px 4px 4px', borderRadius: 20,
-                          border: activo ? '2px solid #0d9488' : '1.5px solid #d9d9d9',
-                          background: activo ? '#f0fdfa' : '#fff',
+                          border: activo ? `2px solid ${primary}` : `1.5px solid ${C.border}`,
+                          background: activo ? C.bgPrimaryLow : C.bgSurface,
                           cursor: 'pointer', fontWeight: activo ? 600 : 400,
-                          color: activo ? '#0d9488' : '#333', fontSize: 13,
+                          color: activo ? primary : C.textPrimary, fontSize: 13,
                           transition: 'all 0.15s',
                         }}
                       >
                         <Avatar size={22}
-                          style={{ background: activo ? '#0d9488' : '#e0e0e0', color: activo ? '#fff' : '#555', fontSize: 10, flexShrink: 0 }}>
+                          style={{ background: activo ? primary : C.bgMuted, color: activo ? '#fff' : C.textSecondary, fontSize: 10, flexShrink: 0 }}>
                           {iniciales}
                         </Avatar>
                         {b.nombre.split(' ')[0]}
@@ -363,7 +373,6 @@ export default function PosClient({
                     )
                   })
                 ) : (
-                  // >8 barberos: Select con búsqueda
                   <Select
                     showSearch
                     placeholder="Buscar barbero..."
@@ -377,7 +386,7 @@ export default function PosClient({
                 )}
               </div>
               {barberoActivo && (
-                <div style={{ marginTop: 6, fontSize: 12, color: '#0d9488' }}>
+                <div style={{ marginTop: 6, fontSize: 12, color: primary }}>
                   ✂️ <b>{barberoActivo.nombre}</b> seleccionado — elige un servicio abajo para agregar la línea
                 </div>
               )}
@@ -385,11 +394,10 @@ export default function PosClient({
 
             {/* ── Servicios por categoría ── */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 2 · Elige servicio
               </div>
 
-              {/* Tabs de categoría */}
               {(() => {
                 const cats = ['todos', ...Array.from(new Set(serviciosProp.map(s => s.category || 'otro'))).sort()]
                 const labels: Record<string, string> = {
@@ -402,13 +410,14 @@ export default function PosClient({
 
                 return (
                   <>
+                    {/* Tabs de categoría */}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                       {cats.map(cat => (
                         <button key={cat} onClick={() => setCategoriaActiva(cat)} style={{
                           padding: '3px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
-                          border: categoriaActiva === cat ? '2px solid #0d9488' : '1.5px solid #d9d9d9',
-                          background: categoriaActiva === cat ? '#0d9488' : '#fff',
-                          color: categoriaActiva === cat ? '#fff' : '#555',
+                          border: categoriaActiva === cat ? `2px solid ${primary}` : `1.5px solid ${C.border}`,
+                          background: categoriaActiva === cat ? primary : C.bgSurface,
+                          color: categoriaActiva === cat ? '#fff' : C.textSecondary,
                           fontWeight: categoriaActiva === cat ? 600 : 400,
                           transition: 'all 0.15s',
                         }}>
@@ -420,6 +429,7 @@ export default function PosClient({
                       ))}
                     </div>
 
+                    {/* Grid de servicios */}
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fill, minmax(min(120px, 44%), 1fr))',
@@ -435,18 +445,18 @@ export default function PosClient({
                           title={!barberoActivo ? 'Selecciona primero un barbero' : s.name}
                           style={{
                             padding: '6px 8px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-                            border: '1.5px solid #e0e0e0',
-                            background: barberoActivo ? '#fff' : '#fafafa',
-                            color: barberoActivo ? '#222' : '#999',
+                            border: `1.5px solid ${C.border}`,
+                            background: barberoActivo ? C.bgSurface : C.bgSubtle,
+                            color: barberoActivo ? C.textPrimary : C.textMuted,
                             textAlign: 'left', lineHeight: 1.3,
                             transition: 'all 0.15s',
                             opacity: barberoActivo ? 1 : 0.6,
                           }}
-                          onMouseEnter={e => { if (barberoActivo) (e.currentTarget as HTMLElement).style.borderColor = '#0d9488' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0' }}
+                          onMouseEnter={e => { if (barberoActivo) (e.currentTarget as HTMLElement).style.borderColor = primary }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border }}
                         >
                           <div style={{ fontWeight: 500, marginBottom: 2 }}>{s.name}</div>
-                          <div style={{ color: '#0d9488', fontWeight: 700 }}>{fmt(s.price)}</div>
+                          <div style={{ color: primary, fontWeight: 700 }}>{fmt(s.price)}</div>
                         </button>
                       ))}
                     </div>
@@ -459,17 +469,17 @@ export default function PosClient({
 
             {/* Tabla de líneas */}
             {lineas.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#bbb', padding: '20px 0' }}>
+              <div style={{ textAlign: 'center', color: C.textDisabled, padding: '20px 0' }}>
                 Toca un barbero o servicio para agregar líneas
               </div>
             ) : (
               <div style={{ marginBottom: 8 }}>
                 {lineas.map((l, idx) => (
-                  <Card key={l.key} size="small" style={{ marginBottom: 6, background: '#fafafa' }}>
+                  <Card key={l.key} size="small" style={{ marginBottom: 6, background: C.bgSubtle }}>
                     {/* Fila 1: número + barbero + servicio */}
                     <Row gutter={6} align="middle" style={{ marginBottom: 4 }}>
                       <Col flex="20px">
-                        <span style={{ color: '#888', fontSize: 11 }}>{idx + 1}</span>
+                        <span style={{ color: C.textMuted, fontSize: 11 }}>{idx + 1}</span>
                       </Col>
                       <Col flex="1">
                         <Select
@@ -510,7 +520,7 @@ export default function PosClient({
                         />
                       </Col>
                       <Col style={{ textAlign: 'right', minWidth: 60 }}>
-                        <span style={{ fontWeight: 700, color: '#0d9488', fontSize: 13 }}>
+                        <span style={{ fontWeight: 700, color: primary, fontSize: 13 }}>
                           {fmt(l.precioUnitario * l.cantidad - l.descuento)}
                         </span>
                       </Col>
@@ -534,7 +544,7 @@ export default function PosClient({
             <Row justify="end" style={{ marginBottom: 12 }}>
               <Col>
                 <Statistic title="Total" value={subtotal} precision={2} prefix="$"
-                  valueStyle={{ color: '#0d9488', fontSize: 28, fontWeight: 700 }} />
+                  valueStyle={{ color: primary, fontSize: 28, fontWeight: 700 }} />
               </Col>
             </Row>
 
@@ -543,7 +553,6 @@ export default function PosClient({
               const esPagoSimple = pagos.length === 1
               const p = pagos[0]
               const esCash = p.metodo === 'CASH'
-              // Monto efectivo del pago simple = total a pagar
               const montoEfectivo = esPagoSimple ? subtotal : p.monto
               const vuelto = esCash && (p.recibido || 0) > 0
                 ? parseFloat((Math.max(0, (p.recibido || 0) - montoEfectivo)).toFixed(2))
@@ -553,23 +562,23 @@ export default function PosClient({
               return (
                 <div style={{ marginBottom: 10 }}>
 
-                  {/* ── Encabezado con método + botón pago dividido ── */}
+                  {/* Encabezado sección cobro */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       3 · Cobro
                     </div>
                     {pagos.length < 3 && lineas.length > 0 && (
                       <Button size="small" type="link" icon={<PlusOutlined />} onClick={addPago}
-                        style={{ fontSize: 12, padding: 0, color: '#0d9488' }}>
+                        style={{ fontSize: 12, padding: 0, color: primary }}>
                         Dividir pago
                       </Button>
                     )}
                   </div>
 
-                  {/* ── PAGO SIMPLE: un solo método ── */}
+                  {/* ── PAGO SIMPLE ── */}
                   {esPagoSimple ? (
                     <div>
-                      {/* Selector de método — horizontal, tipo segmento */}
+                      {/* Selector de método */}
                       <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                         {METODOS.map(m => (
                           <button key={m.key} onClick={() => {
@@ -577,9 +586,9 @@ export default function PosClient({
                             updatePago(p.key, 'recibido', undefined)
                           }} style={{
                             flex: 1, padding: 'clamp(5px, 1.5vw, 8px) 2px', borderRadius: 8, cursor: 'pointer',
-                            border: p.metodo === m.key ? '2px solid #0d9488' : '1.5px solid #e0e0e0',
-                            background: p.metodo === m.key ? '#f0fdfa' : '#fff',
-                            color: p.metodo === m.key ? '#0d9488' : '#666',
+                            border: p.metodo === m.key ? `2px solid ${primary}` : `1.5px solid ${C.border}`,
+                            background: p.metodo === m.key ? C.bgPrimaryLow : C.bgSurface,
+                            color: p.metodo === m.key ? primary : C.textSecondary,
                             fontWeight: p.metodo === m.key ? 700 : 400,
                             fontSize: 'clamp(10px, 2.5vw, 13px)', textAlign: 'center', transition: 'all 0.15s',
                             lineHeight: 1.2,
@@ -589,15 +598,15 @@ export default function PosClient({
                         ))}
                       </div>
 
-                      {/* Total a cobrar — prominente */}
+                      {/* Total a cobrar prominente */}
                       {lineas.length > 0 && (
                         <div style={{
-                          background: '#f6ffed', border: '1.5px solid #b7eb8f',
+                          background: `${primary}12`, border: `1.5px solid ${primary}50`,
                           borderRadius: 10, padding: '10px 16px', marginBottom: 12,
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         }}>
-                          <span style={{ color: '#555', fontSize: 14 }}>Total a cobrar</span>
-                          <span style={{ color: '#0d9488', fontSize: 26, fontWeight: 800 }}>{fmt(subtotal)}</span>
+                          <span style={{ color: C.textSecondary, fontSize: 14 }}>Total a cobrar</span>
+                          <span style={{ color: primary, fontSize: 26, fontWeight: 800 }}>{fmt(subtotal)}</span>
                         </div>
                       )}
 
@@ -605,19 +614,18 @@ export default function PosClient({
                       {esCash && lineas.length > 0 && (
                         <>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginBottom: 6 }}>
+                            <div style={{ fontSize: 12, color: C.textSecondary, fontWeight: 600, marginBottom: 6 }}>
                               ¿Con cuánto paga el cliente?
                             </div>
-                            {/* Billetes rápidos — más grandes y claros */}
                             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
                               {BILLETES.map(b => {
                                 const activo = p.recibido === b
                                 return (
                                   <button key={b} onClick={() => usarBillete(p.key, b)} style={{
                                     flex: '1 1 50px', padding: '8px 0', borderRadius: 8,
-                                    border: activo ? '2px solid #0d9488' : '1.5px solid #d9d9d9',
-                                    background: activo ? '#0d9488' : b >= subtotal ? '#f6ffed' : '#fafafa',
-                                    color: activo ? '#fff' : b >= subtotal ? '#389e0d' : '#555',
+                                    border: activo ? `2px solid ${primary}` : `1.5px solid ${C.border}`,
+                                    background: activo ? primary : b >= subtotal ? `${primary}12` : C.bgSubtle,
+                                    color: activo ? '#fff' : b >= subtotal ? primary : C.textSecondary,
                                     fontWeight: 700, fontSize: 14, cursor: 'pointer',
                                     transition: 'all 0.15s',
                                   }}>
@@ -626,7 +634,6 @@ export default function PosClient({
                                 )
                               })}
                             </div>
-                            {/* Campo manual */}
                             <InputNumber
                               size="large" prefix="$" placeholder="O escribe el monto exacto"
                               style={{ width: '100%' }}
@@ -635,12 +642,12 @@ export default function PosClient({
                             />
                           </div>
 
-                          {/* Vuelto — la parte más importante, grande y visible */}
+                          {/* Vuelto / Falta */}
                           {(p.recibido || 0) > 0 && (
                             <div style={{
                               borderRadius: 10, padding: '12px 16px', marginTop: 8,
-                              background: clienteEntregaMenos ? '#fff1f0' : '#f0fdfa',
-                              border: `2px solid ${clienteEntregaMenos ? '#ff4d4f' : '#0d9488'}`,
+                              background: clienteEntregaMenos ? '#fff1f0' : `${primary}12`,
+                              border: `2px solid ${clienteEntregaMenos ? '#ff4d4f' : primary}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             }}>
                               {clienteEntregaMenos ? (
@@ -652,8 +659,8 @@ export default function PosClient({
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ color: '#0d9488', fontWeight: 600, fontSize: 14 }}>💰 Vuelto</span>
-                                  <span style={{ color: '#0d9488', fontSize: 28, fontWeight: 800 }}>{fmt(vuelto)}</span>
+                                  <span style={{ color: primary, fontWeight: 600, fontSize: 14 }}>💰 Vuelto</span>
+                                  <span style={{ color: primary, fontSize: 28, fontWeight: 800 }}>{fmt(vuelto)}</span>
                                 </>
                               )}
                             </div>
@@ -661,7 +668,7 @@ export default function PosClient({
                         </>
                       )}
 
-                      {/* CARD / TRANSFER / QR: referencia opcional */}
+                      {/* CARD / TRANSFER / QR */}
                       {(p.metodo === 'CARD' || p.metodo === 'TRANSFER' || p.metodo === 'QR') && lineas.length > 0 && (
                         <Input size="large" placeholder={
                           p.metodo === 'CARD' ? 'Referencia o últimos 4 dígitos (opcional)' :
@@ -676,50 +683,47 @@ export default function PosClient({
                     </div>
 
                   ) : (
-                    /* ── PAGO DIVIDIDO: múltiples métodos ── */
+                    /* ── PAGO DIVIDIDO ── */
                     <div>
-                      {/* Barra de progreso del cubierto */}
                       {lineas.length > 0 && (
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                            <span style={{ color: '#555' }}>Cubierto</span>
-                            <span style={{ fontWeight: 700, color: pagoCompleto ? '#0d9488' : '#faad14' }}>
+                            <span style={{ color: C.textSecondary }}>Cubierto</span>
+                            <span style={{ fontWeight: 700, color: pagoCompleto ? primary : '#faad14' }}>
                               {fmt(totalPagado)} / {fmt(subtotal)}
                               {pagoCompleto && ' ✅'}
                             </span>
                           </div>
-                          <div style={{ background: '#f0f0f0', borderRadius: 6, height: 8, overflow: 'hidden' }}>
+                          <div style={{ background: C.bgMuted, borderRadius: 6, height: 8, overflow: 'hidden' }}>
                             <div style={{
                               height: '100%', borderRadius: 6, transition: 'width 0.3s',
-                              background: pagoCompleto ? '#0d9488' : '#faad14',
+                              background: pagoCompleto ? primary : '#faad14',
                               width: `${Math.min(100, subtotal > 0 ? (totalPagado / subtotal) * 100 : 0)}%`,
                             }} />
                           </div>
                         </div>
                       )}
 
-                      {pagos.map((pg, idx) => {
+                      {pagos.map((pg) => {
                         const pendiente = pendientePorPago(pg.key)
                         const pgVuelto = pg.metodo === 'CASH' && (pg.recibido || 0) > 0
                           ? Math.max(0, (pg.recibido || 0) - pg.monto)
                           : 0
                         const pgFalta = pg.metodo === 'CASH' && (pg.recibido || 0) > 0 && (pg.recibido || 0) < pg.monto
                         return (
-                          <Card key={pg.key} size="small" style={{ marginBottom: 8, borderColor: '#e8e8e8' }}>
+                          <Card key={pg.key} size="small" style={{ marginBottom: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                              {/* Método */}
                               <Select size="small" style={{ flex: 1 }} value={pg.metodo}
                                 onChange={v => { updatePago(pg.key, 'metodo', v); updatePago(pg.key, 'recibido', undefined) }}
                                 options={METODOS.map(m => ({ value: m.key, label: m.label }))}
                               />
-                              {/* Monto de este método */}
                               <InputNumber size="small" prefix="$"
                                 style={{ width: 110 }}
                                 value={pg.monto} min={0} max={subtotal} precision={2}
                                 placeholder="Monto"
                                 onChange={v => updatePago(pg.key, 'monto', v || 0)}
                                 addonAfter={
-                                  <span style={{ fontSize: 10, color: '#0d9488', cursor: 'pointer' }}
+                                  <span style={{ fontSize: 10, color: primary, cursor: 'pointer' }}
                                     onClick={() => updatePago(pg.key, 'monto', pendiente)}
                                     title="Usar el restante">
                                     Resto
@@ -732,17 +736,16 @@ export default function PosClient({
                               )}
                             </div>
 
-                            {/* Cash dentro de pago dividido */}
                             {pg.metodo === 'CASH' && (
                               <>
-                                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>El cliente entrega:</div>
+                                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>El cliente entrega:</div>
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
                                   {BILLETES.map(b => (
                                     <button key={b} onClick={() => usarBillete(pg.key, b)} style={{
                                       flex: '1 1 36px', padding: '5px 2px', borderRadius: 6,
-                                      border: pg.recibido === b ? '2px solid #0d9488' : '1px solid #d9d9d9',
-                                      background: pg.recibido === b ? '#0d9488' : '#fafafa',
-                                      color: pg.recibido === b ? '#fff' : '#555',
+                                      border: pg.recibido === b ? `2px solid ${primary}` : `1px solid ${C.border}`,
+                                      background: pg.recibido === b ? primary : C.bgSubtle,
+                                      color: pg.recibido === b ? '#fff' : C.textSecondary,
                                       fontWeight: 600, fontSize: 12, cursor: 'pointer',
                                     }}>
                                       ${b}
@@ -757,10 +760,10 @@ export default function PosClient({
                                 {(pg.recibido || 0) > 0 && (
                                   <div style={{
                                     padding: '6px 12px', borderRadius: 8, marginTop: 4, textAlign: 'right',
-                                    background: pgFalta ? '#fff1f0' : '#f0fdfa',
-                                    border: `1.5px solid ${pgFalta ? '#ff4d4f' : '#0d9488'}`,
+                                    background: pgFalta ? '#fff1f0' : `${primary}12`,
+                                    border: `1.5px solid ${pgFalta ? '#ff4d4f' : primary}`,
                                   }}>
-                                    <span style={{ color: pgFalta ? '#ff4d4f' : '#0d9488', fontWeight: 700 }}>
+                                    <span style={{ color: pgFalta ? '#ff4d4f' : primary, fontWeight: 700 }}>
                                       {pgFalta ? `⚠️ Falta ${fmt(pg.monto - (pg.recibido || 0))}` : `💰 Vuelto ${fmt(pgVuelto)}`}
                                     </span>
                                   </div>
@@ -794,36 +797,35 @@ export default function PosClient({
             <div style={{ marginBottom: 12 }}>
               <Button size="small" type={conFactura ? 'primary' : 'dashed'}
                 icon={<FileTextOutlined />}
-                onClick={() => setConFactura(v => !v)}
-                style={conFactura ? { background: '#0d9488', borderColor: '#0d9488' } : {}}>
+                onClick={() => setConFactura(v => !v)}>
                 {conFactura ? '🧾 Con factura' : '☐ Cliente quiere factura'}
               </Button>
 
               {conFactura && (
-                <Card size="small" style={{ marginTop: 8, background: '#f0fdfa' }}>
+                <Card size="small" style={{ marginTop: 8, background: C.bgPrimaryLow, borderColor: `${primary}40` }}>
                   <Row gutter={8} style={{ marginBottom: 6 }}>
                     <Col span={12}>
-                      <div style={{ fontSize: 11, color: '#888' }}>Tipo</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>Tipo</div>
                       <Select size="small" value={tipoDte} onChange={v => setTipoDte(v)} style={{ width: '100%' }}>
                         <Select.Option value="01">Factura Consumidor Final</Select.Option>
                         <Select.Option value="03">Crédito Fiscal (CCF)</Select.Option>
                       </Select>
                     </Col>
                     <Col span={12}>
-                      <div style={{ fontSize: 11, color: '#888' }}>Nombre</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>Nombre</div>
                       <Input size="small" placeholder="Consumidor Final" value={clienteNombre}
                         onChange={e => setClienteNombre(e.target.value)} />
                     </Col>
                   </Row>
                   <Row gutter={8}>
                     <Col span={12}>
-                      <div style={{ fontSize: 11, color: '#888' }}>{tipoDte === '03' ? 'NIT' : 'DUI'}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>{tipoDte === '03' ? 'NIT' : 'DUI'}</div>
                       <Input size="small" placeholder={tipoDte === '03' ? '0614-123456-001-5' : '12345678-9'}
                         value={clienteDocumento} onChange={e => setClienteDocumento(e.target.value)} />
                     </Col>
                     {tipoDte === '03' && (
                       <Col span={12}>
-                        <div style={{ fontSize: 11, color: '#888' }}>NRC</div>
+                        <div style={{ fontSize: 11, color: C.textMuted }}>NRC</div>
                         <Input size="small" placeholder="123456-7" value={clienteNrc}
                           onChange={e => setClienteNrc(e.target.value)} />
                       </Col>
@@ -842,7 +844,7 @@ export default function PosClient({
               loading={loadingCobrar}
               disabled={lineas.length === 0 || !pagoCompleto}
               onClick={cobrar}
-              style={{ background: '#0d9488', borderColor: '#0d9488', height: 48, fontSize: 16, fontWeight: 700 }}
+              style={{ height: 48, fontSize: 16, fontWeight: 700 }}
             >
               ✅ COBRAR {subtotal > 0 ? fmt(subtotal) : ''}
             </Button>
@@ -854,32 +856,31 @@ export default function PosClient({
           {/* Barberos hoy */}
           <Card title="✂️ Barberos hoy" size="small" style={{ marginBottom: 12 }}>
             {barberosHoy.length === 0 ? (
-              <div style={{ color: '#bbb', textAlign: 'center', padding: '16px 0' }}>Sin servicios aún</div>
+              <div style={{ color: C.textDisabled, textAlign: 'center', padding: '16px 0' }}>Sin servicios aún</div>
             ) : (
               barberosHoy.map(b => (
                 <div key={b.barberoId} style={{ marginBottom: 10 }}>
                   <Row justify="space-between" align="middle">
-                    <Col><b>{b.nombre}</b> <span style={{ color: '#888', fontSize: 11 }}>{b.servicios} servicios</span></Col>
-                    <Col><b style={{ color: '#0d9488' }}>{fmt(b.total)}</b></Col>
+                    <Col><b>{b.nombre}</b> <span style={{ color: C.textMuted, fontSize: 11 }}>{b.servicios} servicios</span></Col>
+                    <Col><b style={{ color: primary }}>{fmt(b.total)}</b></Col>
                   </Row>
-                  {/* Barra visual */}
-                  <div style={{ background: '#e6f7f5', borderRadius: 4, height: 6, marginTop: 4, overflow: 'hidden' }}>
+                  <div style={{ background: C.bgMuted, borderRadius: 4, height: 6, marginTop: 4, overflow: 'hidden' }}>
                     <div style={{
-                      background: '#0d9488', height: '100%', borderRadius: 4,
+                      background: primary, height: '100%', borderRadius: 4,
                       width: `${Math.min(100, (b.total / Math.max(...barberosHoy.map(x => x.total))) * 100)}%`
                     }} />
                   </div>
-                  <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
                     {b.desglose.map(d => `${d.cantidad}×${d.descripcion} ${fmt(d.subtotal)}`).join(' · ')}
                   </div>
                 </div>
               ))
             )}
             {barberosHoy.length > 0 && (
-              <div style={{ borderTop: '1px dashed #e0e0e0', marginTop: 8, paddingTop: 8 }}>
+              <div style={{ borderTop: `1px dashed ${C.border}`, marginTop: 8, paddingTop: 8 }}>
                 <Row justify="space-between">
-                  <Col style={{ color: '#888' }}>Total turno</Col>
-                  <Col><b style={{ color: '#0d9488', fontSize: 14 }}>{fmt(barberosHoy.reduce((s, b) => s + b.total, 0))}</b></Col>
+                  <Col style={{ color: C.textMuted }}>Total turno</Col>
+                  <Col><b style={{ color: primary, fontSize: 14 }}>{fmt(barberosHoy.reduce((s, b) => s + b.total, 0))}</b></Col>
                 </Row>
               </div>
             )}
@@ -889,24 +890,24 @@ export default function PosClient({
           <Card title="🕐 Últimas ventas" size="small"
             extra={<Button size="small" icon={<ReloadOutlined />} onClick={cargarVentasRecientes} />}>
             {ventasRecientes.length === 0 ? (
-              <div style={{ color: '#bbb', textAlign: 'center', padding: '16px 0' }}>Sin ventas aún</div>
+              <div style={{ color: C.textDisabled, textAlign: 'center', padding: '16px 0' }}>Sin ventas aún</div>
             ) : (
               ventasRecientes.map(v => (
                 <div key={v.id} style={{
-                  padding: '6px 0', borderBottom: '1px solid #f0f0f0',
+                  padding: '6px 0', borderBottom: `1px solid ${C.border}`,
                   opacity: v.estado === 'ANULADA' ? 0.4 : 1,
                 }}>
                   <Row justify="space-between" align="middle">
                     <Col>
                       <span style={{ fontWeight: 600 }}>#{v.numero}</span>
-                      <span style={{ color: '#888', fontSize: 11, marginLeft: 6 }}>
+                      <span style={{ color: C.textMuted, fontSize: 11, marginLeft: 6 }}>
                         {new Date(v.createdAt).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {v.estado === 'ANULADA' && <Tag color="red" style={{ marginLeft: 4, fontSize: 10 }}>ANULADA</Tag>}
                     </Col>
-                    <Col><b style={{ color: '#0d9488' }}>{fmt(v.total)}</b></Col>
+                    <Col><b style={{ color: primary }}>{fmt(v.total)}</b></Col>
                   </Row>
-                  <div style={{ fontSize: 10, color: '#999' }}>
+                  <div style={{ fontSize: 10, color: C.textMuted }}>
                     {v.detalles.map((d, i) => <span key={i}>{d.barberoNombre}: {d.descripcion} </span>)}
                   </div>
                 </div>
@@ -924,20 +925,19 @@ export default function PosClient({
         {modalExito && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 44 }}>✅</div>
-            <h2 style={{ color: '#0d9488', margin: '10px 0 4px' }}>¡Cobro registrado!</h2>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#111' }}>{fmt(modalExito.total)}</div>
-            <div style={{ color: '#888', margin: '6px 0 2px', fontSize: 13 }}>Venta #{modalExito.numero}</div>
-            <div style={{ color: '#bbb', fontSize: 9, marginBottom: 16, fontFamily: 'monospace' }}>{modalExito.codigoGen}</div>
+            <h2 style={{ color: primary, margin: '10px 0 4px' }}>¡Cobro registrado!</h2>
+            <div style={{ fontSize: 28, fontWeight: 800, color: C.textPrimary }}>{fmt(modalExito.total)}</div>
+            <div style={{ color: C.textMuted, margin: '6px 0 2px', fontSize: 13 }}>Venta #{modalExito.numero}</div>
+            <div style={{ color: C.textDisabled, fontSize: 9, marginBottom: 16, fontFamily: 'monospace' }}>{modalExito.codigoGen}</div>
 
-            {/* Botones imprimir */}
             {modalExito.dte && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>¿El cliente quiere factura?</div>
+                <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>¿El cliente quiere factura?</div>
                 <Space>
                   <Button
                     icon={<FileDoneOutlined />}
                     onClick={() => abrirFacturaCompleta(modalExito.dte!)}
-                    style={{ borderColor: '#0d9488', color: '#0d9488' }}
+                    style={{ borderColor: primary, color: primary }}
                   >
                     Ver Factura (A4)
                   </Button>
@@ -954,7 +954,7 @@ export default function PosClient({
             <Button
               onClick={() => setModalExito(null)}
               type="primary" size="large"
-              style={{ background: '#0d9488', borderColor: '#0d9488', minWidth: 160 }}
+              style={{ minWidth: 160 }}
             >
               Nueva venta
             </Button>
