@@ -20,6 +20,7 @@ export type ProductoSerialized = {
   categoria: { id: number; nombre: string } | null;
   precioVenta: number;
   costoPromedio: number;
+  precioComision: number | null;
   stockMinimo: number;
   stockActual: number;
   unidadMedida: string;
@@ -60,6 +61,7 @@ function serializeProducto(p: NonNullable<RawProducto>): ProductoSerialized {
     categoria: p.categoria ?? null,
     precioVenta: Number(p.precioVenta),
     costoPromedio: Number(p.costoPromedio),
+    precioComision: p.precioComision !== null && p.precioComision !== undefined ? Number(p.precioComision) : null,
     stockMinimo,
     stockActual,
     unidadMedida: p.unidadMedida,
@@ -152,17 +154,22 @@ export async function createProducto(tenantId: number, body: unknown) {
     throw new ConflictError(`El código "${b.codigo}" ya está en uso`);
   }
 
-  const p = await repo.createProducto(tenantId, {
+  const payload = {
     codigo: String(b.codigo).toUpperCase().trim(),
     nombre: String(b.nombre).trim(),
     descripcion: b.descripcion ? String(b.descripcion).trim() : undefined,
     categoriaId: b.categoriaId ? Number(b.categoriaId) : undefined,
     precioVenta,
     costoPromedio: b.costoPromedio ? Number(b.costoPromedio) : 0,
+    precioComision: b.precioComision !== undefined && b.precioComision !== null && b.precioComision !== ''
+      ? Number(b.precioComision)
+      : null,
     stockMinimo: b.stockMinimo ? Number(b.stockMinimo) : 0,
     stockInicial: b.stockInicial ? Number(b.stockInicial) : 0,
     unidadMedida: b.unidadMedida ? String(b.unidadMedida) : 'UNIDAD',
-  });
+  };
+
+  const p = await repo.createProducto(tenantId, payload);
 
   // Si hay stock inicial, crear entrada en kardex
   const stockInicial = b.stockInicial ? Number(b.stockInicial) : 0;
@@ -215,6 +222,11 @@ export async function updateProducto(id: number, tenantId: number, body: unknown
     data.precioVenta = pv;
   }
   if (b.costoPromedio !== undefined) data.costoPromedio = Number(b.costoPromedio);
+  if (b.precioComision !== undefined) {
+    data.precioComision = (b.precioComision !== null && b.precioComision !== '')
+      ? Number(b.precioComision)
+      : null;
+  }
   if (b.stockMinimo !== undefined) data.stockMinimo = Number(b.stockMinimo);
   if (b.unidadMedida !== undefined) data.unidadMedida = String(b.unidadMedida);
 

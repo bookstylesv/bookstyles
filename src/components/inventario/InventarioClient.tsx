@@ -45,6 +45,7 @@ type Producto = {
   categoria: { id: number; nombre: string } | null;
   precioVenta: number;
   costoPromedio: number;
+  precioComision: number | null;
   stockMinimo: number;
   stockActual: number;
   unidadMedida: string;
@@ -168,7 +169,7 @@ const FORM_EMPTY = {
   descripcion: '',
   categoriaId: undefined as number | undefined,
   precioVenta: undefined as number | undefined,
-  costoPromedio: undefined as number | undefined,
+  precioComision: undefined as number | undefined,
   stockMinimo: undefined as number | undefined,
   stockInicial: undefined as number | undefined,
   unidadMedida: 'UNIDAD',
@@ -297,7 +298,7 @@ export default function InventarioClient({
       descripcion: p.descripcion ?? '',
       categoriaId: p.categoriaId ?? undefined,
       precioVenta: p.precioVenta,
-      costoPromedio: p.costoPromedio,
+      precioComision: p.precioComision ?? undefined,
       stockMinimo: p.stockMinimo,
       stockInicial: undefined,
       unidadMedida: p.unidadMedida,
@@ -418,7 +419,7 @@ export default function InventarioClient({
       descripcion: formData.descripcion?.trim() || undefined,
       categoriaId: formData.categoriaId,
       precioVenta: formData.precioVenta,
-      costoPromedio: formData.costoPromedio ?? 0,
+      precioComision: formData.precioComision ?? null,
       stockMinimo: formData.stockMinimo ?? 0,
       stockInicial: formData.stockInicial ?? 0,
       unidadMedida: formData.unidadMedida,
@@ -1253,15 +1254,15 @@ export default function InventarioClient({
               </FormField>
             </Col>
             <Col span={12}>
-              <FormField label="Costo promedio ($)">
+              <FormField label="Precio comisión ($)">
                 <InputNumber
                   style={{ width: '100%' }}
                   min={0}
                   step={0.01}
                   precision={2}
                   prefix="$"
-                  value={formData.costoPromedio}
-                  onChange={v => setFormData(p => ({ ...p, costoPromedio: v ?? undefined }))}
+                  value={formData.precioComision}
+                  onChange={v => setFormData(p => ({ ...p, precioComision: v ?? undefined }))}
                   placeholder="0.00"
                 />
               </FormField>

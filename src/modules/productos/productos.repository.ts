@@ -27,6 +27,7 @@ export type ProductoCreateInput = {
   categoriaId?: number;
   precioVenta: number;
   costoPromedio?: number;
+  precioComision?: number | null;
   stockMinimo?: number;
   stockInicial?: number;
   unidadMedida?: string;
@@ -120,6 +121,7 @@ export async function createProducto(tenantId: number, data: ProductoCreateInput
       categoriaId: data.categoriaId ?? null,
       precioVenta: data.precioVenta,
       costoPromedio: data.costoPromedio ?? 0,
+      precioComision: data.precioComision ?? null,
       stockMinimo: data.stockMinimo ?? 0,
       stockActual: data.stockInicial ?? 0,
       unidadMedida: data.unidadMedida ?? 'UNIDAD',
@@ -139,6 +141,7 @@ export async function updateProducto(id: number, tenantId: number, data: Product
       ...(data.categoriaId !== undefined && { categoriaId: data.categoriaId }),
       ...(data.precioVenta !== undefined && { precioVenta: data.precioVenta }),
       ...(data.costoPromedio !== undefined && { costoPromedio: data.costoPromedio }),
+      ...(data.precioComision !== undefined && { precioComision: data.precioComision }),
       ...(data.stockMinimo !== undefined && { stockMinimo: data.stockMinimo }),
       ...(data.unidadMedida !== undefined && { unidadMedida: data.unidadMedida }),
     },
