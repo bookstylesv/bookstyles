@@ -99,8 +99,9 @@ export interface CreateVentaInput {
   clienteId?: number
   appointmentId?: number
   items: Array<{
-    barberoId: number
+    barberoId?: number
     servicioId?: number
+    productoId?: number
     descripcion: string
     cantidad: number
     precioUnitario: number
@@ -117,9 +118,24 @@ export interface CreateVentaInput {
 }
 
 export async function createVenta(tenantId: number, input: CreateVentaInput) {
-  // Validaciones
-  if (!input.items || input.items.length === 0) throw new Error('La venta debe tener al menos un servicio')
+  // Validaciones básicas
+  if (!input.items || input.items.length === 0) throw new Error('La venta debe tener al menos un ítem')
   if (!input.pagos || input.pagos.length === 0) throw new Error('Debe especificar al menos una forma de pago')
+
+  // Barbero obligatorio para ítems de servicio
+  for (const item of input.items) {
+    if (!item.productoId && !item.barberoId) throw new Error(`El ítem "${item.descripcion}" es un servicio y requiere barbero asignado`)
+  }
+
+  // Validar stock de productos
+  for (const item of input.items) {
+    if (!item.productoId) continue
+    const prod = await repo.findProductoById(item.productoId, tenantId)
+    if (!prod) throw new Error(`Producto no encontrado (id: ${item.productoId})`)
+    if (Number(prod.stockActual) < item.cantidad) {
+      throw new Error(`Stock insuficiente para "${prod.nombre}": disponible ${Number(prod.stockActual)}, solicitado ${item.cantidad}`)
+    }
+  }
 
   const turnoActivo = await repo.getTurnoActivo(tenantId)
   if (!turnoActivo || turnoActivo.id !== input.turnoId) throw new Error('No hay turno activo o el turnoId no coincide')
@@ -137,8 +153,8 @@ export async function createVenta(tenantId: number, input: CreateVentaInput) {
   const { siguiente: numCorrelativo, numeroControl } = await getNextCorrelativo(tenantId, input.tipoDte)
   void numCorrelativo
 
-  // Barberos para snapshot
-  const barberIds = [...new Set(input.items.map(i => i.barberoId))]
+  // Barberos para snapshot (solo ítems con barbero)
+  const barberIds = [...new Set(input.items.filter(i => i.barberoId).map(i => i.barberoId!))]
   const barbers = await prisma.barber.findMany({
     where: { id: { in: barberIds } },
     include: { user: { select: { fullName: true } } },
@@ -149,7 +165,7 @@ export async function createVenta(tenantId: number, input: CreateVentaInput) {
   const dteItems: DTEItem[] = input.items.map((item, idx) => ({
     numItem: idx + 1,
     descripcion: item.descripcion,
-    barberoNombre: barberMap.get(item.barberoId) || 'Barbero',
+    barberoNombre: item.barberoId ? (barberMap.get(item.barberoId) || '') : '',
     cantidad: item.cantidad,
     precioUni: item.precioUnitario,
     montoDescu: item.descuento || 0,
@@ -203,6 +219,7 @@ export async function createVenta(tenantId: number, input: CreateVentaInput) {
       numItem: idx + 1,
       barberoId: item.barberoId,
       servicioId: item.servicioId,
+      productoId: item.productoId,
       descripcion: item.descripcion,
       cantidad: item.cantidad,
       precioUnitario: item.precioUnitario,
@@ -382,6 +399,7 @@ function serializeVenta(v: any) {
       barberoNombre: d.barbero?.user?.fullName || '',
       servicioId: d.servicioId,
       servicioNombre: d.servicio?.name || d.descripcion,
+      productoId: d.productoId,
     })),
     pagos: (v.pagos || []).map((p: any) => ({
       id: p.id,

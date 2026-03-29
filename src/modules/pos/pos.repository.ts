@@ -111,7 +111,7 @@ export async function getBarberosHoy(tenantId: number, turnoId?: number) {
   }
 
   const detalles = await prisma.barberDetalleVenta.findMany({
-    where: { venta: whereVenta },
+    where: { venta: whereVenta, barberoId: { not: null } },
     include: {
       barbero: { include: { user: { select: { fullName: true } } } },
       servicio: { select: { name: true } },
@@ -119,7 +119,7 @@ export async function getBarberosHoy(tenantId: number, turnoId?: number) {
     },
   })
 
-  // Agrupar por barbero
+  // Agrupar por barbero (solo líneas con barbero asignado)
   const mapa = new Map<number, {
     barberoId: number
     nombre: string
@@ -129,6 +129,7 @@ export async function getBarberosHoy(tenantId: number, turnoId?: number) {
   }>()
 
   for (const d of detalles) {
+    if (!d.barberoId || !d.barbero) continue
     const bid = d.barberoId
     const nombre = d.barbero.user.fullName
     if (!mapa.has(bid)) {
@@ -155,6 +156,10 @@ export async function getBarberosHoy(tenantId: number, turnoId?: number) {
       return { descripcion: desc, precioUnitario: parseFloat(precio), ...v, subtotal: parseFloat(v.subtotal.toFixed(2)) }
     }),
   })).sort((a, b) => b.total - a.total)
+}
+
+export async function findProductoById(id: number, tenantId: number) {
+  return prisma.barberProducto.findFirst({ where: { id, tenantId, activo: true } })
 }
 
 // ─── VENTAS ───────────────────────────────────────────────────────────────────
@@ -191,8 +196,9 @@ export async function createVenta(
     dteJson?: object
     detalles: Array<{
       numItem: number
-      barberoId: number
+      barberoId?: number
       servicioId?: number
+      productoId?: number
       descripcion: string
       cantidad: number
       precioUnitario: number
@@ -210,55 +216,88 @@ export async function createVenta(
     }>
   }
 ) {
-  return prisma.barberVenta.create({
-    data: {
-      tenantId,
-      turnoId,
-      numero: data.numero,
-      codigoGeneracion: data.codigoGeneracion,
-      numeroControl: data.numeroControl,
-      tipoDte: data.tipoDte,
-      clienteId: data.clienteId,
-      clienteNombre: data.clienteNombre,
-      clienteDocumento: data.clienteDocumento,
-      clienteNrc: data.clienteNrc,
-      subtotal: data.subtotal,
-      descuentoTotal: data.descuentoTotal,
-      totalGravado: data.totalGravado,
-      totalExento: data.totalExento,
-      iva: data.iva,
-      total: data.total,
-      appointmentId: data.appointmentId,
-      simulada: data.simulada,
-      dteJson: data.dteJson as Prisma.InputJsonValue ?? Prisma.JsonNull,
-      detalles: {
-        create: data.detalles.map(d => ({
-          numItem: d.numItem,
-          barberoId: d.barberoId,
-          servicioId: d.servicioId,
-          descripcion: d.descripcion,
+  return prisma.$transaction(async (tx) => {
+    const venta = await tx.barberVenta.create({
+      data: {
+        tenantId,
+        turnoId,
+        numero: data.numero,
+        codigoGeneracion: data.codigoGeneracion,
+        numeroControl: data.numeroControl,
+        tipoDte: data.tipoDte,
+        clienteId: data.clienteId,
+        clienteNombre: data.clienteNombre,
+        clienteDocumento: data.clienteDocumento,
+        clienteNrc: data.clienteNrc,
+        subtotal: data.subtotal,
+        descuentoTotal: data.descuentoTotal,
+        totalGravado: data.totalGravado,
+        totalExento: data.totalExento,
+        iva: data.iva,
+        total: data.total,
+        appointmentId: data.appointmentId,
+        simulada: data.simulada,
+        dteJson: data.dteJson as Prisma.InputJsonValue ?? Prisma.JsonNull,
+        detalles: {
+          create: data.detalles.map(d => ({
+            numItem: d.numItem,
+            barberoId: d.barberoId ?? null,
+            servicioId: d.servicioId,
+            productoId: d.productoId,
+            descripcion: d.descripcion,
+            cantidad: d.cantidad,
+            precioUnitario: d.precioUnitario,
+            descuento: d.descuento,
+            subtotal: d.subtotal,
+            esGravado: d.esGravado,
+            ivaItem: d.ivaItem,
+          })),
+        },
+        pagos: {
+          create: data.pagos.map(p => ({
+            metodo: p.metodo,
+            monto: p.monto,
+            recibido: p.recibido,
+            vuelto: p.vuelto,
+            referencia: p.referencia,
+          })),
+        },
+      },
+      include: {
+        detalles: { include: { barbero: { include: { user: { select: { fullName: true } } } }, servicio: true, producto: true } },
+        pagos: true,
+      },
+    })
+
+    // Descontar stock de productos vendidos
+    for (const d of data.detalles) {
+      if (!d.productoId) continue
+      const prod = await tx.barberProducto.findFirst({ where: { id: d.productoId, tenantId } })
+      if (!prod) continue
+      const stockAnterior = Number(prod.stockActual)
+      const stockNuevo = parseFloat((stockAnterior - d.cantidad).toFixed(4))
+      await tx.barberKardex.create({
+        data: {
+          tenantId,
+          productoId: d.productoId,
+          tipoMovimiento: 'SALIDA',
+          referencia: `VENTA-${venta.numero}`,
           cantidad: d.cantidad,
-          precioUnitario: d.precioUnitario,
-          descuento: d.descuento,
-          subtotal: d.subtotal,
-          esGravado: d.esGravado,
-          ivaItem: d.ivaItem,
-        })),
-      },
-      pagos: {
-        create: data.pagos.map(p => ({
-          metodo: p.metodo,
-          monto: p.monto,
-          recibido: p.recibido,
-          vuelto: p.vuelto,
-          referencia: p.referencia,
-        })),
-      },
-    },
-    include: {
-      detalles: { include: { barbero: { include: { user: { select: { fullName: true } } } }, servicio: true } },
-      pagos: true,
-    },
+          costoUnitario: Number(prod.costoPromedio),
+          costoTotal: parseFloat((d.cantidad * Number(prod.costoPromedio)).toFixed(4)),
+          stockAnterior,
+          stockNuevo,
+          notas: `POS venta #${venta.numero}`,
+          fecha: new Date(),
+        },
+      })
+      await tx.barberProducto.update({
+        where: { id: d.productoId },
+        data: { stockActual: stockNuevo },
+      })
+    }
+
+    return venta
   })
 }
 

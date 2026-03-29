@@ -7,7 +7,8 @@ import {
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined,
-  ReloadOutlined, PrinterOutlined, FileDoneOutlined
+  ReloadOutlined, PrinterOutlined, FileDoneOutlined,
+  AppstoreOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { abrirFacturaCompleta, abrirTicket, type DTEJsonViewer } from '@/lib/dte-viewer'
@@ -17,11 +18,14 @@ import { useBarberTheme } from '@/context/ThemeContext'
 
 interface Barbero { id: number; nombre: string }
 interface Servicio { id: number; name: string; price: number; category?: string }
+interface Producto { id: number; nombre: string; precio: number; stock: number; stockMinimo: number; categoria: string; unidad: string }
 interface LineaVenta {
   key: string
   barberoId: number | null
   barberoNombre: string
   servicioId: number | null
+  productoId: number | null
+  esProducto: boolean
   descripcion: string
   precioUnitario: number
   cantidad: number
@@ -77,9 +81,11 @@ const fmt = (n: number) => `$${n.toFixed(2)}`
 export default function PosClient({
   barberos: barberosProp,
   servicios: serviciosProp,
+  productos: productosProp,
 }: {
   barberos: Barbero[]
   servicios: Servicio[]
+  productos: Producto[]
 }) {
   const { theme: barberTheme } = useBarberTheme()
   const primary = barberTheme.colorPrimary
@@ -113,6 +119,7 @@ export default function PosClient({
   const [modalExito, setModalExito] = useState<{ numero: number; total: number; codigoGen: string; dte: DTEJsonViewer | null } | null>(null)
   const [barberoActivo, setBarberoActivo] = useState<{ id: number; nombre: string } | null>(null)
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todos')
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
 
   // ── Cargar datos ────────────────────────────────────────────────────────────
 
@@ -149,7 +156,8 @@ export default function PosClient({
     setLineas(prev => [...prev, {
       key: Date.now().toString(),
       barberoId: null, barberoNombre: '',
-      servicioId: null, descripcion: '',
+      servicioId: null, productoId: null, esProducto: false,
+      descripcion: '',
       precioUnitario: 0, cantidad: 1, descuento: 0, esGravado: false,
     }])
   }
@@ -163,6 +171,17 @@ export default function PosClient({
         if (svc) {
           updated.descripcion = svc.name
           updated.precioUnitario = svc.price
+          updated.productoId = null
+          updated.esProducto = false
+        }
+      }
+      if (field === 'productoId') {
+        const p = productosProp.find(p => p.id === value)
+        if (p) {
+          updated.descripcion = p.nombre
+          updated.precioUnitario = p.precio
+          updated.servicioId = null
+          updated.esProducto = true
         }
       }
       return updated
@@ -177,28 +196,41 @@ export default function PosClient({
         key: Date.now().toString(),
         barberoId: barberoActivo.id,
         barberoNombre: barberoActivo.nombre,
-        servicioId: svc.id,
+        servicioId: svc.id, productoId: null, esProducto: false,
         descripcion: svc.name,
         precioUnitario: svc.price,
         cantidad: 1, descuento: 0, esGravado: false,
       }])
       return
     }
-    const lineaSinServicio = lineas.find(l => !l.servicioId)
+    const lineaSinServicio = lineas.find(l => !l.servicioId && !l.productoId)
     if (lineaSinServicio) {
       setLineas(prev => prev.map(l =>
         l.key === lineaSinServicio.key
-          ? { ...l, servicioId: svc.id, descripcion: svc.name, precioUnitario: svc.price }
+          ? { ...l, servicioId: svc.id, productoId: null, esProducto: false, descripcion: svc.name, precioUnitario: svc.price }
           : l
       ))
     } else {
       setLineas(prev => [...prev, {
         key: Date.now().toString(),
         barberoId: null, barberoNombre: '',
-        servicioId: svc.id, descripcion: svc.name,
+        servicioId: svc.id, productoId: null, esProducto: false,
+        descripcion: svc.name,
         precioUnitario: svc.price, cantidad: 1, descuento: 0, esGravado: false,
       }])
     }
+  }
+
+  const selectProductoRapido = (p: Producto) => {
+    if (p.stock <= 0) return toast.error(`Sin stock: ${p.nombre}`)
+    setLineas(prev => [...prev, {
+      key: Date.now().toString(),
+      barberoId: null, barberoNombre: '',
+      servicioId: null, productoId: p.id, esProducto: true,
+      descripcion: p.nombre,
+      precioUnitario: p.precio,
+      cantidad: 1, descuento: 0, esGravado: false,
+    }])
   }
 
   // ── Pagos ───────────────────────────────────────────────────────────────────
@@ -232,9 +264,9 @@ export default function PosClient({
 
   const cobrar = async () => {
     if (!turno) return toast.error('No hay turno activo')
-    if (lineas.length === 0) return toast.error('Agrega al menos un servicio')
-    if (lineas.some(l => !l.barberoId)) return toast.error('Asigna un barbero a cada servicio')
-    if (lineas.some(l => !l.descripcion)) return toast.error('Todos los servicios deben tener descripción')
+    if (lineas.length === 0) return toast.error('Agrega al menos un ítem')
+    if (lineas.some(l => !l.esProducto && !l.barberoId)) return toast.error('Asigna un barbero a cada servicio')
+    if (lineas.some(l => !l.descripcion)) return toast.error('Todos los ítems deben tener descripción')
     if (!pagoCompleto) return toast.error(`Falta cubrir ${fmt(subtotal - totalPagado)}`)
 
     setLoadingCobrar(true)
@@ -246,8 +278,9 @@ export default function PosClient({
         clienteDocumento: conFactura ? clienteDocumento : undefined,
         clienteNrc: conFactura && tipoDte === '03' ? clienteNrc : undefined,
         items: lineas.map(l => ({
-          barberoId: l.barberoId,
-          servicioId: l.servicioId,
+          barberoId: l.barberoId ?? undefined,
+          servicioId: l.servicioId ?? undefined,
+          productoId: l.productoId ?? undefined,
           descripcion: l.descripcion,
           cantidad: l.cantidad,
           precioUnitario: l.precioUnitario,
@@ -392,74 +425,198 @@ export default function PosClient({
               )}
             </div>
 
-            {/* ── Servicios por categoría ── */}
+            {/* ── Servicios / Productos ── */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                2 · Elige servicio
+              {/* Cabecera con label + toggle vista */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  2 · Elige servicio o producto
+                </div>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <button onClick={() => setViewMode('cards')} title="Vista tarjetas" style={{
+                    padding: '3px 7px', borderRadius: '6px 0 0 6px', cursor: 'pointer', fontSize: 14,
+                    border: `1.5px solid ${C.border}`,
+                    background: viewMode === 'cards' ? primary : C.bgSurface,
+                    color: viewMode === 'cards' ? '#fff' : C.textMuted,
+                    borderRight: 'none',
+                  }}><AppstoreOutlined /></button>
+                  <button onClick={() => setViewMode('list')} title="Vista lista" style={{
+                    padding: '3px 7px', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: 14,
+                    border: `1.5px solid ${C.border}`,
+                    background: viewMode === 'list' ? primary : C.bgSurface,
+                    color: viewMode === 'list' ? '#fff' : C.textMuted,
+                  }}><UnorderedListOutlined /></button>
+                </div>
               </div>
 
               {(() => {
-                const cats = ['todos', ...Array.from(new Set(serviciosProp.map(s => s.category || 'otro'))).sort()]
+                const esProductosTab = categoriaActiva === '__productos__'
+                const cats = ['todos', ...Array.from(new Set(serviciosProp.map(s => s.category || 'otro'))).sort(), '__productos__']
                 const labels: Record<string, string> = {
                   todos: '🔍 Todos', cabello: '💇 Cabello', barba: '🧔 Barba',
                   combo: '⭐ Combos', tratamiento: '💆 Tratamientos', otro: '📦 Otros',
+                  __productos__: '📦 Productos',
                 }
-                const serviciosFiltrados = categoriaActiva === 'todos'
-                  ? serviciosProp
-                  : serviciosProp.filter(s => (s.category || 'otro') === categoriaActiva)
+                const serviciosFiltrados = esProductosTab
+                  ? []
+                  : categoriaActiva === 'todos' ? serviciosProp : serviciosProp.filter(s => (s.category || 'otro') === categoriaActiva)
 
                 return (
                   <>
-                    {/* Tabs de categoría */}
+                    {/* Tabs */}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                      {cats.map(cat => (
-                        <button key={cat} onClick={() => setCategoriaActiva(cat)} style={{
-                          padding: '3px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
-                          border: categoriaActiva === cat ? `2px solid ${primary}` : `1.5px solid ${C.border}`,
-                          background: categoriaActiva === cat ? primary : C.bgSurface,
-                          color: categoriaActiva === cat ? '#fff' : C.textSecondary,
-                          fontWeight: categoriaActiva === cat ? 600 : 400,
-                          transition: 'all 0.15s',
-                        }}>
-                          {labels[cat] || cat}
-                          <span style={{ marginLeft: 4, opacity: 0.7, fontSize: 10 }}>
-                            ({cat === 'todos' ? serviciosProp.length : serviciosProp.filter(s => (s.category || 'otro') === cat).length})
-                          </span>
-                        </button>
-                      ))}
+                      {cats.map(cat => {
+                        const isProductos = cat === '__productos__'
+                        const count = isProductos
+                          ? productosProp.length
+                          : cat === 'todos' ? serviciosProp.length : serviciosProp.filter(s => (s.category || 'otro') === cat).length
+                        const activo = categoriaActiva === cat
+                        return (
+                          <button key={cat} onClick={() => setCategoriaActiva(cat)} style={{
+                            padding: '3px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
+                            border: activo ? `2px solid ${isProductos ? '#52c41a' : primary}` : `1.5px solid ${C.border}`,
+                            background: activo ? (isProductos ? '#52c41a' : primary) : C.bgSurface,
+                            color: activo ? '#fff' : C.textSecondary,
+                            fontWeight: activo ? 600 : 400,
+                            transition: 'all 0.15s',
+                          }}>
+                            {labels[cat] || cat}
+                            <span style={{ marginLeft: 4, opacity: 0.7, fontSize: 10 }}>({count})</span>
+                          </button>
+                        )
+                      })}
                     </div>
 
-                    {/* Grid de servicios */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(120px, 44%), 1fr))',
-                      gap: 6,
-                      maxHeight: 'clamp(160px, 30vh, 240px)',
-                      overflowY: 'auto',
-                      padding: '2px 2px 4px',
-                    }}>
-                      {serviciosFiltrados.map(s => (
-                        <button
-                          key={s.id}
-                          onClick={() => selectServicioRapido(s)}
-                          title={!barberoActivo ? 'Selecciona primero un barbero' : s.name}
-                          style={{
-                            padding: '6px 8px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-                            border: `1.5px solid ${C.border}`,
-                            background: barberoActivo ? C.bgSurface : C.bgSubtle,
-                            color: barberoActivo ? C.textPrimary : C.textMuted,
-                            textAlign: 'left', lineHeight: 1.3,
-                            transition: 'all 0.15s',
-                            opacity: barberoActivo ? 1 : 0.6,
-                          }}
-                          onMouseEnter={e => { if (barberoActivo) (e.currentTarget as HTMLElement).style.borderColor = primary }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border }}
-                        >
-                          <div style={{ fontWeight: 500, marginBottom: 2 }}>{s.name}</div>
-                          <div style={{ color: primary, fontWeight: 700 }}>{fmt(s.price)}</div>
-                        </button>
-                      ))}
-                    </div>
+                    {/* ── VISTA TARJETAS ── */}
+                    {viewMode === 'cards' && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(min(120px, 44%), 1fr))',
+                        gap: 6,
+                        maxHeight: 'clamp(160px, 30vh, 240px)',
+                        overflowY: 'auto',
+                        padding: '2px 2px 4px',
+                      }}>
+                        {/* Tarjetas de servicios */}
+                        {!esProductosTab && serviciosFiltrados.map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => selectServicioRapido(s)}
+                            title={!barberoActivo ? 'Selecciona primero un barbero' : s.name}
+                            style={{
+                              padding: '6px 8px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                              border: `1.5px solid ${C.border}`,
+                              background: barberoActivo ? C.bgSurface : C.bgSubtle,
+                              color: barberoActivo ? C.textPrimary : C.textMuted,
+                              textAlign: 'left', lineHeight: 1.3,
+                              transition: 'all 0.15s',
+                              opacity: barberoActivo ? 1 : 0.6,
+                            }}
+                            onMouseEnter={e => { if (barberoActivo) (e.currentTarget as HTMLElement).style.borderColor = primary }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border }}
+                          >
+                            <div style={{ fontWeight: 500, marginBottom: 2 }}>{s.name}</div>
+                            <div style={{ color: primary, fontWeight: 700 }}>{fmt(s.price)}</div>
+                          </button>
+                        ))}
+                        {/* Tarjetas de productos */}
+                        {esProductosTab && productosProp.map(p => {
+                          const sinStock = p.stock <= 0
+                          const stockBajo = !sinStock && p.stock <= p.stockMinimo
+                          const stockColor = sinStock ? '#ff4d4f' : stockBajo ? '#faad14' : '#52c41a'
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => selectProductoRapido(p)}
+                              disabled={sinStock}
+                              title={sinStock ? 'Sin stock' : `Stock: ${p.stock} ${p.unidad}`}
+                              style={{
+                                padding: '6px 8px', borderRadius: 8, fontSize: 12,
+                                cursor: sinStock ? 'not-allowed' : 'pointer',
+                                border: `1.5px solid ${sinStock ? '#ff4d4f40' : C.border}`,
+                                background: sinStock ? C.bgSubtle : C.bgSurface,
+                                color: sinStock ? C.textDisabled : C.textPrimary,
+                                textAlign: 'left', lineHeight: 1.3,
+                                transition: 'all 0.15s',
+                                opacity: sinStock ? 0.5 : 1,
+                                position: 'relative',
+                              }}
+                              onMouseEnter={e => { if (!sinStock) (e.currentTarget as HTMLElement).style.borderColor = '#52c41a' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = sinStock ? '#ff4d4f40' : C.border }}
+                            >
+                              <div style={{
+                                position: 'absolute', top: 4, right: 4,
+                                fontSize: 9, fontWeight: 700, color: stockColor,
+                                background: `${stockColor}18`, borderRadius: 4, padding: '1px 4px',
+                              }}>
+                                {p.stock} {p.unidad.toLowerCase()}
+                              </div>
+                              <div style={{ fontWeight: 500, marginBottom: 2, paddingRight: 28 }}>{p.nombre}</div>
+                              <div style={{ color: '#52c41a', fontWeight: 700 }}>{fmt(p.precio)}</div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* ── VISTA LISTA ── */}
+                    {viewMode === 'list' && (
+                      <div style={{ maxHeight: 'clamp(160px, 30vh, 240px)', overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                              <th style={{ textAlign: 'left', padding: '3px 6px', color: C.textMuted, fontWeight: 600 }}>Nombre</th>
+                              <th style={{ textAlign: 'right', padding: '3px 6px', color: C.textMuted, fontWeight: 600 }}>Precio</th>
+                              <th style={{ textAlign: 'center', padding: '3px 6px', color: C.textMuted, fontWeight: 600 }}>Stock</th>
+                              <th style={{ width: 36 }} />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Filas de servicios */}
+                            {!esProductosTab && serviciosFiltrados.map(s => (
+                              <tr key={s.id} style={{ borderBottom: `1px solid ${C.border}` }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = C.bgSubtle}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                                <td style={{ padding: '4px 6px', color: C.textPrimary }}>{s.name}</td>
+                                <td style={{ padding: '4px 6px', textAlign: 'right', color: primary, fontWeight: 700 }}>{fmt(s.price)}</td>
+                                <td style={{ padding: '4px 6px', textAlign: 'center', color: C.textMuted }}>—</td>
+                                <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                  <button onClick={() => selectServicioRapido(s)} style={{
+                                    width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${primary}`,
+                                    background: C.bgPrimaryLow, color: primary, cursor: 'pointer', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}>+</button>
+                                </td>
+                              </tr>
+                            ))}
+                            {/* Filas de productos */}
+                            {esProductosTab && productosProp.map(p => {
+                              const sinStock = p.stock <= 0
+                              const stockBajo = !sinStock && p.stock <= p.stockMinimo
+                              const stockColor = sinStock ? '#ff4d4f' : stockBajo ? '#faad14' : '#52c41a'
+                              return (
+                                <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}`, opacity: sinStock ? 0.5 : 1 }}
+                                  onMouseEnter={e => { if (!sinStock) (e.currentTarget as HTMLElement).style.background = C.bgSubtle }}
+                                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                                  <td style={{ padding: '4px 6px', color: C.textPrimary }}>{p.nombre}</td>
+                                  <td style={{ padding: '4px 6px', textAlign: 'right', color: '#52c41a', fontWeight: 700 }}>{fmt(p.precio)}</td>
+                                  <td style={{ padding: '4px 6px', textAlign: 'center', color: stockColor, fontWeight: 600, fontSize: 11 }}>
+                                    {p.stock} {p.unidad.toLowerCase()}
+                                  </td>
+                                  <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                    <button onClick={() => selectProductoRapido(p)} disabled={sinStock} style={{
+                                      width: 24, height: 24, borderRadius: 6, border: `1.5px solid #52c41a`,
+                                      background: '#52c41a18', color: '#52c41a', cursor: sinStock ? 'not-allowed' : 'pointer',
+                                      fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>+</button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </>
                 )
               })()}
@@ -470,36 +627,49 @@ export default function PosClient({
             {/* Tabla de líneas */}
             {lineas.length === 0 ? (
               <div style={{ textAlign: 'center', color: C.textDisabled, padding: '20px 0' }}>
-                Toca un barbero o servicio para agregar líneas
+                Toca un servicio o producto para agregar líneas
               </div>
             ) : (
               <div style={{ marginBottom: 8 }}>
                 {lineas.map((l, idx) => (
                   <Card key={l.key} size="small" style={{ marginBottom: 6, background: C.bgSubtle }}>
-                    {/* Fila 1: número + barbero + servicio */}
+                    {/* Fila 1: número + barbero + servicio/producto */}
                     <Row gutter={6} align="middle" style={{ marginBottom: 4 }}>
                       <Col flex="20px">
                         <span style={{ color: C.textMuted, fontSize: 11 }}>{idx + 1}</span>
                       </Col>
                       <Col flex="1">
                         <Select
-                          size="small" placeholder="Barbero" style={{ width: '100%' }}
+                          size="small"
+                          placeholder={l.esProducto ? 'Sin barbero (producto)' : 'Barbero *'}
+                          style={{ width: '100%' }}
+                          allowClear={l.esProducto}
                           value={l.barberoId}
                           onChange={v => {
                             const b = barberosProp.find(b => b.id === v)
-                            updateLinea(l.key, 'barberoId', v)
+                            updateLinea(l.key, 'barberoId', v ?? null)
                             if (b) updateLinea(l.key, 'barberoNombre', b.nombre)
+                            else updateLinea(l.key, 'barberoNombre', '')
                           }}
                           options={barberosProp.map(b => ({ value: b.id, label: '✂️ ' + b.nombre }))}
                         />
                       </Col>
                       <Col flex="1">
-                        <Select
-                          size="small" showSearch placeholder="Servicio" style={{ width: '100%' }}
-                          value={l.servicioId}
-                          onChange={v => updateLinea(l.key, 'servicioId', v)}
-                          options={serviciosProp.map(s => ({ value: s.id, label: s.name + ' ' + fmt(s.price) }))}
-                        />
+                        {l.esProducto ? (
+                          <Select
+                            size="small" showSearch placeholder="Producto" style={{ width: '100%' }}
+                            value={l.productoId}
+                            onChange={v => updateLinea(l.key, 'productoId', v)}
+                            options={productosProp.map(p => ({ value: p.id, label: `📦 ${p.nombre} (${p.stock} ${p.unidad.toLowerCase()})` }))}
+                          />
+                        ) : (
+                          <Select
+                            size="small" showSearch placeholder="Servicio" style={{ width: '100%' }}
+                            value={l.servicioId}
+                            onChange={v => updateLinea(l.key, 'servicioId', v)}
+                            options={serviciosProp.map(s => ({ value: s.id, label: s.name + ' ' + fmt(s.price) }))}
+                          />
+                        )}
                       </Col>
                     </Row>
                     {/* Fila 2: precio + descuento + total + borrar */}

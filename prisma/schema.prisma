@@ -372,6 +372,7 @@ model BarberProducto {
 
   kardex         BarberKardex[]
   detallesCompra BarberDetalleCompra[]
+  detallesVenta  BarberDetalleVenta[]
 
   @@unique([tenantId, codigo])
   @@index([tenantId])
@@ -698,23 +699,25 @@ model BarberVenta {
   @@map("barber_ventas")
 }
 
-// Línea de detalle — cada servicio con su barbero
+// Línea de detalle — cada servicio o producto con su barbero (opcional en productos)
 model BarberDetalleVenta {
-  id             Int            @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   ventaId        Int
-  venta          BarberVenta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  numItem        Int            // 1, 2, 3...
-  barberoId      Int
-  barbero        Barber         @relation(fields: [barberoId], references: [id])
+  venta          BarberVenta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  numItem        Int             // 1, 2, 3...
+  barberoId      Int?
+  barbero        Barber?         @relation(fields: [barberoId], references: [id])
   servicioId     Int?
-  servicio       BarberService? @relation(fields: [servicioId], references: [id])
-  descripcion    String         // snapshot del nombre del servicio
-  cantidad       Int            @default(1)
-  precioUnitario Decimal        @db.Decimal(10, 2)
-  descuento      Decimal        @default(0) @db.Decimal(10, 2)
-  subtotal       Decimal        @db.Decimal(10, 2)
-  esGravado      Boolean        @default(false)
-  ivaItem        Decimal        @default(0) @db.Decimal(10, 2)
+  servicio       BarberService?  @relation(fields: [servicioId], references: [id])
+  productoId     Int?
+  producto       BarberProducto? @relation(fields: [productoId], references: [id])
+  descripcion    String          // snapshot del nombre del servicio/producto
+  cantidad       Int             @default(1)
+  precioUnitario Decimal         @db.Decimal(10, 2)
+  descuento      Decimal         @default(0) @db.Decimal(10, 2)
+  subtotal       Decimal         @db.Decimal(10, 2)
+  esGravado      Boolean         @default(false)
+  ivaItem        Decimal         @default(0) @db.Decimal(10, 2)
 
   @@map("barber_detalles_venta")
 }
