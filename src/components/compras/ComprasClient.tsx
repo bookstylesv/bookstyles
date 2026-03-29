@@ -1571,8 +1571,8 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
               style={{
                 display: 'grid',
                 gridTemplateColumns: nuevaTipoCompra === 'PRODUCTO'
-                  ? '2fr 1.4fr 0.7fr 0.9fr 0.7fr 0.9fr 32px'
-                  : '2.5fr 0.7fr 0.9fr 0.7fr 0.9fr 32px',
+                  ? 'minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.9fr) 32px'
+                  : 'minmax(0, 2.5fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.9fr) 32px',
                 gap: 6,
                 marginBottom: 4,
                 padding: '0 4px',
@@ -1595,8 +1595,8 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: nuevaTipoCompra === 'PRODUCTO'
-                    ? '2fr 1.4fr 0.7fr 0.9fr 0.7fr 0.9fr 32px'
-                    : '2.5fr 0.7fr 0.9fr 0.7fr 0.9fr 32px',
+                    ? 'minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.9fr) 32px'
+                    : 'minmax(0, 2.5fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.9fr) 32px',
                   gap: 6,
                   marginBottom: 8,
                   alignItems: 'center',
