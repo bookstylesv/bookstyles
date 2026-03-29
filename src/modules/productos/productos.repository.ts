@@ -90,7 +90,7 @@ export async function findAllProductos(
     prisma.barberProducto.findMany({
       where: whereBase,
       include: PRODUCTO_INCLUDE,
-      orderBy: { nombre: 'asc' },
+      orderBy: { codigo: 'asc' },
       ...(pagination && { skip: pagination.skip, take: pagination.limit }),
     }),
     prisma.barberProducto.count({ where: whereBase }),
@@ -175,7 +175,7 @@ export async function searchProductos(tenantId: number, query: string) {
       unidadMedida: true,
       precioVenta: true,
     },
-    orderBy: { nombre: 'asc' },
+    orderBy: { codigo: 'asc' },
     take: 20,
   });
 }
