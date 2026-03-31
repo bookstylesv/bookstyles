@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateSuperadminKey, unauthorizedResponse } from '@/lib/superadmin-auth';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 import type { BarberPlan, BarberTenantStatus } from '@prisma/client';
 
 const TENANT_SELECT = {
@@ -50,10 +51,17 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     name: string; slug: string; email?: string; phone?: string; city?: string;
     plan?: BarberPlan; maxBarbers?: number; paidUntil?: string;
+    owner?: { fullName: string; email: string; password: string };
   };
 
   if (!body.name?.trim() || !body.slug?.trim()) {
     return NextResponse.json({ error: 'name y slug son requeridos' }, { status: 422 });
+  }
+
+  if (body.owner) {
+    if (!body.owner.fullName?.trim() || !body.owner.email?.trim() || !body.owner.password?.trim()) {
+      return NextResponse.json({ error: 'owner requiere fullName, email y password' }, { status: 422 });
+    }
   }
 
   const existing = await prisma.barberTenant.findUnique({ where: { slug: body.slug } });
@@ -79,5 +87,21 @@ export async function POST(req: NextRequest) {
     select: TENANT_SELECT,
   });
 
-  return NextResponse.json(tenant, { status: 201 });
+  if (body.owner) {
+    const hashed = await bcrypt.hash(body.owner.password, 10);
+    await prisma.barberUser.create({
+      data: {
+        tenantId: tenant.id,
+        fullName: body.owner.fullName.trim(),
+        email:    body.owner.email.trim().toLowerCase(),
+        password: hashed,
+        role:     'OWNER',
+      },
+    });
+  }
+
+  return NextResponse.json(
+    { ...tenant, ownerCreated: !!body.owner },
+    { status: 201 },
+  );
 }
