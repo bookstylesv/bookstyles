@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   '/book',              // ← página pública de reservas (sin login)
   '/api/book',          // ← API pública de reservas (sin login)
   '/api/superadmin',    // ← endpoints del panel central Speeddan Control (auth por API key)
+  '/api/public',        // ← endpoints públicos sin autenticación (branding, etc.)
 ];
 
 function getSecret(): Uint8Array {
