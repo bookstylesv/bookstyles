@@ -818,11 +818,35 @@ export default function ProductosClient({
               <Row gutter={12}>
                 <Col span={12}>
                   <FormField label="Unidad de compra *">
-                    <Input
-                      value={formData.unidadCompra}
-                      onChange={e => setFormData(p => ({ ...p, unidadCompra: e.target.value }))}
-                      placeholder="Ej: Botella, Galón, Caja"
-                      maxLength={40}
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder="Seleccionar..."
+                      showSearch
+                      value={formData.unidadCompra || undefined}
+                      onChange={v => setFormData(p => ({ ...p, unidadCompra: v }))}
+                      filterOption={(input, opt) =>
+                        (opt?.label as string ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={unidades.map(u => ({
+                        value: u.nombre,
+                        label: u.simbolo ? `${u.nombre} (${u.simbolo})` : u.nombre,
+                      }))}
+                      dropdownRender={menu => (
+                        <>
+                          {menu}
+                          <div style={{ padding: '8px 12px', borderTop: '1px solid #f0f0f0' }}>
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<PlusOutlined />}
+                              onClick={() => { setModalOpen(false); setUnidadDrawerOpen(true); }}
+                              style={{ padding: 0 }}
+                            >
+                              Crear nueva unidad
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     />
                   </FormField>
                 </Col>
@@ -865,7 +889,7 @@ export default function ProductosClient({
                   value={formData.factorConversion}
                   onChange={v => setFormData(p => ({ ...p, factorConversion: v ?? undefined }))}
                   placeholder="Ej: 12"
-                  addonBefore={`1 ${formData.unidadCompra || 'unid.compra'} =`}
+                  addonBefore={`1 ${formData.unidadCompra || '?'} =`}
                   addonAfter={
                     formData.unidadVentaId
                       ? unidades.find(u => u.id === formData.unidadVentaId)?.nombre ?? 'uds'
@@ -1039,7 +1063,11 @@ export default function ProductosClient({
         destroyOnHidden
       >
         <div style={{ background: C.bgSubtle, borderRadius: 8, padding: 16, marginBottom: 20, border: `1px solid ${C.border}` }}>
-          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 13 }}>Nueva unidad de medida</div>
+          <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 13 }}>Nueva unidad de medida</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+            El mismo catálogo se usa para <strong>unidad de compra</strong> y <strong>unidad de venta</strong>.
+            Ej: KG, LB, GL, Onza, Vaso, Cucharada
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <Row gutter={12}>
               <Col span={14}>
@@ -1086,7 +1114,7 @@ export default function ProductosClient({
             <SplitCellsOutlined style={{ fontSize: 28, color: C.textDisabled }} />
             <div style={{ marginTop: 8 }}>Sin unidades creadas</div>
             <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
-              Crea unidades como "Onza", "Vaso", "Cucharada"
+              Crea unidades para compra (KG, LB, GL) y venta (Onza, Vaso, Cucharada)
             </div>
           </div>
         ) : (
