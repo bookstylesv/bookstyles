@@ -117,6 +117,9 @@ model BarberTenant {
   // Módulo Loyalty
   loyaltyTarjetas BarberLoyaltyTarjeta[]
 
+  // Módulo Unidades de Medida
+  unidadesMedida BarberUnidadMedida[]
+
   @@map("barber_tenants")
 }
 
@@ -370,6 +373,11 @@ model BarberProducto {
   stockMinimo    Decimal                  @default(0) @db.Decimal(10, 2)
   stockActual   Decimal                  @default(0) @db.Decimal(10, 2)
   unidadMedida  String                   @default("UNIDAD")
+  // Unidades fraccionadas
+  unidadCompra     String                @default("UNIDAD")  // ej: "Botella", "Galón", "Caja"
+  unidadVentaId    Int?                                       // FK a BarberUnidadMedida
+  unidadVenta      BarberUnidadMedida?   @relation(fields: [unidadVentaId], references: [id])
+  factorConversion Decimal               @default(1) @db.Decimal(10, 4) // cuántas unidVenta por 1 unidCompra
   activo        Boolean                  @default(true)
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
@@ -402,6 +410,26 @@ model BarberKardex {
   @@index([tenantId])
   @@index([productoId])
   @@map("barber_kardex")
+}
+
+// ══════════════════════════════════════════════════════
+// MÓDULO UNIDADES DE MEDIDA (catálogo por tenant)
+// ══════════════════════════════════════════════════════
+
+model BarberUnidadMedida {
+  id        Int           @id @default(autoincrement())
+  tenantId  Int
+  tenant    BarberTenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre    String        // "Onza", "Vaso", "Cucharada", "Libra"
+  simbolo   String?       // "oz", "vaso", "cdta" (opcional)
+  activa    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  productos BarberProducto[]
+
+  @@unique([tenantId, nombre])
+  @@index([tenantId])
+  @@map("barber_unidades_medida")
 }
 
 // ══════════════════════════════════════════════════════

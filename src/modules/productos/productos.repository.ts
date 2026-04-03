@@ -31,6 +31,10 @@ export type ProductoCreateInput = {
   stockMinimo?: number;
   stockInicial?: number;
   unidadMedida?: string;
+  // Unidades fraccionadas
+  unidadCompra?: string;
+  unidadVentaId?: number | null;
+  factorConversion?: number;
 };
 
 export type ProductoUpdateInput = Partial<Omit<ProductoCreateInput, 'stockInicial'>>;
@@ -48,6 +52,9 @@ export type AjusteStockInput = {
 const PRODUCTO_INCLUDE = {
   categoria: {
     select: { id: true, nombre: true },
+  },
+  unidadVenta: {
+    select: { id: true, nombre: true, simbolo: true },
   },
 } as const;
 
@@ -125,6 +132,9 @@ export async function createProducto(tenantId: number, data: ProductoCreateInput
       stockMinimo: data.stockMinimo ?? 0,
       stockActual: data.stockInicial ?? 0,
       unidadMedida: data.unidadMedida ?? 'UNIDAD',
+      unidadCompra: data.unidadCompra ?? 'UNIDAD',
+      unidadVentaId: data.unidadVentaId ?? null,
+      factorConversion: data.factorConversion ?? 1,
       activo: true,
     },
     include: PRODUCTO_INCLUDE,
@@ -144,6 +154,9 @@ export async function updateProducto(id: number, tenantId: number, data: Product
       ...(data.precioComision !== undefined && { precioComision: data.precioComision }),
       ...(data.stockMinimo !== undefined && { stockMinimo: data.stockMinimo }),
       ...(data.unidadMedida !== undefined && { unidadMedida: data.unidadMedida }),
+      ...(data.unidadCompra !== undefined && { unidadCompra: data.unidadCompra }),
+      ...(data.unidadVentaId !== undefined && { unidadVentaId: data.unidadVentaId }),
+      ...(data.factorConversion !== undefined && { factorConversion: data.factorConversion }),
     },
     include: PRODUCTO_INCLUDE,
   });

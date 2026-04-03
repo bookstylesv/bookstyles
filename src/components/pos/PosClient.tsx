@@ -18,7 +18,11 @@ import { useBarberTheme } from '@/context/ThemeContext'
 
 interface Barbero { id: number; nombre: string }
 interface Servicio { id: number; name: string; price: number; category?: string }
-interface Producto { id: number; codigo: string; nombre: string; precio: number; stock: number; stockMinimo: number; categoria: string; unidad: string }
+interface Producto {
+  id: number; codigo: string; nombre: string; precio: number; stock: number
+  stockMinimo: number; categoria: string; unidad: string
+  unidadCompra?: string; factorConversion?: number; esFraccionable?: boolean
+}
 interface LineaVenta {
   key: string
   barberoId: number | null
@@ -138,6 +142,13 @@ export default function PosClient({
     tipo: 'SELLOS' | 'PUNTOS'; meta: number; saldoActual: number
     estado: 'ACTIVA' | 'PENDIENTE_CANJE'; dolarsPorPunto?: number
   }[]>([])
+
+  // Mini-modal para productos fraccionables
+  const [modalFraccion, setModalFraccion] = useState<{
+    producto: Producto
+    modoVenta: 'unidad' | 'fraccion'
+    cantidadFraccion: number
+  } | null>(null)
 
   // ── Cargar datos ────────────────────────────────────────────────────────────
 
@@ -269,19 +280,26 @@ export default function PosClient({
 
   const selectProductoRapido = (p: Producto) => {
     if (p.stock <= 0) return toast.error(`Sin stock: ${p.nombre}`)
-    // Si ya existe una línea para este producto, incrementar cantidad
-    const existente = lineas.find(l => l.productoId === p.id)
+    // Si el producto es fraccionable, abrir mini-modal para elegir modo
+    if (p.esFraccionable && (p.factorConversion ?? 1) > 1) {
+      setModalFraccion({ producto: p, modoVenta: 'unidad', cantidadFraccion: 1 })
+      return
+    }
+    agregarProductoAlCarrito(p, 1, p.precio, p.nombre)
+  }
+
+  const agregarProductoAlCarrito = (p: Producto, cantidad: number, precioUnitario: number, descripcion: string) => {
+    const existente = lineas.find(l => l.productoId === p.id && l.descripcion === descripcion)
     if (existente) {
-      updateLinea(existente.key, 'cantidad', existente.cantidad + 1)
+      updateLinea(existente.key, 'cantidad', existente.cantidad + cantidad)
       return
     }
     setLineas(prev => [...prev, {
       key: Date.now().toString(),
       barberoId: null, barberoNombre: '',
       servicioId: null, productoId: p.id, esProducto: true,
-      descripcion: p.nombre,
-      precioUnitario: p.precio,
-      cantidad: 1, descuento: 0, esGravado: false,
+      descripcion,
+      precioUnitario, cantidad, descuento: 0, esGravado: false,
     }])
   }
 
@@ -1374,6 +1392,164 @@ export default function PosClient({
             </Button>
           </div>
         )}
+      </Modal>
+
+      {/* ══════════════════════════════════════════════════════
+          Mini-modal: Venta de producto fraccionable
+      ══════════════════════════════════════════════════════ */}
+      <Modal
+        open={!!modalFraccion}
+        onCancel={() => setModalFraccion(null)}
+        title={
+          <Space>
+            <span>✂️</span>
+            <span>¿Cómo vender este producto?</span>
+          </Space>
+        }
+        footer={null}
+        destroyOnHidden
+        width={440}
+      >
+        {modalFraccion && (() => {
+          const p = modalFraccion.producto
+          const factor = p.factorConversion ?? 1
+          const unidVenta = p.unidad
+          const unidCompra = p.unidadCompra ?? 'unidad'
+          const stockEnCompra = (p.stock / factor).toFixed(2)
+
+          // Precio por unidad de venta = precio / factor
+          const precioPorFraccion = p.precio / factor
+          const precioFraccionTotal = precioPorFraccion * modalFraccion.cantidadFraccion
+
+          const stockSuficiente = modalFraccion.modoVenta === 'unidad'
+            ? p.stock >= factor
+            : p.stock >= modalFraccion.cantidadFraccion
+
+          const handleAgregar = () => {
+            if (!stockSuficiente) {
+              toast.error(`Stock insuficiente. Disponible: ${p.stock} ${unidVenta}`)
+              return
+            }
+            if (modalFraccion.modoVenta === 'unidad') {
+              // Descuenta factorConversion unidades de venta
+              agregarProductoAlCarrito(
+                p,
+                factor, // la cantidad en unidades de venta
+                precioPorFraccion,
+                `${p.nombre} (1 ${unidCompra} = ${factor} ${unidVenta})`
+              )
+            } else {
+              const cant = modalFraccion.cantidadFraccion
+              if (cant <= 0) { toast.error('Indica la cantidad'); return }
+              agregarProductoAlCarrito(
+                p,
+                cant,
+                precioPorFraccion,
+                `${p.nombre} × ${cant} ${unidVenta}`
+              )
+            }
+            setModalFraccion(null)
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Info del producto */}
+              <div style={{
+                background: `${primary}12`, borderRadius: 8, padding: '10px 14px',
+                border: `1px solid ${primary}30`,
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.nombre}</div>
+                <div style={{ fontSize: 12, color: 'hsl(var(--text-muted))', marginTop: 4 }}>
+                  Stock: <strong>{p.stock} {unidVenta}</strong>
+                  {' '}= {stockEnCompra} {unidCompra}{Number(stockEnCompra) !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Selector modo venta */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setModalFraccion(prev => prev ? { ...prev, modoVenta: 'unidad' } : null)}
+                  style={{
+                    flex: 1, padding: '14px 10px', borderRadius: 8, cursor: 'pointer',
+                    border: `2px solid ${modalFraccion.modoVenta === 'unidad' ? primary : 'hsl(var(--border-default))'}`,
+                    background: modalFraccion.modoVenta === 'unidad' ? `${primary}12` : 'hsl(var(--bg-surface))',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>📦</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Unidad completa</span>
+                  <span style={{ fontSize: 11, color: 'hsl(var(--text-muted))' }}>
+                    1 {unidCompra} = {factor} {unidVenta}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: primary }}>
+                    {fmt(p.precio)}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setModalFraccion(prev => prev ? { ...prev, modoVenta: 'fraccion' } : null)}
+                  style={{
+                    flex: 1, padding: '14px 10px', borderRadius: 8, cursor: 'pointer',
+                    border: `2px solid ${modalFraccion.modoVenta === 'fraccion' ? primary : 'hsl(var(--border-default))'}`,
+                    background: modalFraccion.modoVenta === 'fraccion' ? `${primary}12` : 'hsl(var(--bg-surface))',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>✂️</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Por fracción</span>
+                  <span style={{ fontSize: 11, color: 'hsl(var(--text-muted))' }}>
+                    {fmt(precioPorFraccion)} / {unidVenta}
+                  </span>
+                </button>
+              </div>
+
+              {/* Input cantidad fracción */}
+              {modalFraccion.modoVenta === 'fraccion' && (
+                <div>
+                  <div style={{ fontSize: 12, marginBottom: 6, fontWeight: 500 }}>
+                    Cantidad de {unidVenta}s a vender:
+                  </div>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={0.01} step={1} precision={2}
+                    value={modalFraccion.cantidadFraccion}
+                    onChange={v => setModalFraccion(prev => prev ? { ...prev, cantidadFraccion: v ?? 1 } : null)}
+                    addonAfter={unidVenta}
+                    autoFocus
+                  />
+                  {modalFraccion.cantidadFraccion > 0 && (
+                    <div style={{ marginTop: 6, fontSize: 13, color: primary, fontWeight: 600 }}>
+                      Total: {fmt(precioFraccionTotal)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Alerta stock insuficiente */}
+              {!stockSuficiente && (
+                <Alert
+                  type="error"
+                  message={`Stock insuficiente. Disponible: ${p.stock} ${unidVenta}`}
+                  showIcon
+                />
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <Button onClick={() => setModalFraccion(null)}>Cancelar</Button>
+                <Button
+                  type="primary"
+                  disabled={!stockSuficiente || (modalFraccion.modoVenta === 'fraccion' && modalFraccion.cantidadFraccion <= 0)}
+                  onClick={handleAgregar}
+                  style={{ background: primary, borderColor: primary }}
+                >
+                  Agregar al carrito
+                </Button>
+              </div>
+            </div>
+          )
+        })()}
       </Modal>
     </div>
   )

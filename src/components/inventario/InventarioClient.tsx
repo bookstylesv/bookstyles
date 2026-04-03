@@ -8,6 +8,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Table, Card, Button, Row, Col,
@@ -49,6 +50,9 @@ type Producto = {
   stockMinimo: number;
   stockActual: number;
   unidadMedida: string;
+  unidadCompra: string;
+  unidadVenta: { id: number; nombre: string; simbolo: string | null } | null;
+  factorConversion: number;
   activo: boolean;
   stockBajo: boolean;
 };
@@ -186,6 +190,7 @@ export default function InventarioClient({
 }: Props) {
   const { theme: barberTheme } = useBarberTheme()
   const primary = barberTheme.colorPrimary
+  const router = useRouter()
   const C = {
     bgPage: 'hsl(var(--bg-page))',
     bgSurface: 'hsl(var(--bg-surface))',
@@ -661,15 +666,18 @@ export default function InventarioClient({
     {
       title: 'Stock',
       key: 'stock',
-      width: 180,
+      width: 200,
       render: (_, r) => {
         const pct = stockPercent(r.stockActual, r.stockMinimo);
         const status = stockStatus(r.stockActual, r.stockMinimo);
+        const factor = Number(r.factorConversion ?? 1);
+        const unidVenta = r.unidadVenta?.nombre ?? r.unidadMedida;
+        const enCompra = factor > 1 ? (r.stockActual / factor).toFixed(2) : null;
         return (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
               <Text style={{ fontSize: 13, fontWeight: 600, color: status === 'exception' ? '#cf1322' : primary }}>
-                {r.stockActual} {r.unidadMedida}
+                {r.stockActual} {unidVenta}
               </Text>
               {r.stockBajo && (
                 <Tooltip title={`Stock mínimo: ${r.stockMinimo}`}>
@@ -686,7 +694,12 @@ export default function InventarioClient({
               trailColor={C.bgMuted}
             />
             <Text type="secondary" style={{ fontSize: 10 }}>
-              Mín: {r.stockMinimo} {r.unidadMedida}
+              Mín: {r.stockMinimo} {unidVenta}
+              {enCompra && (
+                <span style={{ marginLeft: 6 }}>
+                  · {enCompra} {r.unidadCompra}
+                </span>
+              )}
             </Text>
           </div>
         );
@@ -718,11 +731,22 @@ export default function InventarioClient({
     {
       title: 'Unidad',
       key: 'unidad',
-      width: 90,
+      width: 110,
       responsive: ['lg'],
-      render: (_, r) => (
-        <Tag style={{ fontSize: 10 }}>{r.unidadMedida}</Tag>
-      ),
+      render: (_, r) => {
+        const factor = Number(r.factorConversion ?? 1);
+        const unidVenta = r.unidadVenta?.nombre ?? r.unidadMedida;
+        if (factor > 1) {
+          return (
+            <Tooltip title={`1 ${r.unidadCompra} = ${factor} ${unidVenta}`}>
+              <Tag color="blue" style={{ fontSize: 10 }}>
+                {r.unidadCompra} / {unidVenta}
+              </Tag>
+            </Tooltip>
+          );
+        }
+        return <Tag style={{ fontSize: 10 }}>{unidVenta}</Tag>;
+      },
     },
     {
       title: 'Acciones',
@@ -1072,10 +1096,10 @@ export default function InventarioClient({
                       <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={openCreate}
+                        onClick={() => router.push('/productos')}
                         style={{ background: primary, borderColor: primary }}
                       >
-                        Nuevo producto
+                        Ir a Productos
                       </Button>
                     </Col>
                   </Row>
@@ -1126,8 +1150,8 @@ export default function InventarioClient({
                             {soloStockBajo ? 'No hay productos con stock bajo' : 'Sin productos registrados'}
                           </div>
                           {!soloStockBajo && (
-                            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ marginTop: 12 }}>
-                              Crear primer producto
+                            <Button type="primary" icon={<PlusOutlined />} onClick={() => router.push('/productos')} style={{ marginTop: 12 }}>
+                              Ir a Productos
                             </Button>
                           )}
                         </div>
@@ -1376,13 +1400,18 @@ export default function InventarioClient({
               <Col span={6}>
                 <div style={{ fontSize: 11, color: C.textMuted }}>Stock actual</div>
                 <div style={{ fontWeight: 700, fontSize: 18, color: kardexProducto.stockBajo ? '#cf1322' : primary }}>
-                  {kardexProducto.stockActual} <span style={{ fontSize: 12, fontWeight: 400 }}>{kardexProducto.unidadMedida}</span>
+                  {kardexProducto.stockActual} <span style={{ fontSize: 12, fontWeight: 400 }}>{kardexProducto.unidadVenta?.nombre ?? kardexProducto.unidadMedida}</span>
                 </div>
+                {Number(kardexProducto.factorConversion) > 1 && (
+                  <div style={{ fontSize: 10, color: C.textMuted }}>
+                    = {(kardexProducto.stockActual / Number(kardexProducto.factorConversion)).toFixed(2)} {kardexProducto.unidadCompra}
+                  </div>
+                )}
               </Col>
               <Col span={6}>
                 <div style={{ fontSize: 11, color: C.textMuted }}>Mínimo</div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>
-                  {kardexProducto.stockMinimo} {kardexProducto.unidadMedida}
+                  {kardexProducto.stockMinimo} {kardexProducto.unidadVenta?.nombre ?? kardexProducto.unidadMedida}
                 </div>
               </Col>
               <Col span={6}>
@@ -1649,13 +1678,13 @@ export default function InventarioClient({
               <Col span={12}>
                 <div style={{ fontSize: 11, color: C.textMuted }}>Stock actual</div>
                 <div style={{ fontWeight: 700, fontSize: 16, color: ajusteEffectiveProducto.stockBajo ? '#cf1322' : primary }}>
-                  {ajusteEffectiveProducto.stockActual} {ajusteEffectiveProducto.unidadMedida}
+                  {ajusteEffectiveProducto.stockActual} {ajusteEffectiveProducto.unidadVenta?.nombre ?? ajusteEffectiveProducto.unidadMedida}
                 </div>
               </Col>
               <Col span={12}>
                 <div style={{ fontSize: 11, color: C.textMuted }}>Stock mínimo</div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>
-                  {ajusteEffectiveProducto.stockMinimo} {ajusteEffectiveProducto.unidadMedida}
+                  {ajusteEffectiveProducto.stockMinimo} {ajusteEffectiveProducto.unidadVenta?.nombre ?? ajusteEffectiveProducto.unidadMedida}
                 </div>
               </Col>
             </Row>
@@ -1726,7 +1755,7 @@ export default function InventarioClient({
               background: '#fff1f0', border: '1px solid #ffa39e',
               borderRadius: 6, padding: '8px 12px', color: '#cf1322', fontSize: 12,
             }}>
-              La cantidad supera el stock actual ({ajusteEffectiveProducto.stockActual} {ajusteEffectiveProducto.unidadMedida}).
+              La cantidad supera el stock actual ({ajusteEffectiveProducto.stockActual} {ajusteEffectiveProducto.unidadVenta?.nombre ?? ajusteEffectiveProducto.unidadMedida}).
             </div>
           )}
 

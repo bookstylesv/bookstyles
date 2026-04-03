@@ -24,6 +24,10 @@ export type ProductoSerialized = {
   stockMinimo: number;
   stockActual: number;
   unidadMedida: string;
+  unidadCompra: string;
+  unidadVentaId: number | null;
+  unidadVenta: { id: number; nombre: string; simbolo: string | null } | null;
+  factorConversion: number;
   activo: boolean;
   stockBajo: boolean;
 };
@@ -65,6 +69,10 @@ function serializeProducto(p: NonNullable<RawProducto>): ProductoSerialized {
     stockMinimo,
     stockActual,
     unidadMedida: p.unidadMedida,
+    unidadCompra: p.unidadCompra,
+    unidadVentaId: p.unidadVentaId ?? null,
+    unidadVenta: (p as unknown as { unidadVenta?: { id: number; nombre: string; simbolo: string | null } | null }).unidadVenta ?? null,
+    factorConversion: Number(p.factorConversion ?? 1),
     activo: p.activo,
     stockBajo: stockActual <= stockMinimo,
   };
@@ -167,6 +175,9 @@ export async function createProducto(tenantId: number, body: unknown) {
     stockMinimo: b.stockMinimo ? Number(b.stockMinimo) : 0,
     stockInicial: b.stockInicial ? Number(b.stockInicial) : 0,
     unidadMedida: b.unidadMedida ? String(b.unidadMedida) : 'UNIDAD',
+    unidadCompra: b.unidadCompra ? String(b.unidadCompra).trim() : 'UNIDAD',
+    unidadVentaId: b.unidadVentaId ? Number(b.unidadVentaId) : null,
+    factorConversion: b.factorConversion ? Number(b.factorConversion) : 1,
   };
 
   const p = await repo.createProducto(tenantId, payload);
@@ -229,6 +240,9 @@ export async function updateProducto(id: number, tenantId: number, body: unknown
   }
   if (b.stockMinimo !== undefined) data.stockMinimo = Number(b.stockMinimo);
   if (b.unidadMedida !== undefined) data.unidadMedida = String(b.unidadMedida);
+  if (b.unidadCompra !== undefined) data.unidadCompra = String(b.unidadCompra).trim();
+  if (b.unidadVentaId !== undefined) data.unidadVentaId = b.unidadVentaId ? Number(b.unidadVentaId) : null;
+  if (b.factorConversion !== undefined) data.factorConversion = Number(b.factorConversion);
 
   const updated = await repo.updateProducto(id, tenantId, data);
   return serializeProducto(updated);

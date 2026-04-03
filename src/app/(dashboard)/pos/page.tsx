@@ -32,7 +32,10 @@ export default async function PosPage({
     }),
     prisma.barberProducto.findMany({
       where: { tenantId: user.tenantId, activo: true },
-      include: { categoria: { select: { nombre: true } } },
+      include: {
+        categoria: { select: { nombre: true } },
+        unidadVenta: { select: { nombre: true, simbolo: true } },
+      },
       orderBy: [{ nombre: 'asc' }],
     }),
   ])
@@ -52,7 +55,10 @@ export default async function PosPage({
     stock: Number(p.stockActual),
     stockMinimo: Number(p.stockMinimo),
     categoria: p.categoria?.nombre ?? 'Sin categoría',
-    unidad: p.unidadMedida,
+    unidad: p.unidadVenta?.nombre ?? p.unidadMedida,
+    unidadCompra: p.unidadCompra,
+    factorConversion: Number(p.factorConversion ?? 1),
+    esFraccionable: Number(p.factorConversion ?? 1) > 1,
   }))
 
   return (

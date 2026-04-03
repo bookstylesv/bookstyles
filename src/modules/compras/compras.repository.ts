@@ -53,7 +53,7 @@ const COMPRA_INCLUDE = {
   detalles: {
     include: {
       producto: {
-        select: { id: true, codigo: true, nombre: true, unidadMedida: true },
+        select: { id: true, codigo: true, nombre: true, unidadMedida: true, unidadCompra: true, factorConversion: true },
       },
     },
   },
@@ -157,25 +157,37 @@ export async function create(tenantId: number, data: CompraCreateInput) {
 
         const producto = await tx.barberProducto.findUnique({
           where: { id: det.productoId },
-          select: { stockActual: true, costoPromedio: true },
+          select: {
+            stockActual: true, costoPromedio: true,
+            unidadCompra: true, factorConversion: true,
+            unidadVenta: { select: { nombre: true } },
+          },
         });
 
         if (!producto) continue;
 
         const stockAnterior = Number(producto.stockActual);
         const costoAnterior = Number(producto.costoPromedio);
-        const cantidadEntrada = det.cantidad;
+        const factor = Number(producto.factorConversion ?? 1);
+
+        // Si el producto tiene factor de conversión: la compra viene en unidadCompra
+        // y hay que convertirla a unidadVenta para actualizar el stock
+        const cantidadEnUnidadVenta = det.cantidad * factor;
         const costoNuevo = det.costoUnitario;
 
-        // Costo promedio ponderado:
-        // ( stockActual * costoPromedio + cantidadEntrada * costoNuevo ) / ( stockActual + cantidadEntrada )
+        // Costo promedio ponderado (en unidad de venta):
         const totalValorAnterior = stockAnterior * costoAnterior;
-        const totalValorNuevo = cantidadEntrada * costoNuevo;
-        const stockNuevo = stockAnterior + cantidadEntrada;
+        const totalValorNuevo = cantidadEnUnidadVenta * costoNuevo;
+        const stockNuevo = stockAnterior + cantidadEnUnidadVenta;
         const costoPromedioNuevo =
           stockNuevo > 0
             ? (totalValorAnterior + totalValorNuevo) / stockNuevo
             : costoNuevo;
+
+        // Nota de conversión si aplica
+        const notaConversion = factor > 1
+          ? `${det.cantidad} ${producto.unidadCompra} × ${factor} = ${cantidadEnUnidadVenta} ${producto.unidadVenta?.nombre ?? 'uds'}`
+          : (data.notas ?? null);
 
         // Actualizar producto
         await tx.barberProducto.update({
@@ -193,12 +205,12 @@ export async function create(tenantId: number, data: CompraCreateInput) {
             productoId:    det.productoId,
             tipoMovimiento: 'COMPRA',
             referencia:    `COMPRA-${compra.id} / ${data.numeroDocumento}`,
-            cantidad:      new Prisma.Decimal(cantidadEntrada),
+            cantidad:      new Prisma.Decimal(cantidadEnUnidadVenta),
             costoUnitario: new Prisma.Decimal(costoNuevo),
-            costoTotal:    new Prisma.Decimal(cantidadEntrada * costoNuevo),
+            costoTotal:    new Prisma.Decimal(cantidadEnUnidadVenta * costoNuevo),
             stockAnterior: new Prisma.Decimal(stockAnterior),
             stockNuevo:    new Prisma.Decimal(stockNuevo),
-            notas:         data.notas ?? null,
+            notas:         notaConversion,
             fecha:         data.fecha,
           },
         });

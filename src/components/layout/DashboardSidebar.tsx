@@ -23,6 +23,7 @@ import {
   Gear,
   Truck,
   Package,
+  Stack,
   ShoppingCart,
   Receipt,
   ClockCountdown,
@@ -61,7 +62,8 @@ const NAV_ITEMS: NavItem[] = [
   // ── Administración ──
   { href: '/compras',        label: 'Compras',         icon: ShoppingCart,   roles: ['OWNER'] },
   { href: '/proveedores',    label: 'Proveedores',     icon: Truck,          roles: ['OWNER'] },
-  { href: '/inventario',     label: 'Inventario',      icon: Package,        roles: ['OWNER'] },
+  { href: '/productos',      label: 'Productos',       icon: Package,        roles: ['OWNER'] },
+  { href: '/inventario',     label: 'Inventario',      icon: Stack,          roles: ['OWNER'] },
   { href: '/gastos',         label: 'Gastos',          icon: Receipt,        roles: ['OWNER'] },
   { href: '/cxp',            label: 'Cuentas x Pagar', icon: ClockCountdown, roles: ['OWNER'] },
   { href: '/planilla',       label: 'Planilla',        icon: Money,          roles: ['OWNER'] },
