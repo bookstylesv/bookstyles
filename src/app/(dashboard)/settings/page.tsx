@@ -140,6 +140,48 @@ export default function SettingsPage() {
     } finally { setHoursLoading(false); }
   }
 
+  // Convierte hex (#rrggbb) → HSL string "H S% L%"
+  function hexToHsl(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  }
+
+  // Convierte HSL string "H S% L%" → hex para el color picker
+  function hslToHex(hsl: string): string {
+    const parts = hsl.match(/[\d.]+/g);
+    if (!parts || parts.length < 3) return '#0d9488';
+    const h = Number(parts[0]) / 360;
+    const s = Number(parts[1]) / 100;
+    const l = Number(parts[2]) / 100;
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+    const g = Math.round(hue2rgb(p, q, h)       * 255);
+    const b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+
   async function onThemeSubmit(values: ThemeForm) {
     const hsl = values.brandPrimary.trim();
     const id  = toast.loading('Aplicando color…');
@@ -351,28 +393,59 @@ export default function SettingsPage() {
         size="small"
       >
         <form onSubmit={handleTheme(onThemeSubmit)}>
-          <Row gutter={16} align="bottom">
-            <Col xs={24} sm={16} md={10}>
-              <FieldLabel>Color primario (HSL sin hsl())</FieldLabel>
+          <Row gutter={[16, 12]} align="bottom">
+            {/* Selector visual de color */}
+            <Col>
+              <FieldLabel>Selector de color</FieldLabel>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="color"
+                  defaultValue={hslToHex(primaryHSL)}
+                  onChange={e => {
+                    const hsl = hexToHsl(e.target.value);
+                    // Sincronizar el campo de texto
+                    const field = document.getElementById('brandPrimaryInput') as HTMLInputElement;
+                    if (field) field.value = hsl;
+                    // Preview en tiempo real
+                    document.documentElement.style.setProperty('--brand-primary', hsl);
+                  }}
+                  style={{
+                    width: 48, height: 40, padding: 2, borderRadius: 8,
+                    border: '2px solid #e8e8e8', cursor: 'pointer', background: 'none',
+                  }}
+                />
+                <div style={{
+                  width: 48, height: 40, borderRadius: 8,
+                  background: `hsl(${primaryHSL})`,
+                  border: '2px solid #e8e8e8',
+                  transition: 'background 0.2s',
+                }} />
+              </div>
+            </Col>
+            {/* Campo HSL manual */}
+            <Col xs={24} sm={12} md={8}>
+              <FieldLabel>Valor HSL (se actualiza automáticamente)</FieldLabel>
               <Input
+                id="brandPrimaryInput"
                 {...regTheme('brandPrimary')}
                 defaultValue={primaryHSL}
                 placeholder="172 83% 32%"
+                onChange={e => {
+                  document.documentElement.style.setProperty('--brand-primary', e.target.value);
+                }}
               />
               <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
-                Formato: <code>H S% L%</code> · Ej: <code>172 83% 32%</code> (teal) · <code>213 94% 47%</code> (azul)
+                Puedes usar el selector o escribir el valor HSL directamente
               </Text>
             </Col>
             <Col>
-              <div style={{
-                width:  40, height: 40, borderRadius: 8,
-                background: `hsl(${primaryHSL})`,
-                border: '2px solid #e8e8e8', marginBottom: 22,
-              }} />
-            </Col>
-            <Col>
-              <Button type="primary" htmlType="submit" icon={<BgColorsOutlined />} style={{ marginBottom: 22 }}>
-                Aplicar color
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SaveOutlined />}
+                style={{ marginBottom: 22 }}
+              >
+                Guardar color
               </Button>
             </Col>
           </Row>
