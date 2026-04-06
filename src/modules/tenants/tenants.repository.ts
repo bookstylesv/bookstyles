@@ -54,10 +54,24 @@ export const tenantsRepository = {
     });
   },
 
+  async updateBusinessHours(tenantId: number, businessHours: BusinessHourEntry[]) {
+    return prisma.barberTenant.update({
+      where: { id: tenantId },
+      data:  { businessHours: businessHours as object[] },
+    });
+  },
+
   async suspend(tenantId: number) {
     return prisma.barberTenant.update({
       where: { id: tenantId },
       data:  { status: 'SUSPENDED', suspendedAt: new Date() },
     });
   },
+};
+
+export type BusinessHourEntry = {
+  dayOfWeek: number;   // 0=Dom … 6=Sáb
+  active:    boolean;
+  startTime: string;   // "08:00"
+  endTime:   string;   // "17:00"
 };

@@ -8,11 +8,12 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
-  Card, Button, Input, Row, Col, Tag, Typography, Space, Spin,
+  Card, Button, Input, Row, Col, Tag, Typography, Space, Spin, Switch, TimePicker,
 } from 'antd';
 import {
-  SaveOutlined, SettingOutlined, BgColorsOutlined, InfoCircleOutlined,
+  SaveOutlined, SettingOutlined, BgColorsOutlined, InfoCircleOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
+import dayjs, { type Dayjs } from 'dayjs';
 
 const { Title, Text } = Typography;
 
@@ -34,6 +35,25 @@ type Tenant = {
 type InfoForm  = { name: string; email: string; phone: string; address: string; city: string };
 type ThemeForm = { brandPrimary: string };
 
+type BusinessHourEntry = {
+  dayOfWeek: number;
+  active:    boolean;
+  startTime: string;
+  endTime:   string;
+};
+
+const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const DEFAULT_HOURS: BusinessHourEntry[] = [
+  { dayOfWeek: 0, active: false, startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 1, active: false, startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 2, active: true,  startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 3, active: true,  startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 4, active: true,  startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 5, active: true,  startTime: '08:00', endTime: '17:00' },
+  { dayOfWeek: 6, active: true,  startTime: '08:00', endTime: '17:00' },
+];
+
 // Helper label wrapper
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -45,9 +65,11 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 // ── Componente ───────────────────────────────────────────
 export default function SettingsPage() {
-  const [tenant,      setTenant]      = useState<Tenant | null>(null);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoError,   setInfoError]   = useState('');
+  const [tenant,           setTenant]           = useState<Tenant | null>(null);
+  const [infoLoading,      setInfoLoading]      = useState(false);
+  const [infoError,        setInfoError]        = useState('');
+  const [hours,            setHours]            = useState<BusinessHourEntry[]>(DEFAULT_HOURS);
+  const [hoursLoading,     setHoursLoading]     = useState(false);
 
   const { register: regInfo, handleSubmit: handleInfo, reset: resetInfo } = useForm<InfoForm>();
   const { register: regTheme, handleSubmit: handleTheme }                 = useForm<ThemeForm>();
@@ -67,6 +89,9 @@ export default function SettingsPage() {
           });
         }
       });
+    fetch('/api/settings/schedule')
+      .then(r => r.json())
+      .then(json => { if (json.success) setHours(json.data); });
   }, [resetInfo]);
 
   async function onInfoSubmit(values: InfoForm) {
@@ -86,6 +111,33 @@ export default function SettingsPage() {
     } catch {
       setInfoError('Error de red'); toast.error('Error de red');
     } finally { setInfoLoading(false); }
+  }
+
+  function toggleDay(dayOfWeek: number, active: boolean) {
+    setHours(prev => prev.map(h => h.dayOfWeek === dayOfWeek ? { ...h, active } : h));
+  }
+
+  function setTime(dayOfWeek: number, field: 'startTime' | 'endTime', value: Dayjs | null) {
+    if (!value) return;
+    setHours(prev => prev.map(h =>
+      h.dayOfWeek === dayOfWeek ? { ...h, [field]: value.format('HH:mm') } : h
+    ));
+  }
+
+  async function saveHours() {
+    setHoursLoading(true);
+    try {
+      const res  = await fetch('/api/settings/schedule', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hours),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error?.message ?? 'Error al guardar horarios'); return; }
+      setHours(json.data);
+      toast.success('Horarios guardados y sincronizados con los barberos');
+    } catch {
+      toast.error('Error de red');
+    } finally { setHoursLoading(false); }
   }
 
   async function onThemeSubmit(values: ThemeForm) {
@@ -207,6 +259,85 @@ export default function SettingsPage() {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* ── Horarios de trabajo ── */}
+      <Card
+        title={
+          <Space>
+            <ClockCircleOutlined style={{ color: '#0d9488' }} />
+            <span>Horarios de trabajo</span>
+          </Space>
+        }
+        size="small"
+        style={{ marginBottom: 16 }}
+        extra={
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={hoursLoading}
+            onClick={saveHours}
+            size="small"
+          >
+            Guardar horarios
+          </Button>
+        }
+      >
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
+          Configura los días y horarios en que atiende tu barbería. Los clientes solo podrán agendar citas dentro de estos horarios.
+        </Text>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {hours.map(h => (
+            <Row key={h.dayOfWeek} align="middle" gutter={12}>
+              <Col style={{ width: 32 }}>
+                <Switch
+                  size="small"
+                  checked={h.active}
+                  onChange={val => toggleDay(h.dayOfWeek, val)}
+                  style={{ background: h.active ? '#0d9488' : undefined }}
+                />
+              </Col>
+              <Col style={{ width: 96 }}>
+                <Text style={{ fontSize: 13, color: h.active ? undefined : '#bfbfbf', fontWeight: h.active ? 500 : 400 }}>
+                  {DAY_NAMES[h.dayOfWeek]}
+                </Text>
+              </Col>
+              {h.active ? (
+                <>
+                  <Col>
+                    <TimePicker
+                      size="small"
+                      format="HH:mm"
+                      minuteStep={30}
+                      value={dayjs(h.startTime, 'HH:mm')}
+                      onChange={val => setTime(h.dayOfWeek, 'startTime', val)}
+                      allowClear={false}
+                      style={{ width: 90 }}
+                    />
+                  </Col>
+                  <Col>
+                    <Text type="secondary" style={{ fontSize: 12 }}>a</Text>
+                  </Col>
+                  <Col>
+                    <TimePicker
+                      size="small"
+                      format="HH:mm"
+                      minuteStep={30}
+                      value={dayjs(h.endTime, 'HH:mm')}
+                      onChange={val => setTime(h.dayOfWeek, 'endTime', val)}
+                      allowClear={false}
+                      style={{ width: 90 }}
+                    />
+                  </Col>
+                </>
+              ) : (
+                <Col>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Cerrado</Text>
+                </Col>
+              )}
+            </Row>
+          ))}
+        </div>
       </Card>
 
       {/* ── Apariencia ── */}

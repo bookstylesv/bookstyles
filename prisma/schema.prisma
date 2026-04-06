@@ -74,8 +74,9 @@ model BarberTenant {
   paidUntil   DateTime?
   suspendedAt DateTime?
   maxBarbers  Int                @default(3)
-  themeConfig Json               @default("{}")
-  modules     Json               @default("{\"appointments\":true,\"billing\":false,\"loyalty\":false,\"products\":false}")
+  themeConfig   Json               @default("{}")
+  modules       Json               @default("{\"appointments\":true,\"billing\":false,\"loyalty\":false,\"products\":false}")
+  businessHours Json               @default("[]")
   logoUrl     String?
   address     String?
   phone       String?
