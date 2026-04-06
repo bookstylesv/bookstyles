@@ -15,11 +15,16 @@ import type { BarberUserRole } from '@prisma/client';
 import {
   HouseSimple,
   CalendarDots,
+  CalendarHeart,
   Users,
+  UsersThree,
   Scissors,
+  Sparkle,
+  Flower,
   UserCircle,
   CreditCard,
   Star,
+  Heart,
   Gear,
   Truck,
   Package,
@@ -46,29 +51,46 @@ type NavItem = {
   roles: BarberUserRole[];
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',      label: 'Inicio',          icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  // ── Operación diaria ──
-  { href: '/pos',            label: 'POS',             icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',  icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-documentos', label: 'Documentos',      icon: FileText,       roles: ['OWNER'] },
-  { href: '/appointments',   label: 'Citas',           icon: CalendarDots,   roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/billing',        label: 'Caja (Citas)',    icon: CreditCard,     roles: ['OWNER'] },
-  { href: '/loyalty',        label: 'Puntos y Tarjetas', icon: Star,         roles: ['OWNER'] },
-  // ── Catálogos ──
-  { href: '/barbers',        label: 'Barberos',        icon: Users,          roles: ['OWNER'] },
-  { href: '/services',       label: 'Servicios',       icon: Scissors,       roles: ['OWNER'] },
-  { href: '/clients',        label: 'Clientes',        icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
-  // ── Administración ──
-  { href: '/compras',        label: 'Compras',         icon: ShoppingCart,   roles: ['OWNER'] },
-  { href: '/proveedores',    label: 'Proveedores',     icon: Truck,          roles: ['OWNER'] },
-  { href: '/productos',      label: 'Productos',       icon: Package,        roles: ['OWNER'] },
-  { href: '/inventario',     label: 'Inventario',      icon: Stack,          roles: ['OWNER'] },
-  { href: '/gastos',         label: 'Gastos',          icon: Receipt,        roles: ['OWNER'] },
-  { href: '/cxp',            label: 'Cuentas x Pagar', icon: ClockCountdown, roles: ['OWNER'] },
-  { href: '/planilla',       label: 'Planilla',        icon: Money,          roles: ['OWNER'] },
-  // { href: '/reviews',     label: 'Reseñas',         icon: Star,           roles: ['OWNER', 'BARBER'] }, // módulo pendiente
-  { href: '/settings',       label: 'Configuración',   icon: Gear,           roles: ['OWNER'] },
+const NAV_ITEMS_BARBER: NavItem[] = [
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'] },
+  { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: ['OWNER'] },
+  { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: ['OWNER'] },
+  { href: '/barbers',        label: 'Barberos',         icon: Users,          roles: ['OWNER'] },
+  { href: '/services',       label: 'Servicios',        icon: Scissors,       roles: ['OWNER'] },
+  { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'] },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'] },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'] },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'] },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'] },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'] },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'] },
+  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
+];
+
+const NAV_ITEMS_SALON: NavItem[] = [
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'] },
+  { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: ['OWNER', 'BARBER', 'CLIENT'] },
+  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: ['OWNER'] },
+  { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: ['OWNER'] },
+  { href: '/barbers',        label: 'Estilistas',       icon: UsersThree,     roles: ['OWNER'] },
+  { href: '/services',       label: 'Tratamientos',     icon: Sparkle,        roles: ['OWNER'] },
+  { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'] },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'] },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'] },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'] },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'] },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'] },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'] },
+  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
 ];
 
 function getInitials(name: string) {
@@ -78,10 +100,16 @@ function getInitials(name: string) {
 type Props = { role: BarberUserRole; slug: string; name: string };
 
 export default function DashboardSidebar({ role, slug, name }: Props) {
-  const pathname   = usePathname();
-  const items      = NAV_ITEMS.filter(i => i.roles.includes(role));
-  const initials   = getInitials(name || 'U');
-  const { theme }  = useBarberTheme();
+  const pathname       = usePathname();
+  const { theme }      = useBarberTheme();
+  const isSalon        = theme.category === 'femenino';
+  const navConfig      = isSalon ? NAV_ITEMS_SALON : NAV_ITEMS_BARBER;
+  const items          = navConfig.filter(i => i.roles.includes(role));
+  const initials       = getInitials(name || 'U');
+  const LogoIcon       = isSalon ? Flower : Scissors;
+  const navFont        = isSalon
+    ? "'Playfair Display', Georgia, serif"
+    : 'var(--font-inter, Inter, system-ui, sans-serif)';
 
   const [collapsed,       setCollapsed]       = useState(false);
   const [mounted,         setMounted]         = useState(false);
@@ -161,12 +189,12 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
           background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Scissors size={17} weight="bold" color="#fff" />
+          <LogoIcon size={17} weight="bold" color="#fff" />
         </div>
         {!effectiveCollapsed && (
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 700, fontSize: 14.5, letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
-              Speeddan
+            <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 700, fontSize: 14.5, letterSpacing: isSalon ? '0.2px' : '-0.2px', whiteSpace: 'nowrap', fontFamily: navFont }}>
+              {isSalon ? 'Speeddan Salón' : 'Speeddan'}
             </div>
             <div style={{ color: 'hsl(var(--sidebar-muted))', fontSize: 10, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {slug}
@@ -206,7 +234,7 @@ export default function DashboardSidebar({ role, slug, name }: Props) {
             >
               <Icon size={18} weight={active ? 'bold' : 'regular'} style={{ flexShrink: 0 }} />
               {!effectiveCollapsed && (
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: navFont }}>
                   {item.label}
                 </span>
               )}
