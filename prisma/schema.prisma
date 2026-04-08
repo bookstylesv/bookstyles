@@ -121,6 +121,9 @@ model BarberTenant {
   // Módulo Unidades de Medida
   unidadesMedida BarberUnidadMedida[]
 
+  // Cargos de empleados
+  cargos BarberCargo[]
+
   @@map("barber_tenants")
 }
 
@@ -200,6 +203,26 @@ model Barber {
   detallesVenta  BarberDetalleVenta[]
 
   @@map("barbers")
+}
+
+// ──────────────────────────────────────────────────────
+// CARGO — cargos/puestos de empleados por tenant
+// Cada barbería define sus propios cargos (Barbero, Estilista, etc.)
+// ──────────────────────────────────────────────────────
+
+model BarberCargo {
+  id          Int          @id @default(autoincrement())
+  tenantId    Int
+  tenant      BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre      String
+  descripcion String?
+  activo      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([tenantId, nombre])
+  @@index([tenantId])
+  @@map("barber_cargos")
 }
 
 // ──────────────────────────────────────────────────────
