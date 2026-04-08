@@ -154,14 +154,21 @@ export async function createVenta(tenantId: number, input: CreateVentaInput) {
   })
   const barberMap = new Map(barbers.map(b => [b.id, b.user.fullName]))
 
-  // Calcular comisiones por línea
+  // Calcular comisiones por línea según comisionTipo del servicio/producto
   const comisionesPorItem: number[] = await Promise.all(input.items.map(async (item) => {
+    const subtotalItem = item.precioUnitario * item.cantidad - (item.descuento || 0)
     if (item.productoId) {
       const prod = await prisma.barberProducto.findFirst({ where: { id: item.productoId, tenantId } })
-      return parseFloat((Number(prod?.precioComision ?? 0) * item.cantidad).toFixed(2))
+      if (!prod || prod.comisionTipo === 'NINGUNA') return 0
+      if (prod.comisionTipo === 'PORCENTAJE')
+        return parseFloat((subtotalItem * Number(prod.precioComision ?? 0) / 100).toFixed(2))
+      return parseFloat((Number(prod.precioComision ?? 0) * item.cantidad).toFixed(2))
     } else if (item.servicioId) {
       const svc = await prisma.barberService.findFirst({ where: { id: item.servicioId, tenantId } })
-      return parseFloat((Number(svc?.comisionBarbero ?? 0) * item.cantidad).toFixed(2))
+      if (!svc || svc.comisionTipo === 'NINGUNA') return 0
+      if (svc.comisionTipo === 'PORCENTAJE')
+        return parseFloat((subtotalItem * Number(svc.comisionBarbero ?? 0) / 100).toFixed(2))
+      return parseFloat((Number(svc.comisionBarbero ?? 0) * item.cantidad).toFixed(2))
     }
     return 0
   }))

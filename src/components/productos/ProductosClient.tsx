@@ -50,6 +50,7 @@ type Producto = {
   categoria: { id: number; nombre: string } | null;
   precioVenta: number;
   costoPromedio: number;
+  comisionTipo: string;
   precioComision: number | null;
   stockMinimo: number;
   stockActual: number;
@@ -101,6 +102,7 @@ const FORM_EMPTY = {
   descripcion: '',
   categoriaId: undefined as number | undefined,
   precioVenta: undefined as number | undefined,
+  comisionTipo: 'NINGUNA',
   precioComision: undefined as number | undefined,
   stockMinimo: undefined as number | undefined,
   stockInicial: undefined as number | undefined,
@@ -207,6 +209,7 @@ export default function ProductosClient({
       descripcion: p.descripcion ?? '',
       categoriaId: p.categoriaId ?? undefined,
       precioVenta: p.precioVenta,
+      comisionTipo: p.comisionTipo ?? 'NINGUNA',
       precioComision: p.precioComision ?? undefined,
       stockMinimo: p.stockMinimo,
       stockInicial: undefined,
@@ -242,7 +245,8 @@ export default function ProductosClient({
       descripcion: formData.descripcion?.trim() || undefined,
       categoriaId: formData.categoriaId,
       precioVenta: formData.precioVenta,
-      precioComision: formData.precioComision ?? null,
+      comisionTipo: formData.comisionTipo ?? 'NINGUNA',
+      precioComision: formData.comisionTipo === 'NINGUNA' ? null : (formData.precioComision ?? null),
       stockMinimo: formData.stockMinimo ?? 0,
       stockInicial: formData.stockInicial ?? 0,
     };
@@ -479,14 +483,18 @@ export default function ProductosClient({
       ),
     },
     {
-      title: 'Comisión',
+      title: 'Comisión empleado',
       key: 'comision',
-      width: 100,
+      width: 120,
       align: 'right',
       responsive: ['lg'],
-      render: (_, r) => r.precioComision !== null
-        ? <Text style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(r.precioComision)}</Text>
-        : <Text type="secondary" style={{ fontSize: 11 }}>—</Text>,
+      render: (_: unknown, r: Producto) => {
+        if (r.comisionTipo === 'PORCENTAJE' && r.precioComision !== null)
+          return <Text style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{r.precioComision}%</Text>;
+        if (r.comisionTipo === 'MONTO_FIJO' && r.precioComision !== null && r.precioComision > 0)
+          return <Text style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(r.precioComision)}</Text>;
+        return <Text type="secondary" style={{ fontSize: 11 }}>Sin comisión</Text>;
+      },
     },
     {
       title: 'Acciones',
@@ -719,17 +727,43 @@ export default function ProductosClient({
               </FormField>
             </Col>
             <Col span={12}>
-              <FormField label="Precio comisión ($)">
-                <InputNumber
+              <FormField label="Comisión para empleado">
+                <Select
                   style={{ width: '100%' }}
-                  min={0} step={0.01} precision={2} prefix="$"
-                  value={formData.precioComision}
-                  onChange={v => setFormData(p => ({ ...p, precioComision: v ?? undefined }))}
-                  placeholder="0.00"
+                  value={formData.comisionTipo ?? 'NINGUNA'}
+                  onChange={v => setFormData(p => ({ ...p, comisionTipo: v, precioComision: undefined }))}
+                  options={[
+                    { value: 'NINGUNA',    label: 'Sin comisión' },
+                    { value: 'MONTO_FIJO', label: 'Monto fijo ($)' },
+                    { value: 'PORCENTAJE', label: 'Porcentaje (%)' },
+                  ]}
                 />
               </FormField>
             </Col>
           </Row>
+
+          {/* Valor comisión (visible solo si no es NINGUNA) */}
+          {formData.comisionTipo !== 'NINGUNA' && (
+            <FormField
+              label={formData.comisionTipo === 'PORCENTAJE' ? 'Porcentaje de comisión (%)' : 'Monto fijo de comisión ($)'}
+              hint={formData.comisionTipo === 'PORCENTAJE'
+                ? 'Ej: 10 = el empleado gana el 10% del precio de venta'
+                : 'Monto fijo que gana el empleado por unidad vendida'}
+            >
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                max={formData.comisionTipo === 'PORCENTAJE' ? 100 : undefined}
+                step={formData.comisionTipo === 'PORCENTAJE' ? 1 : 0.01}
+                precision={2}
+                prefix={formData.comisionTipo === 'PORCENTAJE' ? undefined : '$'}
+                suffix={formData.comisionTipo === 'PORCENTAJE' ? '%' : undefined}
+                value={formData.precioComision}
+                onChange={v => setFormData(p => ({ ...p, precioComision: v ?? undefined }))}
+                placeholder={formData.comisionTipo === 'PORCENTAJE' ? '10' : '1.00'}
+              />
+            </FormField>
+          )}
 
           {/* Stock mínimo + Stock inicial */}
           <Row gutter={12}>

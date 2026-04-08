@@ -20,6 +20,7 @@ export type ProductoSerialized = {
   categoria: { id: number; nombre: string } | null;
   precioVenta: number;
   costoPromedio: number;
+  comisionTipo: string;
   precioComision: number | null;
   stockMinimo: number;
   stockActual: number;
@@ -65,6 +66,7 @@ function serializeProducto(p: NonNullable<RawProducto>): ProductoSerialized {
     categoria: p.categoria ?? null,
     precioVenta: Number(p.precioVenta),
     costoPromedio: Number(p.costoPromedio),
+    comisionTipo: p.comisionTipo ?? 'NINGUNA',
     precioComision: p.precioComision !== null && p.precioComision !== undefined ? Number(p.precioComision) : null,
     stockMinimo,
     stockActual,

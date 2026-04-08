@@ -10,6 +10,7 @@ export type ServiceCreateInput = {
   name: string;
   description?: string;
   price: number;
+  comisionTipo?: string;
   comisionBarbero?: number;
   duration: number;
   category?: string;
@@ -38,6 +39,7 @@ export async function createService(tenantId: number, data: ServiceCreateInput) 
       name: data.name,
       description: data.description,
       price: data.price,
+      comisionTipo: data.comisionTipo ?? 'NINGUNA',
       comisionBarbero: data.comisionBarbero ?? 0,
       duration: data.duration,
       category: data.category,
@@ -57,6 +59,7 @@ export async function updateService(
       ...(data.name !== undefined && { name: data.name }),
       ...(data.description !== undefined && { description: data.description }),
       ...(data.price !== undefined && { price: data.price }),
+      ...(data.comisionTipo !== undefined && { comisionTipo: data.comisionTipo }),
       ...(data.comisionBarbero !== undefined && { comisionBarbero: data.comisionBarbero }),
       ...(data.duration !== undefined && { duration: data.duration }),
       ...(data.category !== undefined && { category: data.category }),

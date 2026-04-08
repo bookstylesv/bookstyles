@@ -35,13 +35,13 @@ type Categoria = { id: number; nombre: string; color: string; activo: boolean };
 
 type Service = {
   id: number; name: string; description: string | null;
-  price: number; comisionBarbero: number;
+  price: number; comisionTipo: string; comisionBarbero: number;
   duration: number; category: string | null; active: boolean;
 };
 
 type FormValues = {
   name: string; description: string; price: string;
-  comisionBarbero: string;
+  comisionTipo: string; comisionBarbero: string;
   duration: string; category: string; active: boolean;
 };
 
@@ -105,6 +105,7 @@ export default function ServicesClient({
   const { register, handleSubmit, reset, setValue, watch } = useForm<FormValues>();
   const selectedCategory = (watch('category') ?? '') as string;
   const activeVal        = watch('active');
+  const comisionTipoVal  = watch('comisionTipo') ?? 'NINGUNA';
 
   // Filtro cliente-side
   const filtered = services.filter(s => {
@@ -117,7 +118,7 @@ export default function ServicesClient({
   // ── Servicios: abrir modal crear ───────────────────────
   const handleNuevo = () => {
     setEditing(null);
-    reset({ name: '', description: '', price: '', comisionBarbero: '0', duration: '', category: '', active: true });
+    reset({ name: '', description: '', price: '', comisionTipo: 'NINGUNA', comisionBarbero: '0', duration: '', category: '', active: true });
     setError('');
     setOpen(true);
   };
@@ -127,7 +128,9 @@ export default function ServicesClient({
     setEditing(s);
     reset({
       name: s.name, description: s.description ?? '',
-      price: String(s.price), comisionBarbero: String(s.comisionBarbero ?? 0),
+      price: String(s.price),
+      comisionTipo: s.comisionTipo ?? 'NINGUNA',
+      comisionBarbero: String(s.comisionBarbero ?? 0),
       duration: String(s.duration),
       category: s.category ?? '', active: s.active,
     });
@@ -143,7 +146,8 @@ export default function ServicesClient({
         name:           values.name,
         description:    values.description || undefined,
         price:          parseFloat(values.price),
-        comisionBarbero: parseFloat(values.comisionBarbero) || 0,
+        comisionTipo:   values.comisionTipo || 'NINGUNA',
+        comisionBarbero: values.comisionTipo === 'NINGUNA' ? 0 : (parseFloat(values.comisionBarbero) || 0),
         duration:       parseInt(values.duration, 10),
         category:       values.category || undefined,
         active:         values.active,
@@ -256,14 +260,17 @@ export default function ServicesClient({
       render:    (v: number) => <Text strong style={{ fontVariantNumeric: 'tabular-nums' }}>${v.toFixed(2)}</Text>,
     },
     {
-      title:     'Comisión',
-      dataIndex: 'comisionBarbero',
-      key:       'comisionBarbero',
-      width:     90,
-      align:     'right',
-      render:    (v: number) => v > 0
-        ? <Text style={{ color: C.colorSuccess, fontVariantNumeric: 'tabular-nums' }}>${v.toFixed(2)}</Text>
-        : <Text type="secondary">—</Text>,
+      title:  'Comisión empleado',
+      key:    'comision',
+      width:  130,
+      align:  'right',
+      render: (_: unknown, s: Service) => {
+        if (s.comisionTipo === 'PORCENTAJE')
+          return <Text style={{ color: C.colorSuccess, fontVariantNumeric: 'tabular-nums' }}>{s.comisionBarbero}%</Text>;
+        if (s.comisionTipo === 'MONTO_FIJO' && s.comisionBarbero > 0)
+          return <Text style={{ color: C.colorSuccess, fontVariantNumeric: 'tabular-nums' }}>${s.comisionBarbero.toFixed(2)}</Text>;
+        return <Text type="secondary">Sin comisión</Text>;
+      },
     },
     {
       title:     'Duración',
@@ -453,9 +460,30 @@ export default function ServicesClient({
                   <SdInput type="number" min="1" {...register('duration', { required: true })} placeholder="30" />
                 </FormField>
               </div>
-              <FormField label="Comisión barbero ($)" hint="Monto fijo que gana el barbero por cada vez que realiza este servicio">
-                <SdInput type="number" step="0.25" min="0" {...register('comisionBarbero')} placeholder="0.00" />
+              <FormField label="Comisión para empleado">
+                <Select value={comisionTipoVal} onValueChange={v => setValue('comisionTipo', v ?? 'NINGUNA')}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Tipo de comisión" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NINGUNA">Sin comisión</SelectItem>
+                    <SelectItem value="MONTO_FIJO">Monto fijo ($)</SelectItem>
+                    <SelectItem value="PORCENTAJE">Porcentaje (%)</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormField>
+              {comisionTipoVal !== 'NINGUNA' && (
+                <FormField
+                  label={comisionTipoVal === 'PORCENTAJE' ? 'Porcentaje de comisión (%)' : 'Monto fijo de comisión ($)'}
+                  hint={comisionTipoVal === 'PORCENTAJE'
+                    ? 'Ej: 30 = el empleado gana el 30% del precio del servicio'
+                    : 'Monto fijo que gana el empleado por cada vez que realiza este servicio'}
+                >
+                  <SdInput type="number" step={comisionTipoVal === 'PORCENTAJE' ? '1' : '0.25'} min="0"
+                    max={comisionTipoVal === 'PORCENTAJE' ? '100' : undefined}
+                    {...register('comisionBarbero')} placeholder={comisionTipoVal === 'PORCENTAJE' ? '30' : '2.50'} />
+                </FormField>
+              )}
               <FormField label="Categoría">
                 <Select value={selectedCategory} onValueChange={v => setValue('category', v as string)}>
                   <SelectTrigger className="w-full">

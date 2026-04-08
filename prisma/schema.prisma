@@ -253,6 +253,7 @@ model BarberService {
   name        String
   description String?
   price           Decimal  @db.Decimal(10, 2)
+  comisionTipo    String   @default("NINGUNA") // NINGUNA | MONTO_FIJO | PORCENTAJE
   comisionBarbero Decimal  @default(0) @db.Decimal(10, 2)
   duration        Int      // minutos
   imageUrl        String?
@@ -396,6 +397,7 @@ model BarberProducto {
   categoria     BarberCategoriaProducto? @relation(fields: [categoriaId], references: [id])
   precioVenta    Decimal                  @db.Decimal(10, 2)
   costoPromedio  Decimal                  @default(0) @db.Decimal(10, 2)
+  comisionTipo   String                   @default("NINGUNA") // NINGUNA | MONTO_FIJO | PORCENTAJE
   precioComision Decimal?                 @db.Decimal(10, 2)
   stockMinimo    Decimal                  @default(0) @db.Decimal(10, 2)
   stockActual   Decimal                  @default(0) @db.Decimal(10, 2)
