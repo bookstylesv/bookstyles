@@ -276,7 +276,7 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => {
-              setForm({ fullName: '', email: '', password: '', phone: '', bio: '', specialtiesInput: '' });
+              setForm({ fullName: '', email: '', password: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
               setCreateError(''); setShowPass(false); setCreating(true);
             }}
           >
