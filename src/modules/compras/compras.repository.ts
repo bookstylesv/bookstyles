@@ -170,10 +170,11 @@ export async function create(tenantId: number, data: CompraCreateInput) {
         const costoAnterior = Number(producto.costoPromedio);
         const factor = Number(producto.factorConversion ?? 1);
 
-        // Si el producto tiene factor de conversión: la compra viene en unidadCompra
-        // y hay que convertirla a unidadVenta para actualizar el stock
+        // La compra viene en unidadCompra → convertir a unidadVenta para el stock
+        // El usuario ingresa costo por unidadCompra (ej: $100/Unidad con factor 10)
+        // → costo por unidadVenta = $100 / 10 = $10/Arroba
         const cantidadEnUnidadVenta = det.cantidad * factor;
-        const costoNuevo = det.costoUnitario;
+        const costoNuevo = factor > 1 ? det.costoUnitario / factor : det.costoUnitario;
 
         // Costo promedio ponderado (en unidad de venta):
         const totalValorAnterior = stockAnterior * costoAnterior;

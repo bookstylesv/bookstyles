@@ -60,6 +60,9 @@ type Producto = {
   nombre: string;
   unidadMedida: string;
   costoPromedio?: number;
+  factorConversion?: number;
+  unidadCompra?: string;
+  unidadVenta?: { nombre: string } | null;
 };
 
 type Proveedor = {
@@ -130,6 +133,9 @@ type LineaDetalle = {
   costoUnitario: number;
   descuento: number;
   subtotal: number;
+  // Fraccionado: para mostrar la unidad correcta al usuario
+  unidadCompra?: string;
+  factorConversion?: number;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -369,7 +375,10 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
     setLineas(prev =>
       prev.map(l => {
         if (l.key !== lineaKey) return l;
-        const costo = prod.costoPromedio ?? 0;
+        const factor = Number(prod.factorConversion ?? 1);
+        // costoPromedio está en unidadVenta; el usuario debe ingresar costo por unidadCompra
+        const costoPromUV = Number(prod.costoPromedio ?? 0);
+        const costo = factor > 1 ? parseFloat((costoPromUV * factor).toFixed(4)) : costoPromUV;
         const subtotal = calcSubtotal(l.cantidad, costo, l.descuento);
         return {
           ...l,
@@ -377,6 +386,8 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
           descripcion: prod.nombre,
           costoUnitario: costo,
           subtotal,
+          unidadCompra: prod.unidadCompra ?? 'UNIDAD',
+          factorConversion: factor,
         };
       }),
     );
@@ -1633,27 +1644,37 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
                 />
 
                 {/* Cantidad */}
-                <InputNumber
-                  size="small"
-                  min={0.01}
-                  step={1}
-                  precision={2}
-                  style={{ width: '100%' }}
-                  value={linea.cantidad}
-                  onChange={v => updateLinea(linea.key, 'cantidad', v ?? 1)}
-                />
+                <Tooltip title={linea.unidadCompra && linea.unidadCompra !== 'UNIDAD'
+                  ? `Cantidad en ${linea.unidadCompra}` : undefined}>
+                  <InputNumber
+                    size="small"
+                    min={0.01}
+                    step={1}
+                    precision={2}
+                    style={{ width: '100%' }}
+                    value={linea.cantidad}
+                    addonAfter={linea.unidadCompra && linea.unidadCompra !== 'UNIDAD'
+                      ? <span style={{ fontSize: 10 }}>{linea.unidadCompra}</span>
+                      : undefined}
+                    onChange={v => updateLinea(linea.key, 'cantidad', v ?? 1)}
+                  />
+                </Tooltip>
 
                 {/* Costo unitario */}
-                <InputNumber
-                  size="small"
-                  min={0}
-                  step={0.01}
-                  precision={2}
-                  prefix="$"
-                  style={{ width: '100%' }}
-                  value={linea.costoUnitario}
-                  onChange={v => updateLinea(linea.key, 'costoUnitario', v ?? 0)}
-                />
+                <Tooltip title={linea.factorConversion && linea.factorConversion > 1
+                  ? `Costo por ${linea.unidadCompra}. El sistema calcula costo/${linea.unidadCompra} ÷ ${linea.factorConversion}`
+                  : undefined}>
+                  <InputNumber
+                    size="small"
+                    min={0}
+                    step={0.01}
+                    precision={2}
+                    prefix="$"
+                    style={{ width: '100%' }}
+                    value={linea.costoUnitario}
+                    onChange={v => updateLinea(linea.key, 'costoUnitario', v ?? 0)}
+                  />
+                </Tooltip>
 
                 {/* Descuento % */}
                 <InputNumber
@@ -1693,6 +1714,23 @@ export default function ComprasClient({ initialCompras, initialStats }: Props) {
                     onClick={() => removeLinea(linea.key)}
                   />
                 </Tooltip>
+
+                {/* Info fracciones — span full grid */}
+                {linea.factorConversion && linea.factorConversion > 1 && (
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    background: 'rgba(13,148,136,0.08)',
+                    borderRadius: 6,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    color: '#0d9488',
+                  }}>
+                    {linea.cantidad} {linea.unidadCompra} × {linea.factorConversion} ={' '}
+                    <strong>{(linea.cantidad * linea.factorConversion).toFixed(2)} unid. de venta</strong>
+                    {' '}· Costo por unidad menor:{' '}
+                    <strong>${(linea.costoUnitario / linea.factorConversion).toFixed(4)}</strong>
+                  </div>
+                )}
               </div>
             ))}
           </div>
