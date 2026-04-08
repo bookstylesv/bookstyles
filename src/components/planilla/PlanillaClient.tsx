@@ -939,14 +939,24 @@ export default function PlanillaClient({
                 },
                 {
                   key: 'barberos',
-                  label: 'Tipo de Pago por Barbero',
+                  label: 'Configuración de Empleados',
                   children: (
-                    <div style={{ overflowX: 'auto' }}>
-                      <Table dataSource={barberos} rowKey="id" size="middle"
-                        pagination={false} columns={colsBarberos}
-                        scroll={{ x: 'max-content' }}
-                        locale={{ emptyText: 'No hay barberos activos' }} />
-                    </div>
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="Configuración de pago movida al módulo de Empleados"
+                      description={
+                        <span>
+                          El tipo de pago, salario, fecha de ingreso y deducciones de cada empleado
+                          ahora se configuran directamente en{' '}
+                          <a href="/barbers" style={{ color: '#0d9488', fontWeight: 600 }}>
+                            Módulo de Empleados → perfil del empleado → pestaña &quot;Configuración de Pago&quot;
+                          </a>.
+                          Esto permite gestionar toda la información del empleado en un solo lugar.
+                        </span>
+                      }
+                      style={{ margin: '16px 0' }}
+                    />
                   ),
                 },
               ]} />
@@ -987,7 +997,7 @@ export default function PlanillaClient({
         <Table
             dataSource={barberos.filter(b => b.configurado)} rowKey="id" size="small" pagination={false}
             scroll={{ x: 'max-content' }}
-            locale={{ emptyText: 'Ningún barbero configurado. Ve a Configuración → Tipo de Pago por Barbero.' }}
+            locale={{ emptyText: 'Ningún barbero configurado. Ve a Empleados → perfil del empleado → Configuración de Pago.' }}
             columns={[
               { title: 'Barbero', dataIndex: 'nombre' },
               { title: 'Tipo', dataIndex: 'tipoPago', render: (v: string) => <Tag>{TIPO_PAGO_LABELS[v] || v}</Tag> },

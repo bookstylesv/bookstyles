@@ -25,7 +25,18 @@ export async function listBarbers(tenantId: number) {
 export async function getBarber(id: number, tenantId: number) {
   const barber = await repo.findBarberById(id, tenantId);
   if (!barber) throw new NotFoundError('Barbero');
-  return { ...barber, scheduleText: formatSchedule(barber.schedules) };
+  return {
+    ...barber,
+    scheduleText: formatSchedule(barber.schedules),
+    configPlanilla: barber.configPlanilla ? {
+      tipoPago:           barber.configPlanilla.tipoPago,
+      salarioBase:        barber.configPlanilla.salarioBase.toNumber(),
+      valorPorUnidad:     barber.configPlanilla.valorPorUnidad.toNumber(),
+      porcentajeServicio: barber.configPlanilla.porcentajeServicio.toNumber(),
+      aplicaRenta:        barber.configPlanilla.aplicaRenta,
+      fechaIngreso:       barber.configPlanilla.fechaIngreso?.toISOString() ?? null,
+    } : null,
+  };
 }
 
 export async function createBarber(tenantId: number, body: unknown) {

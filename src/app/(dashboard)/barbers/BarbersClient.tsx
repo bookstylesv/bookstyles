@@ -1,103 +1,222 @@
 'use client';
 
 // ══════════════════════════════════════════════════════════
-// BARBEROS — CRUD + CARGOS (patrón Speeddansys ERP)
+// BARBEROS — tabla + drawer perfil completo + CRUD cargos
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
-  Table, Card, Button, Space, Row, Col, Input, Modal,
-  Statistic, Tag, Tooltip, Typography, Avatar, theme, Tabs, Select, Switch,
+  Table, Card, Button, Space, Row, Col, Input, Modal, Drawer,
+  Statistic, Tag, Tooltip, Typography, Avatar, theme, Tabs,
+  Select, Switch, InputNumber, DatePicker, Form, Divider,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  PlusOutlined, EditOutlined, UserOutlined,
-  CheckCircleOutlined, ScissorOutlined, ClockCircleOutlined,
-  TagsOutlined, DeleteOutlined,
+  PlusOutlined, EditOutlined, UserOutlined, CheckCircleOutlined,
+  ScissorOutlined, ClockCircleOutlined, TagsOutlined, DeleteOutlined,
+  SettingOutlined, CalendarOutlined,
 } from '@ant-design/icons';
-
-// Componentes internos del formulario
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button as SdButton }  from '@/components/ui/button';
-import { Input as SdInput }    from '@/components/ui/input';
-import { FormField }           from '@/components/shared/FormField';
-import { Eye, EyeSlash }       from '@phosphor-icons/react';
-import { useBarberTheme } from '@/context/ThemeContext';
+import { Button as SdButton } from '@/components/ui/button';
+import { Input as SdInput }  from '@/components/ui/input';
+import { FormField }         from '@/components/shared/FormField';
+import { Eye, EyeSlash }     from '@phosphor-icons/react';
+import { useBarberTheme }    from '@/context/ThemeContext';
+import dayjs                 from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-// ── Tipos ──────────────────────────────────────────────────────────────────
+// ── Constantes ─────────────────────────────────────────────────────────────
+const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DEFAULT_SCHED = DAY_NAMES.map((_, i) => ({
+  dayOfWeek: i, active: i >= 1 && i <= 6, startTime: '08:00', endTime: '18:00',
+}));
+const TIPO_PAGO_OPTS = [
+  { value: 'FIJO',        label: 'Salario Fijo' },
+  { value: 'POR_DIA',     label: 'Por Día' },
+  { value: 'POR_SEMANA',  label: 'Por Semana' },
+  { value: 'POR_HORA',    label: 'Por Hora' },
+  { value: 'POR_SERVICIO',label: 'Por Servicio / Comisión' },
+];
+
+// ── Tipos ───────────────────────────────────────────────────────────────────
 type Schedule   = { dayOfWeek: number; startTime: string; endTime: string; active: boolean };
 type BarberUser = { id: number; fullName: string; email: string; phone: string | null; avatarUrl: string | null; active: boolean };
 type Barber = {
   id: number; bio: string | null; cargo: string | null; specialties: string[]; active: boolean;
   scheduleText: string; user: BarberUser; schedules: Schedule[];
 };
+type BarberDetail = Barber & {
+  configPlanilla: {
+    tipoPago: string; salarioBase: number; valorPorUnidad: number;
+    porcentajeServicio: number; aplicaRenta: boolean; fechaIngreso: string | null;
+  } | null;
+};
 type CreateForm = { fullName: string; email: string; password: string; phone: string; bio: string; cargo: string; specialtiesInput: string };
 type CargoItem  = { id: number; nombre: string; descripcion: string | null; activo: boolean };
+type PagoForm   = { tipoPago: string; salarioBase: number; valorPorUnidad: number; porcentajeServicio: number; aplicaRenta: boolean; fechaIngreso: string | null };
 
-// Iniciales para el Avatar de antd
-function getInitials(name: string) {
-  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-}
-
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function getInitials(name: string) { return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(); }
 const AVATAR_COLORS = ['#0d9488', '#7c3aed', '#0284c7', '#b45309', '#be123c', '#065f46'];
 function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length]; }
 
-// ── Componente principal ───────────────────────────────────────────────────
+function normSchedule(schedules: Schedule[]): Schedule[] {
+  return DEFAULT_SCHED.map(def => {
+    const found = schedules.find(s => s.dayOfWeek === def.dayOfWeek);
+    return found ?? def;
+  });
+}
+
+// ── Componente ──────────────────────────────────────────────────────────────
 export default function BarbersClient({ initialBarbers }: { initialBarbers: Barber[] }) {
   const { theme: barberTheme } = useBarberTheme();
   const primary = barberTheme.colorPrimary;
   const { token } = theme.useToken();
-  const C = {
-    textDisabled: 'hsl(var(--text-disabled))',
-    textMuted:    'hsl(var(--text-muted))',
-    colorSuccess: token.colorSuccess,
-  };
+  const textDisabled = 'hsl(var(--text-disabled))';
+  const textMuted    = 'hsl(var(--text-muted))';
 
-  // ── Estado barberos ────────────────────────────────────
+  // ── Estado barberos ──────────────────────────────────────
   const [barbers, setBarbers] = useState<Barber[]>(initialBarbers);
 
-  // Estado crear barbero
+  // Crear barbero
   const [creating,      setCreating]      = useState(false);
   const [showPass,      setShowPass]      = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError,   setCreateError]   = useState('');
   const [form, setForm] = useState<CreateForm>({ fullName: '', email: '', password: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
 
-  // Estado editar barbero
-  const [editing,          setEditing]          = useState<Barber | null>(null);
-  const [bio,              setBio]              = useState('');
-  const [cargo,            setCargo]            = useState('');
-  const [specialtiesInput, setSpecialtiesInput] = useState('');
-  const [editLoading,      setEditLoading]      = useState(false);
+  // ── Drawer perfil completo ──────────────────────────────
+  const [drawer,        setDrawer]        = useState<BarberDetail | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerTab,     setDrawerTab]     = useState('general');
 
-  // ── Estado cargos ──────────────────────────────────────
-  const [cargos,        setCargos]        = useState<CargoItem[]>([]);
-  const [cargosLoading, setCargosLoading] = useState(false);
-  const [modalCargo,    setModalCargo]    = useState<CargoItem | null | 'new'>(null);
-  const [cargoNombre,   setCargoNombre]   = useState('');
-  const [cargoDesc,     setCargoDesc]     = useState('');
-  const [cargoSaving,   setCargoSaving]   = useState(false);
+  // Tab General
+  const [genBio,        setGenBio]        = useState('');
+  const [genCargo,      setGenCargo]      = useState('');
+  const [genSpec,       setGenSpec]       = useState('');
+  const [genSaving,     setGenSaving]     = useState(false);
+
+  // Tab Configuración de Pago
+  const [pago, setPago] = useState<PagoForm>({
+    tipoPago: 'FIJO', salarioBase: 0, valorPorUnidad: 0,
+    porcentajeServicio: 0, aplicaRenta: true, fechaIngreso: null,
+  });
+  const [pagoSaving, setPagoSaving] = useState(false);
+
+  // Tab Horarios
+  const [sched,      setSched]      = useState<Schedule[]>(DEFAULT_SCHED);
+  const [schedSaving, setSchedSaving] = useState(false);
+
+  // ── Estado cargos ────────────────────────────────────────
+  const [cargos,      setCargos]      = useState<CargoItem[]>([]);
+  const [cargoLoad,   setCargoLoad]   = useState(false);
+  const [modalCargo,  setModalCargo]  = useState<CargoItem | null | 'new'>(null);
+  const [cargoNombre, setCargoNombre] = useState('');
+  const [cargoDesc,   setCargoDesc]   = useState('');
+  const [cargoSaving, setCargoSaving] = useState(false);
 
   // Cargar cargos al montar
   useEffect(() => {
-    setCargosLoading(true);
-    fetch('/api/cargos')
-      .then(r => r.json())
+    setCargoLoad(true);
+    fetch('/api/cargos').then(r => r.json())
       .then(j => { if (j.success) setCargos(j.data); })
-      .finally(() => setCargosLoading(false));
+      .finally(() => setCargoLoad(false));
   }, []);
 
   const cargoOptions = cargos.filter(c => c.activo).map(c => ({ value: c.nombre, label: c.nombre }));
 
-  function setField(field: keyof CreateForm, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }));
+  function setField(f: keyof CreateForm, v: string) { setForm(p => ({ ...p, [f]: v })); }
+
+  // ── Abrir drawer ─────────────────────────────────────────
+  async function openDrawer(b: Barber) {
+    setDrawerTab('general');
+    setDrawer(b as BarberDetail);
+    setGenBio(b.bio ?? ''); setGenCargo(b.cargo ?? ''); setGenSpec(b.specialties.join(', '));
+    setSched(normSchedule(b.schedules));
+    setPago({ tipoPago: 'FIJO', salarioBase: 0, valorPorUnidad: 0, porcentajeServicio: 0, aplicaRenta: true, fechaIngreso: null });
+    setDrawerLoading(true);
+    try {
+      const res = await fetch(`/api/barbers/${b.id}`);
+      const json = await res.json();
+      if (json.success) {
+        const detail = json.data as BarberDetail;
+        setDrawer(detail);
+        setGenBio(detail.bio ?? ''); setGenCargo(detail.cargo ?? ''); setGenSpec(detail.specialties.join(', '));
+        setSched(normSchedule(detail.schedules));
+        if (detail.configPlanilla) setPago({ ...detail.configPlanilla });
+      }
+    } finally { setDrawerLoading(false); }
   }
 
-  // ── CRUD barberos ──────────────────────────────────────
+  // ── Guardar General ──────────────────────────────────────
+  async function saveGeneral() {
+    if (!drawer) return;
+    setGenSaving(true);
+    try {
+      const specialties = genSpec.split(',').map(s => s.trim()).filter(Boolean);
+      const res = await fetch(`/api/barbers/${drawer.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: genBio, cargo: genCargo, specialties }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setBarbers(prev => prev.map(b => b.id === drawer.id ? { ...b, ...json.data } : b));
+        setDrawer(prev => prev ? { ...prev, ...json.data } : prev);
+        toast.success('Datos generales actualizados');
+      } else { toast.error(json.error?.message ?? 'Error al guardar'); }
+    } catch { toast.error('Error de red'); } finally { setGenSaving(false); }
+  }
+
+  // ── Guardar Configuración de Pago ────────────────────────
+  async function savePago() {
+    if (!drawer) return;
+    setPagoSaving(true);
+    try {
+      const res = await fetch('/api/planilla/barberos-config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barberoId: drawer.id, ...pago }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setDrawer(prev => prev ? { ...prev, configPlanilla: {
+          tipoPago:           json.tipoPago,
+          salarioBase:        json.salarioBase,
+          valorPorUnidad:     json.valorPorUnidad,
+          porcentajeServicio: json.porcentajeServicio,
+          aplicaRenta:        json.aplicaRenta,
+          fechaIngreso:       json.fechaIngreso,
+        }} : prev);
+        toast.success('Configuración de pago guardada');
+      } else { toast.error(json.error?.message ?? 'Error al guardar'); }
+    } catch { toast.error('Error de red'); } finally { setPagoSaving(false); }
+  }
+
+  // ── Guardar Horarios ─────────────────────────────────────
+  async function saveHorarios() {
+    if (!drawer) return;
+    setSchedSaving(true);
+    try {
+      const res = await fetch(`/api/barbers/${drawer.id}/schedule`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sched),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        const updated = normSchedule(json.data as Schedule[]);
+        setSched(updated);
+        setDrawer(prev => prev ? { ...prev, schedules: json.data } : prev);
+        const txt = updated.filter(s => s.active)
+          .map(s => `${DAY_NAMES[s.dayOfWeek].slice(0,3)} ${s.startTime}-${s.endTime}`).join(', ');
+        setBarbers(prev => prev.map(b => b.id === drawer.id ? { ...b, scheduleText: txt, schedules: json.data } : b));
+        toast.success('Horarios guardados');
+      } else { toast.error(json.error?.message ?? 'Error al guardar'); }
+    } catch { toast.error('Error de red'); } finally { setSchedSaving(false); }
+  }
+
+  // ── CRUD barbero (crear) ─────────────────────────────────
   async function handleCreate() {
     if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
       setCreateError('Nombre, email y contraseña son obligatorios.'); return;
@@ -114,64 +233,32 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
         }),
       });
       const json = await res.json();
-      if (!res.ok) { const msg = json.error?.message ?? 'Error al crear barbero'; setCreateError(msg); toast.error(msg); return; }
+      if (!res.ok) { setCreateError(json.error?.message ?? 'Error'); toast.error(json.error?.message ?? 'Error'); return; }
       setBarbers(prev => [...prev, json.data]);
       setCreating(false);
       toast.success(`Barbero "${form.fullName.trim()}" creado`);
-    } catch { const msg = 'Error de red'; setCreateError(msg); toast.error(msg); }
+    } catch { setCreateError('Error de red'); toast.error('Error de red'); }
     finally { setCreateLoading(false); }
   }
 
-  function openEdit(b: Barber) {
-    setEditing(b); setBio(b.bio ?? ''); setCargo(b.cargo ?? ''); setSpecialtiesInput(b.specialties.join(', '));
-  }
-
-  async function saveEdit() {
-    if (!editing) return;
-    setEditLoading(true);
-    try {
-      const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(Boolean);
-      const res = await fetch(`/api/barbers/${editing.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio, cargo, specialties }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setBarbers(prev => prev.map(b => b.id === editing.id ? { ...b, ...json.data } : b));
-        setEditing(null); toast.success('Perfil actualizado');
-      } else { toast.error(json.error?.message ?? 'Error al guardar'); }
-    } catch { toast.error('Error de red'); } finally { setEditLoading(false); }
-  }
-
-  // ── CRUD cargos ────────────────────────────────────────
-  function openNuevoCargo() {
-    setCargoNombre(''); setCargoDesc(''); setModalCargo('new');
-  }
-
-  function openEditCargo(c: CargoItem) {
-    setCargoNombre(c.nombre); setCargoDesc(c.descripcion ?? ''); setModalCargo(c);
-  }
+  // ── CRUD cargos ──────────────────────────────────────────
+  function openNuevoCargo() { setCargoNombre(''); setCargoDesc(''); setModalCargo('new'); }
+  function openEditCargo(c: CargoItem) { setCargoNombre(c.nombre); setCargoDesc(c.descripcion ?? ''); setModalCargo(c); }
 
   async function saveCargo() {
-    if (!cargoNombre.trim()) { toast.error('El nombre del cargo es requerido'); return; }
+    if (!cargoNombre.trim()) { toast.error('El nombre es requerido'); return; }
     setCargoSaving(true);
     try {
       const isNew = modalCargo === 'new';
-      const url   = isNew ? '/api/cargos' : `/api/cargos/${(modalCargo as CargoItem).id}`;
-      const method = isNew ? 'POST' : 'PUT';
+      const url    = isNew ? '/api/cargos' : `/api/cargos/${(modalCargo as CargoItem).id}`;
       const res = await fetch(url, {
-        method, headers: { 'Content-Type': 'application/json' },
+        method: isNew ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre: cargoNombre.trim(), descripcion: cargoDesc.trim() || null }),
       });
       const json = await res.json();
-      if (!res.ok) { toast.error(json.error?.message ?? 'Error al guardar'); return; }
-      if (isNew) {
-        setCargos(prev => [...prev, json.data]);
-        toast.success(`Cargo "${cargoNombre.trim()}" creado`);
-      } else {
-        setCargos(prev => prev.map(c => c.id === json.data.id ? json.data : c));
-        toast.success('Cargo actualizado');
-      }
+      if (!res.ok) { toast.error(json.error?.message ?? 'Error'); return; }
+      if (isNew) { setCargos(prev => [...prev, json.data]); toast.success('Cargo creado'); }
+      else { setCargos(prev => prev.map(c => c.id === json.data.id ? json.data : c)); toast.success('Cargo actualizado'); }
       setModalCargo(null);
     } catch { toast.error('Error de red'); } finally { setCargoSaving(false); }
   }
@@ -188,34 +275,33 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
 
   function confirmDeleteCargo(c: CargoItem) {
     Modal.confirm({
-      title:   `¿Eliminar cargo "${c.nombre}"?`,
-      content: 'Esta acción no se puede deshacer.',
+      title: `¿Eliminar cargo "${c.nombre}"?`, content: 'Esta acción no se puede deshacer.',
       okText: 'Eliminar', okType: 'danger', cancelText: 'Cancelar',
       onOk: async () => {
         const res = await fetch(`/api/cargos/${c.id}`, { method: 'DELETE' });
         if (res.ok) { setCargos(prev => prev.filter(x => x.id !== c.id)); toast.success('Cargo eliminado'); }
-        else { const j = await res.json(); toast.error(j.error?.message ?? 'Error al eliminar'); }
+        else { const j = await res.json(); toast.error(j.error?.message ?? 'Error'); }
       },
     });
   }
 
-  // ── Columnas tabla barberos ────────────────────────────
+  // ── Columnas barberos ────────────────────────────────────
   const columns: ColumnsType<Barber> = [
     {
-      title: 'Barbero', key: 'barbero',
+      title: 'Empleado', key: 'barbero',
       render: (_, r) => (
         <Space>
           <Avatar size={36} style={{ backgroundColor: avatarColor(r.id), flexShrink: 0, fontWeight: 700 }}>
             {getInitials(r.user.fullName)}
           </Avatar>
           <div>
-            <div style={{ fontWeight: 500 }}>{r.user.fullName}</div>
+            <div style={{ fontWeight: 600 }}>{r.user.fullName}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>{r.user.email}</Text>
           </div>
         </Space>
       ),
     },
-    { title: 'Teléfono', key: 'phone', width: 140,
+    { title: 'Teléfono', key: 'phone', width: 130,
       render: (_, r) => r.user.phone ? <Text style={{ fontSize: 12 }}>{r.user.phone}</Text> : <Text type="secondary">—</Text> },
     { title: 'Cargo', key: 'cargo', width: 130,
       render: (_, r) => <Tag color="cyan" style={{ fontSize: 11 }}>{r.cargo ?? 'Barbero'}</Tag> },
@@ -232,94 +318,71 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
         </Space>
       ),
     },
-    {
-      title: 'Horario', key: 'schedule',
-      render: (_, r) => (
-        <Tooltip title={r.scheduleText || 'Sin horario definido'}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {r.scheduleText ? (r.scheduleText.length > 45 ? r.scheduleText.slice(0, 45) + '…' : r.scheduleText) : '—'}
-          </Text>
-        </Tooltip>
-      ),
-    },
-    { title: 'Estado', key: 'active', width: 100,
+    { title: 'Estado', key: 'active', width: 90,
       render: (_, r) => <Tag color={r.active ? 'success' : 'default'}>{r.active ? 'Activo' : 'Inactivo'}</Tag> },
     {
-      title: 'Acciones', key: 'actions', width: 80, fixed: 'right',
-      render: (_, record) => (
-        <Tooltip title="Editar perfil">
-          <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => openEdit(record)} />
-        </Tooltip>
+      title: 'Acciones', key: 'actions', width: 100, fixed: 'right',
+      render: (_, r) => (
+        <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => openDrawer(r)}>
+          Ver perfil
+        </Button>
       ),
     },
   ];
 
-  // ── Columnas tabla cargos ──────────────────────────────
+  // ── Columnas cargos ──────────────────────────────────────
   const colsCargos: ColumnsType<CargoItem> = [
-    { title: 'Nombre', dataIndex: 'nombre',
-      render: (v: string) => <Text strong>{v}</Text> },
+    { title: 'Nombre', dataIndex: 'nombre', render: (v: string) => <Text strong>{v}</Text> },
     { title: 'Descripción', dataIndex: 'descripcion',
       render: (v: string | null) => v ? <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> : <Text type="secondary">—</Text> },
-    { title: 'Estado', dataIndex: 'activo', width: 100,
+    { title: 'Estado', dataIndex: 'activo', width: 110,
       render: (v: boolean, r) => (
-        <Switch
-          size="small"
-          checked={v}
-          checkedChildren="Activo"
-          unCheckedChildren="Inactivo"
-          onChange={() => toggleActivoCargo(r)}
-          style={{ background: v ? primary : undefined }}
-        />
+        <Switch size="small" checked={v} checkedChildren="Activo" unCheckedChildren="Inactivo"
+          onChange={() => toggleActivoCargo(r)} style={{ background: v ? primary : undefined }} />
       ),
     },
-    {
-      title: 'Acciones', key: 'actions', width: 100,
+    { title: 'Acciones', key: 'acc', width: 90,
       render: (_, r) => (
         <Space size={4}>
-          <Tooltip title="Editar">
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEditCargo(r)} />
-          </Tooltip>
-          <Tooltip title="Eliminar">
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => confirmDeleteCargo(r)} />
-          </Tooltip>
+          <Tooltip title="Editar"><Button size="small" icon={<EditOutlined />} onClick={() => openEditCargo(r)} /></Tooltip>
+          <Tooltip title="Eliminar"><Button size="small" danger icon={<DeleteOutlined />} onClick={() => confirmDeleteCargo(r)} /></Tooltip>
         </Space>
       ),
     },
   ];
 
-  const activeCount    = barbers.filter(b => b.active).length;
-  const allSpecialties = [...new Set(barbers.flatMap(b => b.specialties))].length;
+  const activeCount = barbers.filter(b => b.active).length;
 
+  // ── JSX ─────────────────────────────────────────────────
   return (
     <>
-      {/* ── KPIs ─────────────────────────────────────── */}
+      {/* KPIs */}
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={12} md={8}>
           <Card size="small">
-            <Statistic title="Total Barberos" value={barbers.length}
-              prefix={<UserOutlined style={{ color: primary }} />} />
+            <Statistic title="Total Empleados" value={barbers.length} prefix={<UserOutlined style={{ color: primary }} />} />
           </Card>
         </Col>
         <Col xs={12} md={8}>
           <Card size="small">
             <Statistic title="Activos" value={activeCount}
-              prefix={<CheckCircleOutlined style={{ color: C.colorSuccess }} />} />
+              prefix={<CheckCircleOutlined style={{ color: token.colorSuccess }} />} />
           </Card>
         </Col>
         <Col xs={12} md={8}>
           <Card size="small">
-            <Statistic title="Especialidades" value={allSpecialties}
-              prefix={<ScissorOutlined style={{ color: '#722ed1' }} />} />
+            <Statistic title="Cargos definidos" value={cargos.length}
+              prefix={<TagsOutlined style={{ color: '#722ed1' }} />} />
           </Card>
         </Col>
       </Row>
 
-      {/* ── Tabs: Barberos | Cargos ──────────────────── */}
+      {/* Tabs: Empleados | Cargos */}
       <Card>
         <Tabs items={[
           {
-            key:   'barberos',
-            label: <span><UserOutlined /> Barberos</span>,
+            key: 'barberos',
+            label: <span><UserOutlined /> Empleados</span>,
             children: (
               <>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
@@ -328,19 +391,16 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
                       setForm({ fullName: '', email: '', password: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
                       setCreateError(''); setShowPass(false); setCreating(true);
                     }}>
-                    Nuevo barbero
+                    Nuevo empleado
                   </Button>
                 </div>
-                <Table
-                  dataSource={barbers} columns={columns} rowKey="id" size="small" scroll={{ x: 700 }}
-                  pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20'],
-                    showTotal: (t, r) => `${r[0]}–${r[1]} de ${t} barberos` }}
+                <Table dataSource={barbers} columns={columns} rowKey="id" size="small" scroll={{ x: 700 }}
+                  pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10','20'],
+                    showTotal: (t, r) => `${r[0]}–${r[1]} de ${t} empleados` }}
                   locale={{ emptyText: (
                     <div style={{ padding: 40, textAlign: 'center' }}>
-                      <ClockCircleOutlined style={{ fontSize: 32, color: C.textDisabled }} />
-                      <div style={{ marginTop: 8, color: C.textMuted }}>
-                        No hay barberos registrados. Usa &quot;+ Nuevo barbero&quot;.
-                      </div>
+                      <ClockCircleOutlined style={{ fontSize: 32, color: textDisabled }} />
+                      <div style={{ marginTop: 8, color: textMuted }}>No hay empleados. Usa &quot;+ Nuevo empleado&quot;.</div>
                     </div>
                   )}}
                 />
@@ -348,28 +408,23 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
             ),
           },
           {
-            key:   'cargos',
+            key: 'cargos',
             label: <span><TagsOutlined /> Cargos</span>,
             children: (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <Text type="secondary" style={{ fontSize: 13 }}>
-                    Define los puestos de trabajo de tu equipo. Se usan al crear barberos y en constancias laborales.
+                    Define los puestos de trabajo. Se usan al crear empleados y en constancias laborales.
                   </Text>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={openNuevoCargo}>
-                    Nuevo cargo
-                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={openNuevoCargo}>Nuevo cargo</Button>
                 </div>
-                <Table
-                  dataSource={cargos} columns={colsCargos} rowKey="id" size="small"
-                  loading={cargosLoading}
+                <Table dataSource={cargos} columns={colsCargos} rowKey="id" size="small"
+                  loading={cargoLoad}
                   pagination={{ pageSize: 10, showTotal: (t, r) => `${r[0]}–${r[1]} de ${t} cargos` }}
                   locale={{ emptyText: (
                     <div style={{ padding: 40, textAlign: 'center' }}>
-                      <TagsOutlined style={{ fontSize: 32, color: C.textDisabled }} />
-                      <div style={{ marginTop: 8, color: C.textMuted }}>
-                        No hay cargos definidos. Crea el primero con &quot;+ Nuevo cargo&quot;.
-                      </div>
+                      <TagsOutlined style={{ fontSize: 32, color: textDisabled }} />
+                      <div style={{ marginTop: 8, color: textMuted }}>No hay cargos. Crea el primero.</div>
                     </div>
                   )}}
                 />
@@ -379,12 +434,205 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
         ]} />
       </Card>
 
-      {/* ── Modal CREAR barbero ───────────────────────── */}
+      {/* ── Drawer: Perfil completo del empleado ─────────── */}
+      <Drawer
+        open={!!drawer}
+        onClose={() => setDrawer(null)}
+        title={
+          drawer ? (
+            <Space>
+              <Avatar size={32} style={{ backgroundColor: avatarColor(drawer.id), fontWeight: 700 }}>
+                {getInitials(drawer.user.fullName)}
+              </Avatar>
+              <div>
+                <div style={{ fontWeight: 600, lineHeight: 1.2 }}>{drawer.user.fullName}</div>
+                <Tag color="cyan" style={{ fontSize: 11, marginTop: 2 }}>{drawer.cargo ?? 'Barbero'}</Tag>
+              </div>
+            </Space>
+          ) : 'Perfil'
+        }
+        width={typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : 560}
+        loading={drawerLoading}
+      >
+        <Tabs activeKey={drawerTab} onChange={setDrawerTab} items={[
+          /* ── Tab 1: General ── */
+          {
+            key: 'general',
+            label: <span><UserOutlined /> General</span>,
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Form layout="vertical" size="small">
+                  <Form.Item label="Cargo / Puesto">
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder="Selecciona un cargo…"
+                      showSearch allowClear
+                      value={genCargo || undefined}
+                      onChange={v => setGenCargo(v ?? '')}
+                      options={cargoOptions}
+                      notFoundContent={<span style={{ fontSize: 12 }}>Sin cargos — créalos en la pestaña &quot;Cargos&quot;</span>}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Biografía">
+                    <Input.TextArea
+                      value={genBio}
+                      onChange={e => setGenBio(e.target.value)}
+                      placeholder="Descripción breve del empleado…"
+                      autoSize={{ minRows: 2, maxRows: 4 }}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Especialidades (separadas por coma)">
+                    <Input
+                      value={genSpec}
+                      onChange={e => setGenSpec(e.target.value)}
+                      placeholder="Fade, Barba, Diseño…"
+                    />
+                  </Form.Item>
+                </Form>
+                <Divider style={{ margin: '4px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button type="primary" loading={genSaving} onClick={saveGeneral}>
+                    Guardar cambios
+                  </Button>
+                </div>
+              </div>
+            ),
+          },
+
+          /* ── Tab 2: Configuración de Pago ── */
+          {
+            key: 'pago',
+            label: <span><SettingOutlined /> Configuración de Pago</span>,
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Form layout="vertical" size="small">
+                  <Form.Item label="Tipo de Pago">
+                    <Select
+                      style={{ width: '100%' }}
+                      value={pago.tipoPago}
+                      onChange={v => setPago(p => ({ ...p, tipoPago: v }))}
+                      options={TIPO_PAGO_OPTS}
+                    />
+                  </Form.Item>
+
+                  {pago.tipoPago === 'FIJO' && (
+                    <Form.Item label="Salario Base Mensual ($)">
+                      <InputNumber style={{ width: '100%' }} min={0} precision={2} addonBefore="$"
+                        value={pago.salarioBase}
+                        onChange={v => setPago(p => ({ ...p, salarioBase: v ?? 0 }))} />
+                    </Form.Item>
+                  )}
+
+                  {(pago.tipoPago === 'POR_DIA' || pago.tipoPago === 'POR_SEMANA' || pago.tipoPago === 'POR_HORA') && (
+                    <Form.Item label={`Valor por ${pago.tipoPago === 'POR_DIA' ? 'día' : pago.tipoPago === 'POR_SEMANA' ? 'semana' : 'hora'} ($)`}>
+                      <InputNumber style={{ width: '100%' }} min={0} precision={2} addonBefore="$"
+                        value={pago.valorPorUnidad}
+                        onChange={v => setPago(p => ({ ...p, valorPorUnidad: v ?? 0 }))} />
+                    </Form.Item>
+                  )}
+
+                  {pago.tipoPago === 'POR_SERVICIO' && (
+                    <>
+                      <Form.Item label="Porcentaje de comisión (%)">
+                        <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} addonAfter="%"
+                          value={pago.porcentajeServicio}
+                          onChange={v => setPago(p => ({ ...p, porcentajeServicio: v ?? 0 }))} />
+                      </Form.Item>
+                      <Form.Item label="Valor fijo por servicio ($) — si no usa porcentaje">
+                        <InputNumber style={{ width: '100%' }} min={0} precision={2} addonBefore="$"
+                          value={pago.valorPorUnidad}
+                          onChange={v => setPago(p => ({ ...p, valorPorUnidad: v ?? 0 }))} />
+                      </Form.Item>
+                    </>
+                  )}
+
+                  <Form.Item label="Fecha de Ingreso (para cálculo de prestaciones)">
+                    <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY"
+                      value={pago.fechaIngreso ? dayjs(pago.fechaIngreso) : null}
+                      onChange={d => setPago(p => ({ ...p, fechaIngreso: d ? d.toISOString() : null }))}
+                      placeholder="Fecha de contratación"
+                    />
+                  </Form.Item>
+
+                  <Form.Item label="Aplica Retención de Renta (ISR)">
+                    <Switch checked={pago.aplicaRenta}
+                      onChange={v => setPago(p => ({ ...p, aplicaRenta: v }))}
+                      checkedChildren="Sí" unCheckedChildren="No"
+                      style={{ background: pago.aplicaRenta ? primary : undefined }}
+                    />
+                  </Form.Item>
+                </Form>
+                <Divider style={{ margin: '4px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button type="primary" loading={pagoSaving} onClick={savePago}>
+                    Guardar configuración
+                  </Button>
+                </div>
+              </div>
+            ),
+          },
+
+          /* ── Tab 3: Horarios ── */
+          {
+            key: 'horarios',
+            label: <span><CalendarOutlined /> Horarios</span>,
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Configura los días y horarios de trabajo individuales para este empleado.
+                </Text>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {sched.map((h, idx) => (
+                    <Row key={h.dayOfWeek} align="middle" gutter={8}>
+                      <Col style={{ width: 36 }}>
+                        <Switch size="small" checked={h.active}
+                          style={{ background: h.active ? primary : undefined }}
+                          onChange={val => setSched(prev => prev.map((s, i) => i === idx ? { ...s, active: val } : s))}
+                        />
+                      </Col>
+                      <Col style={{ width: 88 }}>
+                        <Text style={{ fontSize: 13, color: h.active ? undefined : '#bfbfbf', fontWeight: h.active ? 500 : 400 }}>
+                          {DAY_NAMES[h.dayOfWeek]}
+                        </Text>
+                      </Col>
+                      {h.active ? (
+                        <>
+                          <Col>
+                            <Select size="small" style={{ width: 88 }} value={h.startTime}
+                              onChange={v => setSched(prev => prev.map((s, i) => i === idx ? { ...s, startTime: v } : s))}
+                              options={Array.from({ length: 24 }, (_, i) => ({ value: `${String(i).padStart(2,'0')}:00`, label: `${String(i).padStart(2,'0')}:00` }))}
+                            />
+                          </Col>
+                          <Col><Text type="secondary" style={{ fontSize: 12 }}>a</Text></Col>
+                          <Col>
+                            <Select size="small" style={{ width: 88 }} value={h.endTime}
+                              onChange={v => setSched(prev => prev.map((s, i) => i === idx ? { ...s, endTime: v } : s))}
+                              options={Array.from({ length: 24 }, (_, i) => ({ value: `${String(i).padStart(2,'0')}:00`, label: `${String(i).padStart(2,'0')}:00` }))}
+                            />
+                          </Col>
+                        </>
+                      ) : (
+                        <Col><Text type="secondary" style={{ fontSize: 12 }}>Descanso</Text></Col>
+                      )}
+                    </Row>
+                  ))}
+                </div>
+                <Divider style={{ margin: '4px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button type="primary" loading={schedSaving} onClick={saveHorarios}>
+                    Guardar horarios
+                  </Button>
+                </div>
+              </div>
+            ),
+          },
+        ]} />
+      </Drawer>
+
+      {/* ── Modal CREAR empleado ─────────────────────────── */}
       <Dialog open={creating} onOpenChange={v => { if (!v) setCreating(false); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nuevo barbero</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Nuevo empleado</DialogTitle></DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
             <FormField label="Nombre completo *">
               <SdInput value={form.fullName} onChange={e => setField('fullName', e.target.value)} placeholder="Carlos López" autoFocus />
@@ -394,13 +642,8 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
             </FormField>
             <FormField label="Contraseña *">
               <div style={{ position: 'relative' }}>
-                <SdInput
-                  type={showPass ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={e => setField('password', e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  style={{ paddingRight: 40 }}
-                />
+                <SdInput type={showPass ? 'text' : 'password'} value={form.password}
+                  onChange={e => setField('password', e.target.value)} placeholder="Mínimo 6 caracteres" style={{ paddingRight: 40 }} />
                 <button type="button" onClick={() => setShowPass(p => !p)}
                   style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', padding: 0, display: 'flex' }}>
                   {showPass ? <EyeSlash size={16} /> : <Eye size={16} />}
@@ -411,19 +654,9 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
               <SdInput value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="+503 7000-0000" />
             </FormField>
             <FormField label="Cargo / Puesto">
-              <Select
-                style={{ width: '100%' }}
-                placeholder="Selecciona un cargo…"
-                showSearch
-                allowClear
-                value={form.cargo || undefined}
-                onChange={v => setField('cargo', v ?? '')}
-                options={cargoOptions}
-                notFoundContent={<span style={{ fontSize: 12 }}>Sin cargos — créalos en la pestaña &quot;Cargos&quot;</span>}
-              />
-            </FormField>
-            <FormField label="Biografía">
-              <SdInput value={form.bio} onChange={e => setField('bio', e.target.value)} placeholder="Especialista en fades…" />
+              <Select style={{ width: '100%' }} placeholder="Selecciona un cargo…" showSearch allowClear
+                value={form.cargo || undefined} onChange={v => setField('cargo', v ?? '')} options={cargoOptions}
+                notFoundContent={<span style={{ fontSize: 12 }}>Sin cargos — créalos en la pestaña &quot;Cargos&quot;</span>} />
             </FormField>
             <FormField label="Especialidades (separadas por coma)">
               <SdInput value={form.specialtiesInput} onChange={e => setField('specialtiesInput', e.target.value)} placeholder="Fade, Barba, Diseño" />
@@ -432,73 +665,30 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
           </div>
           <DialogFooter>
             <SdButton variant="outline" onClick={() => setCreating(false)}>Cancelar</SdButton>
-            <SdButton onClick={handleCreate} disabled={createLoading}>{createLoading ? 'Creando...' : 'Crear barbero'}</SdButton>
+            <SdButton onClick={handleCreate} disabled={createLoading}>{createLoading ? 'Creando...' : 'Crear empleado'}</SdButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Modal EDITAR barbero ──────────────────────── */}
-      <Dialog open={!!editing} onOpenChange={v => { if (!v) setEditing(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar perfil — {editing?.user.fullName}</DialogTitle>
-          </DialogHeader>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
-            <FormField label="Cargo / Puesto">
-              <Select
-                style={{ width: '100%' }}
-                placeholder="Selecciona un cargo…"
-                showSearch
-                allowClear
-                value={cargo || undefined}
-                onChange={v => setCargo(v ?? '')}
-                options={cargoOptions}
-                notFoundContent={<span style={{ fontSize: 12 }}>Sin cargos — créalos en la pestaña &quot;Cargos&quot;</span>}
-              />
-            </FormField>
-            <FormField label="Biografía">
-              <SdInput value={bio} onChange={e => setBio(e.target.value)} placeholder="Descripción del barbero…" />
-            </FormField>
-            <FormField label="Especialidades (separadas por coma)">
-              <SdInput value={specialtiesInput} onChange={e => setSpecialtiesInput(e.target.value)} placeholder="Fade, Barba, Diseño…" />
-            </FormField>
-          </div>
-          <DialogFooter>
-            <SdButton variant="outline" onClick={() => setEditing(null)}>Cancelar</SdButton>
-            <SdButton onClick={saveEdit} disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar cambios'}</SdButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Modal CREAR / EDITAR cargo ────────────────── */}
-      <Modal
-        open={!!modalCargo}
+      {/* ── Modal CRUD cargo ─────────────────────────────── */}
+      <Modal open={!!modalCargo}
         title={modalCargo === 'new' ? <span><TagsOutlined /> Nuevo cargo</span> : <span><EditOutlined /> Editar cargo</span>}
-        onCancel={() => setModalCargo(null)}
-        onOk={saveCargo}
-        okText={modalCargo === 'new' ? 'Crear cargo' : 'Guardar cambios'}
+        onCancel={() => setModalCargo(null)} onOk={saveCargo}
+        okText={modalCargo === 'new' ? 'Crear cargo' : 'Guardar'}
         confirmLoading={cargoSaving}
         okButtonProps={{ style: { background: primary, borderColor: primary } }}
         width="min(420px, 96vw)"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Nombre del cargo *</div>
-            <Input
-              value={cargoNombre}
-              onChange={e => setCargoNombre(e.target.value)}
-              placeholder="Ej: Barbero, Estilista, Cajero, Supervisor…"
-              autoFocus
-            />
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Nombre *</div>
+            <Input value={cargoNombre} onChange={e => setCargoNombre(e.target.value)}
+              placeholder="Ej: Barbero, Estilista, Cajero, Supervisor…" autoFocus />
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Descripción (opcional)</div>
-            <TextArea
-              value={cargoDesc}
-              onChange={e => setCargoDesc(e.target.value)}
-              placeholder="Descripción breve del cargo…"
-              autoSize={{ minRows: 2, maxRows: 4 }}
-            />
+            <TextArea value={cargoDesc} onChange={e => setCargoDesc(e.target.value)}
+              placeholder="Descripción breve…" autoSize={{ minRows: 2, maxRows: 4 }} />
           </div>
         </div>
       </Modal>

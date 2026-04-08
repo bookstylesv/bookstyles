@@ -28,9 +28,8 @@ export async function findBarberById(id: number, tenantId: number) {
       user: {
         select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true, active: true },
       },
-      schedules: {
-        orderBy: { dayOfWeek: 'asc' },
-      },
+      schedules:      { orderBy: { dayOfWeek: 'asc' } },
+      configPlanilla: true,
     },
   });
 }
