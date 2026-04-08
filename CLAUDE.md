@@ -1,9 +1,12 @@
-# Speeddan Barbería ERP — Contexto para Claude
+# CLAUDE.md — Speeddan Barbería ERP
 
-> **DIRECTIVAS DE SESIÓN**: NO explorar el proyecto al inicio. Este archivo + memoria persistente contienen todo el contexto necesario. Ir directo a la tarea del usuario. Usar agentes para búsquedas paralelas. Usar skills cuando apliquen (xlsx, pdf, commit, etc.). Leer solo los archivos que la tarea requiera.
+> **DIRECTIVAS DE SESIÓN** (seguir siempre):
+> 1. **CONFIANZA 90%**: Antes de modificar cualquier archivo, si no tengo 90% de certeza de lo que debo hacer, hacer las preguntas necesarias al usuario primero.
+> 2. **AGENTES Y SKILLS**: NO usar agentes ni skills automáticamente. Esperar instrucción explícita del usuario.
+> 3. **TOKENS**: Leer solo los archivos que la tarea requiera. NO explorar el proyecto al inicio. NO re-leer archivos ya leídos en la sesión.
 
 ## Proyecto
-ERP web **multi-tenant SaaS** para gestión de barberías en El Salvador. Cada barbería = un `BarberTenant` identificado por `slug`.
+ERP web **multi-tenant SaaS** para barberías en El Salvador. Cada barbería = un `BarberTenant` por `slug`.
 
 ## URLs y Credenciales
 | Servicio | URL | Credenciales |
@@ -12,7 +15,6 @@ ERP web **multi-tenant SaaS** para gestión de barberías en El Salvador. Cada b
 | Demo Admin | — | `admin@speeddan.com` / `Admin@2026!` |
 | Demo Barbero | — | `barber@speeddan.com` / `Barber@2026!` |
 | Demo Cliente | — | `client@speeddan.com` / `Client@2026!` |
-| Admin Licencias | `admin-licencias.vercel.app` | `admin` / `admin123` |
 | GitHub | `github.com/Developer545/Speeddan_Barber.git` | — |
 
 ## Stack
@@ -33,66 +35,56 @@ src/
   app/
     (auth)/login/               → Login por slug de tenant
     (dashboard)/                → Páginas protegidas (Server Components)
-      dashboard/                  KPIs + recharts BarChart 7 días
-      appointments/               FullCalendar + antd Table
-      clients/                    CRUD clientes
-      services/                   Catálogo servicios
-      barbers/                    Perfiles + especialidades
-      billing/                    Pagos + KPIs ingresos
-      pos/                        Punto de venta (turnos + ventas + DTE)
-      pos-documentos/             Visor DTEs generados
-      pos-turnos/                 Gestión turnos caja
-      inventario/                 Productos + Kardex
-      compras/                    Órdenes de compra
-      proveedores/                Proveedores
-      cxp/                        Cuentas por pagar
-      gastos/                     Gastos + categorías
-      planilla/                   Nómina (ISSS/AFP/Renta/Aguinaldo)
-      settings/                   Config tenant + tema
+      dashboard/ appointments/ clients/ services/ barbers/
+      billing/ pos/ pos-documentos/ pos-turnos/
+      inventario/ compras/ proveedores/ cxp/ gastos/ planilla/ settings/
     api/                        → 60+ Route Handlers REST
     book/[slug]/                → Reservas públicas (sin auth)
-  components/
-    [modulo]/                   → Client Components (*Client.tsx)
-    shared/                     → AntdProvider, KpiCards, PageHeader, ActionButtons
-    ui/                         → shadcn/ui components
-  modules/
-    [modulo]/                   → service.ts + repository.ts (lógica negocio)
-  lib/
-    auth.ts                     → getCurrentUser(), verifyToken()
-    prisma.ts                   → Singleton PrismaClient
-    dte-viewer.ts               → Renderizado DTEs
-    planilla-viewer.ts          → Renderizado planillas PDF
-    errors.ts                   → Clases de error custom
-    response.ts                 → Formato respuestas API
+  components/[modulo]/          → Client Components (*Client.tsx)
+  components/shared/            → AntdProvider, KpiCards, PageHeader, ActionButtons
+  modules/[modulo]/             → service.ts + repository.ts
+  lib/                          → auth.ts, prisma.ts, errors.ts, response.ts
 prisma/schema.prisma            → 771 líneas, 25+ modelos, prefijo barber_
 ```
 
 ## Modelos Prisma clave
 | Modelo | Propósito |
 |--------|-----------|
-| `BarberTenant` | Multi-tenant, planes (TRIAL/BASIC/PRO/ENTERPRISE), flags módulos |
-| `BarberUser` | Roles: OWNER/BARBER/CLIENT, email único por tenant |
-| `BarberSession` | JWT refresh tokens |
-| `Barber` + `BarberSchedule` | Perfiles + horarios por día |
+| `BarberTenant` | Multi-tenant, planes (TRIAL/BASIC/PRO/ENTERPRISE) |
+| `BarberUser` | Roles: OWNER/BARBER/CLIENT |
+| `Barber` + `BarberSchedule` | Perfiles + horarios |
 | `BarberService` | Servicios (precio, duración, categoría) |
 | `BarberAppointment` | Citas (6 estados) |
 | `BarberTurno` | Turnos caja (ABIERTO/CERRADO) |
-| `BarberVenta` + `BarberDetalleVenta` | Ventas POS + líneas detalle |
-| `BarberCorrelativo` | Numeración DTE secuencial por tipo/año |
+| `BarberVenta` + `BarberDetalleVenta` | Ventas POS + líneas |
 | `BarberProducto` + `BarberKardex` | Inventario + movimientos |
 | `BarberCompra` + `BarberDetalleCompra` | Compras + detalle |
 | `BarberPlanilla` + `BarberDetallePlanilla` | Nómina mensual |
-| `BarberProveedor` | Proveedores |
 | `BarberGasto` + `BarberCategoriaGasto` | Gastos |
 
 ## Convenciones (IMPORTANTE)
 - Páginas dashboard = **Server Components** que pasan datos a `*Client.tsx`
 - `AntdProvider` ya en layout — **NO** envolver con ConfigProvider de nuevo
-- `transpilePackages` en `next.config.ts` incluye antd + todos `rc-*`
-- KPIs siempre con `Row/Col/Card/Statistic` de antd
+- KPIs: `Row/Col/Card/Statistic` de antd
 - Formularios: `react-hook-form` + antd `Select` con `showSearch`
 - NO usar `SpeedDanTable.tsx` (legacy) — usar antd `Table` directo
-- Tablas prefijadas `barber_` en BD para aislamiento multi-tenant
+- Tablas BD prefijadas `barber_` para aislamiento multi-tenant
+- **Patrón de módulo completo**: ver `src/modules/gastos/` como referencia
+
+## API — Respuestas estandarizadas
+`src/lib/response.ts`: `{ success, data?, error?, pagination? }`
+```ts
+return ok(data);           // 200
+return created(data);      // 201
+return apiError(err);      // convierte AppError → respuesta
+const { page, limit, skip } = parsePagination(searchParams);
+```
+
+## Auth
+- `barber_access_token`: JWT HS256, 15 min — `{ sub, tenantId, role, slug, name }`
+- `barber_refresh_token`: JWT HS256, 7 días
+- Server Components: `getCurrentUser()` → `JwtPayload | null`
+- API routes: verificar `tenantId` para aislar datos por tenant
 
 ## Comandos
 ```bash
@@ -104,29 +96,22 @@ npm run db:migrate     # migrate dev
 npm run db:deploy      # migrate deploy (producción)
 ```
 
-## Patrón nuevo módulo
-1. `src/modules/nombre/nombre.service.ts` + `nombre.repository.ts`
-2. `src/app/api/nombre/route.ts` (GET + POST)
-3. `src/app/(dashboard)/nombre/page.tsx` (Server Component)
-4. `src/components/nombre/NombreClient.tsx` (Client Component)
-5. Link en sidebar
+## Clases de error (`src/lib/errors.ts`)
+| Clase | Status | Uso |
+|-------|--------|-----|
+| `NotFoundError('Recurso')` | 404 | `findById` retorna null |
+| `UnauthorizedError()` | 401 | `getCurrentUser()` retorna null |
+| `ForbiddenError()` | 403 | Role sin permiso |
+| `ValidationError('msg')` | 422 | Validaciones de negocio |
+| `ConflictError('msg')` | 409 | Duplicados, estado inválido |
 
-## DTE (Facturación electrónica El Salvador)
+## DTE (Facturación El Salvador)
 - Tipos: Factura (01), CCF (03), Nota Crédito (05)
-- Generados en POS, guardados como JSON en `BarberVenta.dteJson`
-- Numeración secuencial: `BarberCorrelativo` por tipo + año
+- Guardados como JSON en `BarberVenta.dteJson`
+- Numeración: `BarberCorrelativo` por tipo + año
 - Visor: `lib/dte-viewer.ts` + API `/api/pos/venta/[id]/dte`
 
-## Planilla (Nómina salvadoreña)
+## Planilla
 - Deducciones: ISSS, AFP, Renta, INSAFORP
-- Tipos pago barbero: FIJO/POR_DIA/POR_SEMANA/POR_HORA/POR_SERVICIO
-- Cálculos: Aguinaldo, Quincena 25, Vacaciones
+- Tipos pago: FIJO/POR_DIA/POR_SEMANA/POR_HORA/POR_SERVICIO
 - Estados: BORRADOR → APROBADA → PAGADA
-
-## Skills disponibles (.agents/skills/)
-248 skills incluyendo: api-design, architecture-patterns, auth-implementation, nextjs-app-router-patterns, react-best-practices, neon-postgres, typescript-patterns, etc.
-
-## Proyectos relacionados
-- **Speeddansys ERP**: `C:\ProjectosDev\Speeddansys\` → `speeddansys.vercel.app`
-- **DTE Online ERP**: `C:\ProjectosDev\Facturacion DTE online\` → `dte-speeddan.vercel.app`
-- Panel `admin-licencias.vercel.app` valida suscripciones de esta app

@@ -44,8 +44,6 @@ export async function removeService(id: number, tenantId: number) {
 
 // ── Validation ────────────────────────────────────────
 
-const VALID_CATEGORIES = ['cabello', 'barba', 'combo', 'tratamiento'] as const;
-
 function validateServiceBody(body: unknown, partial = false) {
   if (!body || typeof body !== 'object') {
     throw new ValidationError('Cuerpo inválido');
@@ -64,8 +62,8 @@ function validateServiceBody(body: unknown, partial = false) {
   if (b.duration !== undefined && (typeof b.duration !== 'number' || b.duration < 1)) {
     throw new ValidationError('Duración inválida (mínimo 1 minuto)');
   }
-  if (b.category !== undefined && !VALID_CATEGORIES.includes(b.category as never)) {
-    throw new ValidationError(`Categoría inválida. Use: ${VALID_CATEGORIES.join(', ')}`);
+  if (b.category !== undefined && b.category !== null && typeof b.category !== 'string') {
+    throw new ValidationError('Categoría inválida');
   }
 
   return {
