@@ -22,6 +22,17 @@ const PUBLIC_PREFIXES = [
   '/book',
 ]
 
+// Si hay refresh token intenta renovar la sesión; si no, va a login.
+function tryRefreshOrLogin(req: NextRequest, pathname: string) {
+  const rt = req.cookies.get('barber_refresh_token')?.value
+  if (rt) {
+    const refreshUrl = new URL('/api/auth/refresh', req.url)
+    refreshUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(refreshUrl)
+  }
+  return NextResponse.redirect(new URL('/login', req.url))
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
@@ -39,7 +50,7 @@ export async function proxy(req: NextRequest) {
         { status: 401 },
       )
     }
-    return NextResponse.redirect(new URL('/login', req.url))
+    return tryRefreshOrLogin(req, pathname)
   }
 
   try {
@@ -52,7 +63,7 @@ export async function proxy(req: NextRequest) {
         { status: 401 },
       )
     }
-    return NextResponse.redirect(new URL('/login', req.url))
+    return tryRefreshOrLogin(req, pathname)
   }
 }
 
