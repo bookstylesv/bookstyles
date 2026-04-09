@@ -246,18 +246,6 @@ export default function LoginPage() {
         <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, borderRadius: '50%', pointerEvents: 'none', zIndex: 2, background: theme.rightOrb }} />
 
         <div style={{ width: '100%', maxWidth: 430, position: 'relative', zIndex: 5 }}>
-          {tenant === null && (
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 5, borderRadius: 999, background: 'rgba(255,255,255,0.08)', border: sector === 'salon' ? '1px solid rgba(255,223,234,0.16)' : '1px solid rgba(255,255,255,0.14)', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
-                {(['barberia', 'salon'] as Sector[]).map((option) => {
-                  const active = option === sector;
-                  const optionTheme = SECTORS[option];
-                  return <button key={option} type="button" onClick={() => switchSector(option)} style={{ border: 'none', cursor: 'pointer', borderRadius: 999, padding: '9px 14px', minWidth: 124, fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: active ? '#fff' : theme.muted, background: active ? `linear-gradient(135deg, ${optionTheme.accentA} 0%, ${optionTheme.accentB} 100%)` : 'transparent', boxShadow: active ? `0 10px 26px ${optionTheme.glow}` : 'none', transition: 'background 0.18s, color 0.18s' }}>{optionTheme.sectorLabel}</button>;
-                })}
-              </div>
-              <p style={{ margin: '10px 0 0', fontSize: 12, color: theme.muted, letterSpacing: '0.02em' }}>El cliente elige la vista que mejor representa su negocio.</p>
-            </div>
-          )}
 
           <div style={{ textAlign: 'center', marginBottom: 34 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 58, height: 58, marginBottom: 18, background: `linear-gradient(135deg, ${theme.accentA} 0%, ${theme.accentB} 100%)`, borderRadius: 18, boxShadow: `0 14px 30px ${theme.glow}` }}>
