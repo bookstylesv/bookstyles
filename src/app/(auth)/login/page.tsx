@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type Step = 'empresa' | 'credenciales';
-type Sector = 'barberia' | 'salon';
+type Sector = 'neutral' | 'barberia' | 'salon';
 type Feature = { title: string; description: string };
 type TenantInfo = {
   id: number;
@@ -41,6 +41,15 @@ function ScissorsIcon({ size = 32, color = 'white', strokeWidth = 1.6 }: { size?
   );
 }
 
+function StoreIcon({ size = 32, color = 'white', strokeWidth = 1.6 }: { size?: number; color?: string; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
+
 function CalendarIcon({ stroke }: { stroke: string }) {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
 }
@@ -62,6 +71,9 @@ const DEFAULT_BRANDING: BrandingConfig = {
 };
 
 const SECTORS = {
+  neutral: {
+    sectorLabel: 'Speeddan', eyebrow: 'Sistema ERP', helperEmpresa: 'Ingresa la clave de tu empresa', helperAcceso: 'Accede a tu cuenta', headerName: 'Speeddan ERP', companyLabel: 'Clave de empresa', companyPlaceholder: 'ej: mi-empresa', footerNote: 'Speeddan · Sistema seguro', heroFooter: 'ERP Multi-tenant', tagline: 'Sistema de gestión para tu negocio', accentA: '#5b21b6', accentB: '#7c3aed', glow: 'rgba(124,58,237,0.36)', focus: 'rgba(124,58,237,0.72)', text: '#ffffff', muted: 'rgba(255,255,255,0.56)', labelColor: 'rgba(255,255,255,0.54)', card: 'rgba(255,255,255,0.055)', cardBorder: 'rgba(255,255,255,0.10)', input: 'rgba(255,255,255,0.07)', inputBorder: 'rgba(255,255,255,0.16)', leftBase: 'hsl(262 60% 10%)', rightBase: 'hsl(262 60% 6%)', leftImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1400&q=80', rightImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1400&q=80', leftOverlay: 'linear-gradient(145deg, rgba(20,8,60,0.62) 0%, rgba(40,16,100,0.54) 50%, rgba(124,58,237,0.28) 100%)', rightOverlay: 'linear-gradient(160deg, rgba(15,6,45,0.88) 0%, rgba(30,12,80,0.82) 52%, rgba(50,20,110,0.86) 100%)', leftOrb: 'radial-gradient(circle, rgba(124,58,237,0.20) 0%, transparent 70%)', rightOrb: 'radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 70%)', chipBg: 'rgba(167,139,250,0.18)', chipBorder: 'rgba(167,139,250,0.30)', chipText: '#a78bfa', stepDone: '#a78bfa', stepIdle: 'rgba(255,255,255,0.10)', useDisplay: false, features: [{ title: 'Barbería & Salón', description: 'ERP multi-sector completo' }, { title: 'Gestión de Citas', description: 'Agenda online en tiempo real' }, { title: 'Control Financiero', description: 'Reportes y caja en tiempo real' }],
+  },
   barberia: {
     sectorLabel: 'Barberia', eyebrow: 'Barber premium', helperEmpresa: 'Ingresa el codigo de tu barberia', helperAcceso: 'Accede a tu cuenta', headerName: 'Speeddan Barberia', companyLabel: 'Codigo de empresa', companyPlaceholder: 'ej: mi-barberia', footerNote: 'Speeddan ERP Â· Sistema seguro', heroFooter: 'ERP Multi-tenant para barberias', tagline: 'Sistema de gestion para barberias', accentA: '#5D6474', accentB: '#6498AF', glow: 'rgba(100,152,175,0.36)', focus: 'rgba(100,152,175,0.72)', text: '#ffffff', muted: 'rgba(255,255,255,0.56)', labelColor: 'rgba(255,255,255,0.54)', card: 'rgba(255,255,255,0.055)', cardBorder: 'rgba(255,255,255,0.10)', input: 'rgba(255,255,255,0.07)', inputBorder: 'rgba(255,255,255,0.16)', leftBase: 'hsl(175 60% 18%)', rightBase: 'hsl(175 60% 8%)', leftImage: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1400&q=80', rightImage: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1400&q=80', leftOverlay: 'linear-gradient(145deg, rgba(11,31,28,0.42) 0%, rgba(22,46,42,0.35) 50%, rgba(100,152,175,0.28) 100%)', rightOverlay: 'linear-gradient(160deg, rgba(11,31,28,0.78) 0%, rgba(15,42,38,0.72) 50%, rgba(22,46,42,0.80) 100%)', leftOrb: 'radial-gradient(circle, rgba(100,152,175,0.18) 0%, transparent 70%)', rightOrb: 'radial-gradient(circle, rgba(100,152,175,0.12) 0%, transparent 70%)', chipBg: 'rgba(74,222,128,0.18)', chipBorder: 'rgba(74,222,128,0.30)', chipText: '#4ade80', stepDone: '#4ade80', stepIdle: 'rgba(255,255,255,0.10)', useDisplay: false, features: DEFAULT_BRANDING.features,
   },
@@ -71,9 +83,7 @@ const SECTORS = {
 } as const;
 
 function getStoredSector(): Sector {
-  if (typeof window === 'undefined') return 'barberia';
-  const saved = window.localStorage.getItem('speeddan_login_sector');
-  return saved === 'salon' ? 'salon' : 'barberia';
+  return 'neutral';
 }
 
 const featureIcons = [CalendarIcon, ChartIcon, UsersIcon];
@@ -135,6 +145,7 @@ export default function LoginPage() {
     window.localStorage.removeItem('barber_last_tenant');
     setSlug('');
     setTenant(null);
+    setSector('neutral');
     setStep('empresa');
     setError(null);
   };
@@ -212,7 +223,7 @@ export default function LoginPage() {
         <div style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: 430 }}>
           <div className="anim-fade-up" style={{ textAlign: 'center', marginBottom: 40 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 72, borderRadius: 22, marginBottom: 18, background: sector === 'salon' ? 'linear-gradient(135deg, rgba(255,223,234,0.22) 0%, rgba(224,111,152,0.18) 100%)' : 'rgba(255,255,255,0.16)', backdropFilter: 'blur(24px) saturate(1.6)', WebkitBackdropFilter: 'blur(24px) saturate(1.6)', border: sector === 'salon' ? '1px solid rgba(255,223,234,0.28)' : '1px solid rgba(255,255,255,0.30)', boxShadow: sector === 'salon' ? '0 14px 40px rgba(32,10,19,0.32), inset 0 1px 0 rgba(255,243,247,0.24)' : '0 12px 40px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.28)' }}>
-              {sector === 'salon' ? <Sparkles size={32} color="white" strokeWidth={2.1} /> : <ScissorsIcon size={34} color="white" strokeWidth={1.5} />}
+              {sector === 'neutral' ? <StoreIcon size={32} color="white" strokeWidth={1.5} /> : sector === 'salon' ? <Sparkles size={32} color="white" strokeWidth={2.1} /> : <ScissorsIcon size={34} color="white" strokeWidth={1.5} />}
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '7px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', border: sector === 'salon' ? '1px solid rgba(255,223,234,0.18)' : '1px solid rgba(255,255,255,0.14)', color: sector === 'salon' ? '#ffe0ea' : 'rgba(255,255,255,0.72)', fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: sector === 'salon' ? '#ffd1e0' : '#4ade80', boxShadow: sector === 'salon' ? '0 0 8px rgba(255,209,224,0.85)' : '0 0 8px #4ade80' }} />
@@ -249,7 +260,7 @@ export default function LoginPage() {
 
           <div style={{ textAlign: 'center', marginBottom: 34 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 58, height: 58, marginBottom: 18, background: `linear-gradient(135deg, ${theme.accentA} 0%, ${theme.accentB} 100%)`, borderRadius: 18, boxShadow: `0 14px 30px ${theme.glow}` }}>
-              {sector === 'salon' ? <Sparkles size={26} color="white" strokeWidth={2.1} /> : <ScissorsIcon size={26} color="white" strokeWidth={1.8} />}
+              {sector === 'neutral' ? <StoreIcon size={26} color="white" strokeWidth={1.6} /> : sector === 'salon' ? <Sparkles size={26} color="white" strokeWidth={2.1} /> : <ScissorsIcon size={26} color="white" strokeWidth={1.8} />}
             </div>
             <h1 style={{ fontSize: sector === 'salon' ? 24 : 22, fontWeight: 700, color: theme.text, margin: '0 0 4px', letterSpacing: sector === 'salon' ? '-0.03em' : '-0.3px', fontFamily: theme.useDisplay ? 'var(--font-display), Georgia, serif' : 'var(--font-sans)' }}>{heading}</h1>
             <p style={{ fontSize: 13, color: theme.muted, margin: 0 }}>{step === 'empresa' ? theme.helperEmpresa : theme.helperAcceso}</p>
