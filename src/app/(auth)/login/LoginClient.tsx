@@ -92,7 +92,7 @@ export default function LoginClient({ initialBranding }: { initialBranding: Bran
   const router = useRouter();
   const [step, setStep] = useState<Step>('empresa');
   const [sector, setSector] = useState<Sector>(getStoredSector);
-  const [slug, setSlug] = useState(() => typeof window !== 'undefined' ? window.localStorage.getItem('barber_last_tenant') ?? '' : '');
+  const [slug, setSlug] = useState('');
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -109,8 +109,9 @@ export default function LoginClient({ initialBranding }: { initialBranding: Bran
   }, [tenant]);
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('barber_last_tenant') : null;
+    const saved = window.localStorage.getItem('barber_last_tenant');
     if (!saved) return;
+    setSlug(saved);
     setLoading(true);
     fetch(`/api/tenant/verify?slug=${saved}`)
       .then(r => r.ok ? r.json() : null)
