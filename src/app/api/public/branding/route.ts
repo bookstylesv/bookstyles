@@ -11,16 +11,25 @@ const DEFAULT = {
   ],
 };
 
+function parseFeatures(raw: unknown): { title: string; description: string }[] {
+  try {
+    if (Array.isArray(raw)) return raw as { title: string; description: string }[];
+    if (typeof raw === 'string') return JSON.parse(raw);
+  } catch { /* usa default */ }
+  return DEFAULT.features;
+}
+
 export async function GET() {
   try {
     const config = await prisma.barberGlobalConfig.findUnique({ where: { id: 1 } });
     if (!config) return NextResponse.json(DEFAULT);
     return NextResponse.json({
-      brandName: config.brandName,
-      tagline: config.tagline,
-      features: config.features,
+      brandName: config.brandName || DEFAULT.brandName,
+      tagline: config.tagline || DEFAULT.tagline,
+      features: parseFeatures(config.features),
     });
-  } catch {
+  } catch (err) {
+    console.error('[public/branding] error:', err);
     return NextResponse.json(DEFAULT);
   }
 }

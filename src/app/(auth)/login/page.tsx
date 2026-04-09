@@ -99,7 +99,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [branding, setBranding] = useState<BrandingConfig>(DEFAULT_BRANDING);
+  const [branding, setBranding] = useState<BrandingConfig | null>(null);
 
   useEffect(() => {
     fetch('/api/public/branding').then((r) => (r.ok ? r.json() : null)).then((data) => { if (data) setBranding(data); }).catch(() => {});
@@ -130,10 +130,10 @@ export default function LoginPage() {
   }, []);
 
   const theme = SECTORS[sector];
-  const brandName = branding.brandName || DEFAULT_BRANDING.brandName;
-  const brandTagline = sector === 'salon' ? theme.tagline : branding.tagline || DEFAULT_BRANDING.tagline;
-  const features = sector === 'salon' ? theme.features : (branding.features?.length === 3 ? branding.features : DEFAULT_BRANDING.features);
-  const heading = tenant?.name ?? (sector === 'neutral' ? brandName : theme.headerName);
+  const brandName = branding?.brandName || DEFAULT_BRANDING.brandName;
+  const brandTagline = sector === 'salon' ? theme.tagline : branding?.tagline || DEFAULT_BRANDING.tagline;
+  const features = sector === 'salon' ? theme.features : (branding?.features?.length === 3 ? branding.features : DEFAULT_BRANDING.features);
+  const heading = tenant?.name ?? (sector === 'neutral' ? (branding ? brandName : '') : theme.headerName);
 
   const setInputState = (element: HTMLInputElement, focused: boolean) => {
     element.style.borderColor = focused ? theme.focus : theme.inputBorder;
