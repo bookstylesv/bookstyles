@@ -18,21 +18,21 @@ export async function POST(_req: NextRequest) {
     if (!user) throw new UnauthorizedError();
     if (user.role !== 'OWNER') throw new ForbiddenError();
 
-    // Upsert departamentos
+    // Limpiar catálogo anterior (los códigos cambiaron en V1.2)
+    await prisma.barberMunicipio.deleteMany({});
+    await prisma.barberDepartamento.deleteMany({});
+
+    // Insertar departamentos CAT-012
     for (const depto of DEPARTAMENTOS) {
-      await prisma.barberDepartamento.upsert({
-        where:  { codigo: depto.codigo },
-        update: { nombre: depto.nombre },
-        create: { codigo: depto.codigo, nombre: depto.nombre },
+      await prisma.barberDepartamento.create({
+        data: { codigo: depto.codigo, nombre: depto.nombre },
       });
     }
 
-    // Upsert municipios
+    // Insertar municipios CAT-013 V1.2
     for (const mun of MUNICIPIOS) {
-      await prisma.barberMunicipio.upsert({
-        where:  { departamentoCod_codigo: { departamentoCod: mun.departamentoCod, codigo: mun.codigo } },
-        update: { nombre: mun.nombre },
-        create: { codigo: mun.codigo, nombre: mun.nombre, departamentoCod: mun.departamentoCod },
+      await prisma.barberMunicipio.create({
+        data: { codigo: mun.codigo, nombre: mun.nombre, departamentoCod: mun.departamentoCod },
       });
     }
 
