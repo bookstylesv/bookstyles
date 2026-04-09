@@ -11,7 +11,7 @@ import { setAuthCookies } from '@/lib/auth';
 import { ok, apiError, created } from '@/lib/response';
 
 const loginSchema = z.object({
-  email:    z.string().email('Email inválido').toLowerCase(),
+  email:    z.string().min(3, 'Usuario requerido').toLowerCase(),
   password: z.string().min(1, 'Contraseña requerida'),
   slug:     z.string().min(1, 'Código de empresa requerido').toLowerCase(),
 });

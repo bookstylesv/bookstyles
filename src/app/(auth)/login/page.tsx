@@ -102,6 +102,23 @@ export default function LoginPage() {
     return () => Object.keys(tenant.themeConfig).forEach((k) => root.style.removeProperty(k));
   }, [tenant]);
 
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('barber_last_tenant') : null;
+    if (!saved) return;
+    setLoading(true);
+    fetch(`/api/tenant/verify?slug=${saved}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.data) {
+          setTenant(data.data);
+          setSector(data.data.businessType === 'SALON' ? 'salon' : 'barberia');
+          setStep('credenciales');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
   const theme = SECTORS[sector];
   const brandName = branding.brandName || DEFAULT_BRANDING.brandName;
   const brandTagline = sector === 'salon' ? theme.tagline : branding.tagline || DEFAULT_BRANDING.tagline;
@@ -112,6 +129,14 @@ export default function LoginPage() {
     element.style.borderColor = focused ? theme.focus : theme.inputBorder;
     element.style.background = focused ? 'rgba(255,255,255,0.11)' : theme.input;
     element.style.boxShadow = focused ? `0 0 0 3px ${theme.glow}` : 'none';
+  };
+
+  const handleChangeClave = () => {
+    window.localStorage.removeItem('barber_last_tenant');
+    setSlug('');
+    setTenant(null);
+    setStep('empresa');
+    setError(null);
   };
 
   const switchSector = (next: Sector) => {
@@ -146,7 +171,7 @@ export default function LoginPage() {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email || !password) return setError('Email y contrasena son requeridos');
+    if (!email || !password) return setError('Usuario y contraseña son requeridos');
     setError(null);
     setLoading(true);
     try {
@@ -269,10 +294,9 @@ export default function LoginPage() {
 
             {step === 'credenciales' && (
               <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <button type="button" onClick={() => { setStep('empresa'); setTenant(null); setError(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.muted, fontSize: 13, padding: 0, textAlign: 'left', marginBottom: -4, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 4 }}>Cambiar empresa</button>
                 <div>
-                  <label style={labelStyle}>Email</label>
-                  <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus autoComplete="email" style={inputStyle} onFocus={(event) => setInputState(event.target, true)} onBlur={(event) => setInputState(event.target, false)} />
+                  <label style={labelStyle}>Usuario o email</label>
+                  <input type="text" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus autoComplete="username" style={inputStyle} onFocus={(event) => setInputState(event.target, true)} onBlur={(event) => setInputState(event.target, false)} />
                 </div>
                 <div>
                   <label style={labelStyle}>Contrasena</label>
@@ -282,6 +306,11 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <button type="submit" disabled={loading} style={buttonStyle}>{loading ? 'Ingresando...' : 'Ingresar'}</button>
+                <div style={{ textAlign: 'center', marginTop: -8 }}>
+                  <button type="button" onClick={handleChangeClave} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.muted, fontSize: 12, fontFamily: 'var(--font-sans)', textDecoration: 'underline', textUnderlineOffset: 3, opacity: 0.7 }}>
+                    Clave
+                  </button>
+                </div>
               </form>
             )}
           </div>
