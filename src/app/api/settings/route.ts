@@ -18,20 +18,21 @@ export async function GET(_req: NextRequest) {
     if (!tenant) throw new UnauthorizedError();
 
     return ok({
-      id:          tenant.id,
-      slug:        tenant.slug,
-      name:        tenant.name,
-      email:       tenant.email,
-      phone:       tenant.phone,
-      address:     tenant.address,
-      city:        tenant.city,
-      country:     tenant.country,
-      logoUrl:     tenant.logoUrl,
-      plan:        tenant.plan,
-      status:      tenant.status,
-      themeConfig: tenant.themeConfig,
-      trialEndsAt: tenant.trialEndsAt,
-      paidUntil:   tenant.paidUntil,
+      id:           tenant.id,
+      slug:         tenant.slug,
+      name:         tenant.name,
+      email:        tenant.email,
+      phone:        tenant.phone,
+      address:      tenant.address,
+      city:         tenant.city,
+      country:      tenant.country,
+      logoUrl:      tenant.logoUrl,
+      plan:         tenant.plan,
+      status:       tenant.status,
+      businessType: tenant.businessType,
+      themeConfig:  tenant.themeConfig,
+      trialEndsAt:  tenant.trialEndsAt,
+      paidUntil:    tenant.paidUntil,
     });
   } catch (err) {
     return apiError(err);

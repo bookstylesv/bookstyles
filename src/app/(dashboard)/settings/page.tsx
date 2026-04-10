@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   SaveOutlined, SettingOutlined, InfoCircleOutlined, ClockCircleOutlined,
   GlobalOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SyncOutlined,
+  BgColorsOutlined, CheckCircleFilled,
 } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 
@@ -32,6 +33,7 @@ type Tenant = {
   id: number; slug: string; name: string; email: string | null;
   phone: string | null; address: string | null; city: string | null;
   country: string; logoUrl: string | null; plan: string; status: string;
+  businessType: 'BARBERIA' | 'SALON';
   themeConfig: Record<string, string>; trialEndsAt: string | null; paidUntil: string | null;
 };
 type InfoForm  = { name: string; email: string; phone: string; address: string; city: string };
@@ -564,6 +566,142 @@ function TabCatalogoMH() {
 }
 
 // ══════════════════════════════════════════════════════════
+// TAB 4: Tema de Login
+// ══════════════════════════════════════════════════════════
+
+type LoginThemeId =
+  | 'barberia-teal' | 'barberia-clasica' | 'barberia-carbon' | 'barberia-navy'
+  | 'salon-rose'    | 'salon-lila'       | 'salon-dorado'    | 'salon-esmeralda';
+
+const BARBERIA_THEMES: { id: LoginThemeId; label: string; desc: string; from: string; to: string }[] = [
+  { id: 'barberia-teal',    label: 'Oceánico',  desc: 'Verde/teal — estilo premium',    from: 'hsl(175 60% 18%)', to: '#6498AF' },
+  { id: 'barberia-clasica', label: 'Clásica',   desc: 'Marrón cuero + dorado vintage',  from: '#3d2010',          to: '#D4A853' },
+  { id: 'barberia-carbon',  label: 'Carbón',    desc: 'Negro carbón + plata urbano',    from: 'hsl(220 14% 7%)',  to: '#9ca3af' },
+  { id: 'barberia-navy',    label: 'Navy',      desc: 'Azul marino + rojo — gentleman', from: 'hsl(214 52% 7%)',  to: '#e74c3c' },
+];
+
+const SALON_THEMES: { id: LoginThemeId; label: string; desc: string; from: string; to: string }[] = [
+  { id: 'salon-rose',       label: 'Rose',      desc: 'Rosa/fucsia — beauty studio',    from: '#54142e',          to: '#E06F98' },
+  { id: 'salon-lila',       label: 'Lila',      desc: 'Lavanda + plata — elegante',     from: 'hsl(262 45% 8%)', to: '#a78bfa' },
+  { id: 'salon-dorado',     label: 'Dorado',    desc: 'Champagne + oro — lujo premium', from: 'hsl(40 58% 7%)',  to: '#c9a84c' },
+  { id: 'salon-esmeralda',  label: 'Esmeralda', desc: 'Verde esmeralda — spa natural',  from: 'hsl(158 55% 7%)', to: '#2d8a65' },
+];
+
+function TabLoginTema() {
+  const [tenant,    setTenant]    = useState<Tenant | null>(null);
+  const [current,   setCurrent]   = useState<LoginThemeId | null>(null);
+  const [saving,    setSaving]    = useState<LoginThemeId | null>(null);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          setTenant(json.data);
+          setCurrent((json.data.themeConfig?.loginTheme as LoginThemeId) || null);
+        }
+      });
+  }, []);
+
+  async function selectTheme(themeId: LoginThemeId) {
+    setSaving(themeId);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ themeConfig: { loginTheme: themeId } }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error?.message ?? 'Error al guardar'); return; }
+      setCurrent(themeId);
+      toast.success('Tema de login actualizado');
+    } catch { toast.error('Error de red'); }
+    finally { setSaving(null); }
+  }
+
+  if (!tenant) {
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}><Spin size="large" /></div>;
+  }
+
+  const themes = (tenant.businessType === 'SALON') ? SALON_THEMES : BARBERIA_THEMES;
+
+  return (
+    <Card
+      title={<Space><BgColorsOutlined style={{ color: '#0d9488' }} /><span>Tema de Login</span></Space>}
+      size="small"
+    >
+      <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 20 }}>
+        Elige el tema visual que verán tus clientes en la pantalla de acceso.
+      </Text>
+      <Row gutter={[16, 16]}>
+        {themes.map(t => {
+          const isActive = current === t.id;
+          const isSavingThis = saving === t.id;
+          return (
+            <Col key={t.id} xs={24} sm={12} md={6}>
+              <div
+                onClick={() => !saving && selectTheme(t.id)}
+                style={{
+                  borderRadius: 12, overflow: 'hidden', cursor: saving ? 'wait' : 'pointer',
+                  border: isActive ? '2.5px solid #0d9488' : '2px solid #e8e8e8',
+                  boxShadow: isActive ? '0 0 0 3px rgba(13,148,136,0.18)' : '0 2px 8px rgba(0,0,0,0.08)',
+                  transition: 'all 0.2s', position: 'relative', opacity: saving && !isSavingThis ? 0.6 : 1,
+                }}
+              >
+                {/* Preview gradiente */}
+                <div style={{
+                  height: 100, position: 'relative',
+                  background: `linear-gradient(135deg, ${t.from} 0%, ${t.to} 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {/* Mini scissor/sparkle icon */}
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 14,
+                    background: 'rgba(255,255,255,0.18)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.28)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: 22 }}>{t.id.startsWith('salon-') ? '✦' : '✂'}</span>
+                  </div>
+                  {isActive && (
+                    <CheckCircleFilled style={{
+                      position: 'absolute', top: 8, right: 8,
+                      fontSize: 20, color: '#0d9488',
+                      background: '#fff', borderRadius: '50%',
+                    }} />
+                  )}
+                  {isSavingThis && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Spin size="small" />
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div style={{ padding: '10px 12px', background: '#fff' }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{t.label}</div>
+                  <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4 }}>{t.desc}</div>
+                  {isActive && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>Tema activo</div>
+                  )}
+                </div>
+              </div>
+            </Col>
+          );
+        })}
+      </Row>
+      <div style={{ marginTop: 16 }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          URL de login: <code style={{ fontSize: 12, background: '#f5f5f5', padding: '2px 6px', borderRadius: 4 }}>
+            /login/{tenant.slug}
+          </code>
+        </Text>
+      </div>
+    </Card>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ══════════════════════════════════════════════════════════
 
@@ -591,6 +729,11 @@ export default function SettingsPage() {
             key:      'catalogo',
             label:    <Space><GlobalOutlined />Catálogo MH</Space>,
             children: <TabCatalogoMH />,
+          },
+          {
+            key:      'login-tema',
+            label:    <Space><BgColorsOutlined />Tema de Login</Space>,
+            children: <TabLoginTema />,
           },
         ]}
       />
