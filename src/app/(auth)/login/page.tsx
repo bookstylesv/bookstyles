@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import LoginWrapper from './LoginWrapper';
+import LoginClient from './LoginClient';
 
 const DEFAULT_BRANDING = {
   brandName: 'Speeddan',
@@ -33,5 +33,5 @@ async function getBranding() {
 
 export default async function LoginPage() {
   const branding = await getBranding();
-  return <LoginWrapper initialBranding={branding} />;
+  return <LoginClient initialBranding={branding} />;
 }
