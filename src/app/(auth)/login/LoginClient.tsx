@@ -1,6 +1,5 @@
 'use client';
 
-import { Playfair_Display } from 'next/font/google';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,11 +22,6 @@ type BrandingConfig = {
   features: Feature[];
 };
 
-const displayFont = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['600', '700', '800'],
-});
 
 function ScissorsIcon({ size = 32, color = 'white', strokeWidth = 1.6 }: { size?: number; color?: string; strokeWidth?: number }) {
   return (
@@ -209,7 +203,7 @@ export default function LoginClient({ initialBranding }: { initialBranding: Bran
   });
 
   return (
-    <main className={displayFont.variable} style={{ minHeight: '100vh', display: 'flex', fontFamily: 'var(--font-sans)' }}>
+    <main style={{ minHeight: '100vh', display: 'flex', fontFamily: 'var(--font-sans)' }}>
       <div className="login-left-panel" style={{ display: 'none', width: '48%', flexShrink: 0, background: theme.leftBase, position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '60px 48px' }}>
         <div style={{ position: 'absolute', inset: '-8px', zIndex: 0, backgroundImage: `url("${theme.leftImage}")`, backgroundSize: 'cover', backgroundPosition: 'center', filter: sector === 'salon' ? 'blur(0.5px) brightness(0.72) saturate(1.05)' : 'blur(0.5px) brightness(0.68) saturate(1.10)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: theme.leftOverlay }} />
@@ -226,7 +220,7 @@ export default function LoginClient({ initialBranding }: { initialBranding: Bran
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: sector === 'salon' ? '#ffd1e0' : '#4ade80', boxShadow: sector === 'salon' ? '0 0 8px rgba(255,209,224,0.85)' : '0 0 8px #4ade80' }} />
               {theme.eyebrow}
             </div>
-            <h1 style={{ fontSize: sector === 'salon' ? 48 : 42, fontWeight: sector === 'salon' ? 700 : 900, margin: '0 0 8px', letterSpacing: sector === 'salon' ? '-0.04em' : '-1px', lineHeight: 1, fontFamily: theme.useDisplay ? 'var(--font-display), Georgia, serif' : 'var(--font-sans)', color: theme.useDisplay ? 'transparent' : '#fff', background: theme.useDisplay ? 'linear-gradient(135deg, #fff7fb 0%, #ffdce8 45%, #ffc7d8 100%)' : undefined, WebkitBackgroundClip: theme.useDisplay ? 'text' : undefined, backgroundClip: theme.useDisplay ? 'text' : undefined, textShadow: theme.useDisplay ? 'none' : '0 2px 12px rgba(0,0,0,0.4)' }}>{brandName}</h1>
+            <h1 style={{ fontSize: sector === 'salon' ? 48 : 42, fontWeight: sector === 'salon' ? 700 : 900, margin: '0 0 8px', letterSpacing: sector === 'salon' ? '-0.04em' : '-1px', lineHeight: 1, fontFamily: theme.useDisplay ? 'var(--font-playfair), Georgia, serif' : 'var(--font-sans)', color: theme.useDisplay ? 'transparent' : '#fff', background: theme.useDisplay ? 'linear-gradient(135deg, #fff7fb 0%, #ffdce8 45%, #ffc7d8 100%)' : undefined, WebkitBackgroundClip: theme.useDisplay ? 'text' : undefined, backgroundClip: theme.useDisplay ? 'text' : undefined, textShadow: theme.useDisplay ? 'none' : '0 2px 12px rgba(0,0,0,0.4)' }}>{brandName}</h1>
             <div style={{ width: sector === 'salon' ? 140 : 112, height: 1, margin: '0 auto 12px', background: sector === 'salon' ? 'linear-gradient(90deg, rgba(255,212,228,0.18) 0%, rgba(224,111,152,0.12) 100%)' : 'linear-gradient(90deg, rgba(100,152,175,0.18) 0%, rgba(255,255,255,0.12) 100%)' }} />
             <p style={{ fontSize: 15, color: sector === 'salon' ? 'rgba(255,236,243,0.82)' : 'rgba(255,255,255,0.75)', margin: 0, fontWeight: 400 }}>{brandTagline}</p>
           </div>
@@ -259,7 +253,7 @@ export default function LoginClient({ initialBranding }: { initialBranding: Bran
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 58, height: 58, marginBottom: 18, background: `linear-gradient(135deg, ${theme.accentA} 0%, ${theme.accentB} 100%)`, borderRadius: 18, boxShadow: `0 14px 30px ${theme.glow}` }}>
               {sector === 'neutral' ? <StoreIcon size={26} color="white" strokeWidth={1.6} /> : sector === 'salon' ? <Sparkles size={26} color="white" strokeWidth={2.1} /> : <ScissorsIcon size={26} color="white" strokeWidth={1.8} />}
             </div>
-            <h1 style={{ fontSize: sector === 'salon' ? 24 : 22, fontWeight: 700, color: theme.text, margin: '0 0 4px', letterSpacing: sector === 'salon' ? '-0.03em' : '-0.3px', fontFamily: theme.useDisplay ? 'var(--font-display), Georgia, serif' : 'var(--font-sans)' }}>{heading}</h1>
+            <h1 style={{ fontSize: sector === 'salon' ? 24 : 22, fontWeight: 700, color: theme.text, margin: '0 0 4px', letterSpacing: sector === 'salon' ? '-0.03em' : '-0.3px', fontFamily: theme.useDisplay ? 'var(--font-playfair), Georgia, serif' : 'var(--font-sans)' }}>{heading}</h1>
             <p style={{ fontSize: 13, color: theme.muted, margin: 0 }}>{step === 'empresa' ? theme.helperEmpresa : theme.helperAcceso}</p>
           </div>
 
