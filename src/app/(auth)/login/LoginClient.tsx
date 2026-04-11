@@ -331,8 +331,8 @@ export default function LoginClient({
       </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', minHeight: '100vh', background: theme.rightBase, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: '-8px', zIndex: 0, pointerEvents: 'none', backgroundImage: `url("${theme.rightImage}")`, backgroundSize: 'cover', backgroundPosition: isSalon ? 'center' : 'center top', filter: isSalon ? 'blur(0.4px) brightness(0.60) saturate(0.96)' : 'blur(0.5px) brightness(0.56) saturate(0.85)' }} />
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: theme.rightOverlay, opacity: 0.78 }} />
+        <div style={{ position: 'absolute', inset: '-8px', zIndex: 0, pointerEvents: 'none', backgroundImage: `url("${theme.rightImage}")`, backgroundSize: 'cover', backgroundPosition: isSalon ? 'center' : 'center top', filter: isSalon ? 'blur(0.4px) brightness(0.65) saturate(0.96)' : 'blur(0.5px) brightness(0.72) saturate(0.85)' }} />
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: theme.rightOverlay, opacity: 0.60 }} />
         <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, borderRadius: '50%', pointerEvents: 'none', zIndex: 2, background: theme.rightOrb }} />
 
         <div style={{ width: '100%', maxWidth: 430, position: 'relative', zIndex: 5 }}>
