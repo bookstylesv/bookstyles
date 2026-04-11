@@ -168,14 +168,16 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
   async function onSubmit(values: FormValues) {
     setSaving(true); setError('');
     try {
+      const esJuridica = tipoPersona === 'JURIDICA';
+      const nombreComercialVal = values.nombreComercial.trim();
       const body = {
-        fullName:        values.fullName.trim(),
-        email:           values.email.trim().toLowerCase(),
-        phone:           values.phone.trim() || undefined,
+        fullName:        esJuridica ? (nombreComercialVal || 'Empresa') : values.fullName.trim(),
+        email:           values.email?.trim().toLowerCase() || undefined, // backend auto-genera si vacío
+        phone:           values.phone?.trim() || undefined,
         tipoDocumento:   tipoDocumento || undefined,
         numDocumento:    values.numDocumento.trim() || undefined,
-        nrc:             tipoPersona === 'JURIDICA' ? (values.nrc.trim() || undefined) : undefined,
-        nombreComercial: tipoPersona === 'JURIDICA' ? (values.nombreComercial.trim() || undefined) : undefined,
+        nrc:             esJuridica ? (values.nrc.trim() || undefined) : undefined,
+        nombreComercial: esJuridica ? (nombreComercialVal || undefined) : undefined,
         departamentoCod: departamentoCod || undefined,
         municipioCod:    municipioCod || undefined,
         complemento:     values.complemento.trim() || undefined,
@@ -239,10 +241,12 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
           {r.nombreComercial && (
             <Text style={{ fontSize: 11, color: '#0d9488' }}>{r.nombreComercial}</Text>
           )}
-          <Space size={4} style={{ marginTop: 2 }}>
-            <MailOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
-            <Text style={{ fontSize: 12 }} type="secondary">{r.email}</Text>
-          </Space>
+          {!r.email.includes('@interno.noemail') && (
+            <Space size={4} style={{ marginTop: 2 }}>
+              <MailOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+              <Text style={{ fontSize: 12 }} type="secondary">{r.email}</Text>
+            </Space>
+          )}
         </div>
       ),
     },
@@ -424,25 +428,29 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
           <form onSubmit={handleSubmit(onSubmit)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-              {/* ─ Datos de acceso ─ */}
-              <Text strong style={{ fontSize: 13, color: '#0d9488' }}>Datos de acceso</Text>
-              <Row gutter={[12, 10]}>
-                <Col span={24}>
-                  <FormField label="Nombre completo *">
-                    <SdInput {...register('fullName', { required: true })} placeholder="Juan Pérez" autoFocus />
-                  </FormField>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <FormField label="Email *">
-                    <SdInput type="email" {...register('email', { required: true })} placeholder="juan@ejemplo.com" />
-                  </FormField>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <FormField label="Teléfono">
-                    <SdInput {...register('phone')} placeholder="+503 7000-0000" />
-                  </FormField>
-                </Col>
-              </Row>
+              {/* ─ Datos de identificación (solo persona natural) ─ */}
+              {tipoPersona === 'NATURAL' && (
+                <>
+                  <Text strong style={{ fontSize: 13, color: '#0d9488' }}>Datos de identificación</Text>
+                  <Row gutter={[12, 10]}>
+                    <Col span={24}>
+                      <FormField label="Nombre completo *">
+                        <SdInput {...register('fullName', { required: tipoPersona === 'NATURAL' })} placeholder="Juan Pérez" autoFocus />
+                      </FormField>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <FormField label="Teléfono">
+                        <SdInput {...register('phone')} placeholder="+503 7000-0000" />
+                      </FormField>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <FormField label="Email">
+                        <SdInput type="email" {...register('email')} placeholder="juan@ejemplo.com (opcional)" />
+                      </FormField>
+                    </Col>
+                  </Row>
+                </>
+              )}
 
               <Divider style={{ margin: '4px 0' }} />
 

@@ -45,9 +45,12 @@ export async function createClientUser(tenantId: number, raw: unknown) {
   if (!data.fullName || typeof data.fullName !== 'string' || !data.fullName.trim()) {
     throw new ValidationError('El nombre es obligatorio');
   }
-  if (!data.email || typeof data.email !== 'string' || !data.email.includes('@')) {
-    throw new ValidationError('El email no es válido');
-  }
+
+  // Email opcional — si no viene se auto-genera uno interno no usable para login
+  const emailRaw = data.email && typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+  const emailFinal = emailRaw && emailRaw.includes('@')
+    ? emailRaw
+    : `noemail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@interno.noemail`;
 
   const tipoDocumento = data.tipoDocumento ? String(data.tipoDocumento).trim() : undefined;
   const numDocumento  = data.numDocumento  ? String(data.numDocumento).trim()  : undefined;
@@ -72,7 +75,7 @@ export async function createClientUser(tenantId: number, raw: unknown) {
 
   const input: ClientCreateInput = {
     fullName:        String(data.fullName).trim(),
-    email:           String(data.email).trim().toLowerCase(),
+    email:           emailFinal,
     phone:           data.phone ? String(data.phone).trim() : undefined,
     password:        data.password ? String(data.password) : undefined,
     tipoDocumento,
@@ -105,8 +108,8 @@ export async function updateClientUser(tenantId: number, id: number, raw: unknow
   const existing = await findClientById(id, tenantId);
   if (!existing) throw new NotFoundError('Cliente no encontrado');
 
-  // Si cambia el email, verificar unicidad
-  if (data.email && typeof data.email === 'string') {
+  // Si cambia el email (y no es un email interno auto-generado), verificar unicidad
+  if (data.email && typeof data.email === 'string' && data.email.includes('@') && !data.email.includes('@interno.noemail')) {
     const email = data.email.trim().toLowerCase();
     const conflict = await prisma.barberUser.findFirst({
       where: { tenantId, email, NOT: { id } },
