@@ -570,14 +570,15 @@ function TabCatalogoMH() {
 // ══════════════════════════════════════════════════════════
 
 type LoginThemeId =
-  | 'barberia-teal' | 'barberia-clasica' | 'barberia-carbon' | 'barberia-navy'
+  | 'barberia-teal' | 'barberia-clasica' | 'barberia-carbon' | 'barberia-navy' | 'barberia-carbon-white'
   | 'salon-rose'    | 'salon-lila'       | 'salon-dorado'    | 'salon-esmeralda';
 
 const BARBERIA_THEMES: { id: LoginThemeId; label: string; desc: string; from: string; to: string; image: string }[] = [
   { id: 'barberia-teal',    label: 'Oceánico',  desc: 'Verde/teal — estilo premium',    from: 'hsl(175 60% 18%)', to: '#6498AF', image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80' },
   { id: 'barberia-clasica', label: 'Clásica',   desc: 'Marrón cuero + dorado vintage',  from: '#3d2010',          to: '#D4A853', image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=600&q=80' },
-  { id: 'barberia-carbon',  label: 'Carbón',    desc: 'Negro carbón + plata urbano',    from: 'hsl(220 14% 7%)',  to: '#9ca3af', image: 'https://images.unsplash.com/photo-1622287162716-f311baa1a2b8?auto=format&fit=crop&w=600&q=80' },
-  { id: 'barberia-navy',    label: 'Navy',      desc: 'Azul marino + rojo — gentleman', from: 'hsl(214 52% 7%)',  to: '#e74c3c', image: 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?auto=format&fit=crop&w=600&q=80' },
+  { id: 'barberia-carbon',       label: 'Carbón',        desc: 'Negro carbón + plata urbano',       from: 'hsl(220 14% 7%)',  to: '#9ca3af', image: 'https://images.unsplash.com/photo-1622287162716-f311baa1a2b8?auto=format&fit=crop&w=600&q=80' },
+  { id: 'barberia-carbon-white', label: 'Carbón Blanco', desc: 'Negro carbón + blanco — minimal',    from: 'hsl(220 14% 6%)',  to: '#f1f5f9', image: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=600&q=80' },
+  { id: 'barberia-navy',         label: 'Navy',          desc: 'Azul marino + rojo — gentleman',    from: 'hsl(214 52% 7%)',  to: '#e74c3c', image: 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?auto=format&fit=crop&w=600&q=80' },
 ];
 
 const SALON_THEMES: { id: LoginThemeId; label: string; desc: string; from: string; to: string; image: string }[] = [
