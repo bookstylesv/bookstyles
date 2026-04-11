@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
+import { PostHogProvider } from '@/providers/PostHogProvider';
 import '@/app/globals.css';
 
 const inter     = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -50,7 +52,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className={`${inter.variable} ${playfair.variable}`}>
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
+        <Analytics />
         <Toaster
           position="top-right"
           expand={false}

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from '@sentry/nextjs';
 
 const SUPERADMIN_CORS_HEADERS = [
   { key: 'Access-Control-Allow-Origin',  value: process.env.SUPERADMIN_ALLOW_ORIGIN ?? 'https://speeddan-control.vercel.app' },
@@ -53,4 +54,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org:     process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Sube source maps en cada build de Vercel para stack traces legibles
+  silent:               true,
+  widenClientFileUpload: true,
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+});
