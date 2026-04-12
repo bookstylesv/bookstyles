@@ -60,3 +60,5 @@ scripts/create-salon.ts
 
 # Carpetas temporales
 tmp-app/
+
+.vercel
