@@ -69,3 +69,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!validateSuperadminKey(req)) return unauthorizedResponse();
+
+  const { id } = await params;
+  const tenant = await prisma.barberTenant.findUnique({ where: { id: Number(id), deletedAt: null } });
+  if (!tenant) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Soft delete
+  await prisma.barberTenant.update({
+    where: { id: Number(id) },
+    data:  { deletedAt: new Date() },
+  });
+
+  return NextResponse.json({ message: 'Tenant eliminado' });
+}

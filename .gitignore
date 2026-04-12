@@ -49,5 +49,14 @@ next-env.d.ts
 .vercel
 json_dte/*.json
 
-# Claude Code agent skills (no trackear en git)
+# Claude Code / IA — nunca subir al repositorio público
 .agent/
+.claude/
+CLAUDE.md
+skills-lock.json
+
+# Scripts one-shot con datos de instancia específica (contraseñas hardcodeadas)
+scripts/create-salon.ts
+
+# Carpetas temporales
+tmp-app/
