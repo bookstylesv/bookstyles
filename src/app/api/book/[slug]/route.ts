@@ -29,24 +29,32 @@ const TIME_RE  = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PHONE_RE = /^\+?[\d\s\-().]{6,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// ── Rate limit en memoria (funciona en instancia serverless) ─
-// Para producción de alto tráfico usar Redis/Upstash.
-const rateLimitMap = new Map<string, { count: number; firstAt: number }>();
+// ── Rate limit basado en BD (persiste entre instancias serverless) ─
 const RL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 h
-const RL_MAX       = 5;                     // máx 5 reservas/teléfono/día
+const RL_MAX = 5; // máx 5 reservas/teléfono/día
 
-function checkRateLimit(phone: string): boolean {
-  const key  = phone.replace(/\D/g, '');
-  const now  = Date.now();
-  const entry = rateLimitMap.get(key);
+async function checkPhoneRateLimit(tenantId: number, clientPhone: string): Promise<boolean> {
+  const since = new Date(Date.now() - RL_WINDOW_MS);
 
-  if (!entry || now - entry.firstAt > RL_WINDOW_MS) {
-    rateLimitMap.set(key, { count: 1, firstAt: now });
-    return true;
-  }
-  if (entry.count >= RL_MAX) return false;
-  entry.count += 1;
-  return true;
+  // Buscar usuario por teléfono en este tenant
+  const user = await prisma.barberUser.findFirst({
+    where: { tenantId, phone: clientPhone },
+    select: { id: true },
+  });
+  if (!user) return true; // primera reserva de este teléfono → siempre pasa
+
+  const count = await prisma.barberAppointment.count({
+    where: { tenantId, clientId: user.id, createdAt: { gte: since } },
+  });
+  return count < RL_MAX;
+}
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+  );
 }
 
 // ── GET — información pública ────────────────────────────
@@ -149,17 +157,17 @@ export async function POST(
   if (startTime < now)
     return NextResponse.json({ error: 'No puedes reservar en una fecha/hora pasada' }, { status: 400 });
 
-  // ── 3. Rate limiting por teléfono ──────────────────────
-  if (!checkRateLimit(clientPhone)) {
-    return NextResponse.json(
-      { error: 'Has alcanzado el límite de reservas por hoy. Contáctanos directamente.' },
-      { status: 429 }
-    );
-  }
-
-  // ── 4. Validar tenant ──────────────────────────────────
+  // ── 3. Validar tenant ─────────────────────────────────
   const tenant = await prisma.barberTenant.findUnique({ where: { slug } });
   if (!tenant) return NextResponse.json({ error: 'Barbería no encontrada' }, { status: 404 });
+
+  // ── 4. Rate limiting DB-based (persiste entre cold starts) ──
+  if (!(await checkPhoneRateLimit(tenant.id, clientPhone))) {
+    return NextResponse.json(
+      { error: 'Has alcanzado el límite de reservas por hoy. Contáctanos directamente.' },
+      { status: 429 },
+    );
+  }
 
   // ── 5. Validar día no cerrado ──────────────────────────
   const dayStart = new Date(y, mo - 1, d, 0, 0, 0);
@@ -251,14 +259,15 @@ export async function POST(
 
   // ── 9. Crear citas en cadena (una por servicio) ────────
   // Cada cita comienza donde termina la anterior
+  const clientIp = getClientIp(req);
   const appointments = [];
   let cursor = startTime;
   for (const svc of services) {
     const svcEnd = addMinutes(cursor, svc.duration);
-    // __WEB__ prefix marca la cita como originada desde reserva pública
+    // __WEB_IP:x.x.x.x__ permite al owner ver el origen y detectar abuso
     const apptNotes = cursor === startTime
-      ? `__WEB__${notes ? notes : ''}`
-      : '__WEB__';
+      ? `__WEB_IP:${clientIp}__${notes ?? ''}`
+      : `__WEB_IP:${clientIp}__`;
     const appt = await prisma.barberAppointment.create({
       data: {
         tenantId:  tenant.id,
