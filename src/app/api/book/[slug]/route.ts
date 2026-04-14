@@ -76,7 +76,7 @@ export async function GET(
   });
   if (!tenant) return NextResponse.json({ error: 'Barbería no encontrada' }, { status: 404 });
 
-  const [services, barbers] = await Promise.all([
+  const [services, barbers, branches] = await Promise.all([
     prisma.barberService.findMany({
       where:   { tenantId: tenant.id, active: true },
       select:  { id: true, name: true, description: true, price: true, duration: true, category: true },
@@ -84,8 +84,17 @@ export async function GET(
     }),
     prisma.barber.findMany({
       where:   { tenantId: tenant.id, active: true },
-      select:  { id: true, specialties: true, user: { select: { fullName: true, avatarUrl: true } } },
+      select:  {
+        id: true, specialties: true,
+        user: { select: { fullName: true, avatarUrl: true } },
+        branchAssignments: { select: { branchId: true } },
+      },
       orderBy: { id: 'asc' },
+    }),
+    prisma.barberBranch.findMany({
+      where:   { tenantId: tenant.id, status: 'ACTIVE' },
+      select:  { id: true, name: true, slug: true, address: true, city: true, phone: true, isHeadquarters: true },
+      orderBy: [{ isHeadquarters: 'desc' }, { name: 'asc' }],
     }),
   ]);
 
@@ -95,7 +104,9 @@ export async function GET(
     barbers:  barbers.map(b => ({
       id: b.id, name: b.user.fullName,
       avatarUrl: b.user.avatarUrl, specialties: b.specialties,
+      branchIds: b.branchAssignments.map(a => a.branchId),
     })),
+    branches,
   });
 }
 
@@ -125,6 +136,9 @@ export async function POST(
   const serviceIds: number[] = rawIds.length > 0
     ? rawIds.map(Number).filter(n => !isNaN(n) && n > 0)
     : (primaryId > 0 ? [primaryId] : []);
+
+  // branchId opcional — si viene, se asocia la cita a esa sucursal
+  const branchId = body.branchId != null ? Number(body.branchId) : null;
 
   const barberId    = body.barberId != null ? Number(body.barberId) : null;
   const date        = String(body.date ?? '');
@@ -278,6 +292,7 @@ export async function POST(
         endTime:   svcEnd,
         status:    'PENDING',
         notes:     apptNotes,
+        ...(branchId && { branchId }),
       },
       include: {
         barber:  { include: { user: { select: { fullName: true } } } },

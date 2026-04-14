@@ -80,12 +80,34 @@ type Resumen = {
   totalCategorias: number;
 };
 
+type StockSucursalItem = {
+  productoId:  number;
+  branchId:    number;
+  branchName:  string;
+  isHQ:        boolean;
+  stockActual: number;
+  stockMinimo: number;
+  stockBajo:   boolean;
+  producto:    { codigo: string; nombre: string; unidadMedida: string };
+};
+
+type BranchOption = {
+  id:             number;
+  name:           string;
+  slug:           string;
+  isHeadquarters: boolean;
+};
+
 type Props = {
-  initialProductos: Producto[];
-  initialCategorias: Categoria[];
-  initialResumen: Resumen;
-  initialKardex: KardexItem[];
-  initialKardexTotal: number;
+  initialProductos:     Producto[];
+  initialCategorias:    Categoria[];
+  initialResumen:       Resumen;
+  initialKardex:        KardexItem[];
+  initialKardexTotal:   number;
+  initialStockSucursal: StockSucursalItem[];
+  branches:             BranchOption[];
+  currentBranchId:      number | null;
+  isOwner:              boolean;
 };
 
 // ── Constantes ──────────────────────────────────────────────────────────────
@@ -187,6 +209,10 @@ export default function InventarioClient({
   initialResumen,
   initialKardex,
   initialKardexTotal,
+  initialStockSucursal,
+  branches,
+  currentBranchId,
+  isOwner,
 }: Props) {
   const { theme: barberTheme } = useBarberTheme()
   const primary = barberTheme.colorPrimary
@@ -211,7 +237,22 @@ export default function InventarioClient({
   const [resumen, setResumen] = useState<Resumen>(initialResumen);
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'productos' | 'kardex'>('productos');
+  const showStockTab = branches.length >= 2 || currentBranchId != null;
+  const [activeTab, setActiveTab] = useState<'productos' | 'kardex' | 'stock'>('productos');
+
+  // ── Stock por sucursal ─────────────────────────────────────────────────────
+  const [stockSucursal, setStockSucursal] = useState<StockSucursalItem[]>(initialStockSucursal);
+
+  // ── Modal Transferencia ────────────────────────────────────────────────────
+  const showTransferBtn = isOwner && branches.length >= 2;
+  const [transOpen, setTransOpen]       = useState(false);
+  const [transLoading, setTransLoading] = useState(false);
+  const [transError, setTransError]     = useState('');
+  const [transProductoId, setTransProductoId]   = useState<number | undefined>(undefined);
+  const [transFromBranch, setTransFromBranch]   = useState<number | undefined>(undefined);
+  const [transToBranch, setTransToBranch]       = useState<number | undefined>(undefined);
+  const [transCantidad, setTransCantidad]       = useState<number | null>(null);
+  const [transNotas, setTransNotas]             = useState('');
 
   // ── Kardex general ─────────────────────────────────────────────────────────
   const [kardexGeneral, setKardexGeneral] = useState<KardexItem[]>(initialKardex);
@@ -960,6 +1001,121 @@ export default function InventarioClient({
     },
   ];
 
+  // ── Columnas Stock por Sucursal ───────────────────────────────────────────
+
+  const stockSucursalColumns: ColumnsType<StockSucursalItem> = [
+    {
+      title: 'Sucursal',
+      key: 'branch',
+      width: 160,
+      render: (_, r) => (
+        <Space size={4}>
+          <Text style={{ fontWeight: 500, fontSize: 13 }}>{r.branchName}</Text>
+          {r.isHQ && <Tag color="gold" style={{ fontSize: 10 }}>Principal</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: 'Código',
+      key: 'codigo',
+      width: 100,
+      render: (_, r) => <Text code style={{ fontSize: 11 }}>{r.producto.codigo}</Text>,
+    },
+    {
+      title: 'Producto',
+      key: 'nombre',
+      render: (_, r) => (
+        <Text style={{ fontSize: 13 }}>{r.producto.nombre}</Text>
+      ),
+    },
+    {
+      title: 'Unidad',
+      key: 'unidad',
+      width: 90,
+      render: (_, r) => <Tag style={{ fontSize: 10 }}>{r.producto.unidadMedida}</Tag>,
+    },
+    {
+      title: 'Stock actual',
+      key: 'stockActual',
+      width: 110,
+      align: 'right',
+      render: (_, r) => (
+        <Text strong style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: r.stockBajo ? '#cf1322' : '#389e0d' }}>
+          {r.stockActual}
+        </Text>
+      ),
+    },
+    {
+      title: 'Mínimo',
+      key: 'stockMinimo',
+      width: 90,
+      align: 'right',
+      render: (_, r) => (
+        <Text type="secondary" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+          {r.stockMinimo}
+        </Text>
+      ),
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      width: 100,
+      render: (_, r) => r.stockBajo
+        ? <Tag color="error" icon={<WarningOutlined />}>Stock bajo</Tag>
+        : <Tag color="success">OK</Tag>,
+    },
+  ];
+
+  // ── Handler: Transferencia ────────────────────────────────────────────────
+
+  async function handleTransferencia() {
+    if (!transProductoId || !transFromBranch || !transToBranch || !transCantidad) {
+      setTransError('Completa todos los campos requeridos');
+      return;
+    }
+    if (transFromBranch === transToBranch) {
+      setTransError('La sucursal origen y destino no pueden ser la misma');
+      return;
+    }
+    setTransLoading(true);
+    setTransError('');
+    try {
+      const res = await fetch('/api/inventario/transferencias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productoId:   transProductoId,
+          fromBranchId: transFromBranch,
+          toBranchId:   transToBranch,
+          cantidad:     transCantidad,
+          notas:        transNotas || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? 'Error al transferir');
+      }
+      toast.success('Transferencia realizada correctamente');
+      setTransOpen(false);
+      setTransProductoId(undefined);
+      setTransFromBranch(undefined);
+      setTransToBranch(undefined);
+      setTransCantidad(null);
+      setTransNotas('');
+      // Recargar stock por sucursal
+      const stockRes = await fetch('/api/inventario/stock');
+      if (stockRes.ok) {
+        const data = await stockRes.json();
+        setStockSucursal(data.data?.items ?? []);
+      }
+      router.refresh();
+    } catch (e) {
+      setTransError(e instanceof Error ? e.message : 'Error al transferir');
+    } finally {
+      setTransLoading(false);
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -1017,7 +1173,7 @@ export default function InventarioClient({
       <Card>
         <Tabs
           activeKey={activeTab}
-          onChange={k => setActiveTab(k as 'productos' | 'kardex')}
+          onChange={k => setActiveTab(k as 'productos' | 'kardex' | 'stock')}
           size="small"
           items={[
             {
@@ -1193,6 +1349,46 @@ export default function InventarioClient({
                 />
               ),
             },
+            ...(showStockTab ? [{
+              key: 'stock' as const,
+              label: `Stock por sucursal (${stockSucursal.length})`,
+              children: (
+                <>
+                  {showTransferBtn && (
+                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        icon={<SwapOutlined />}
+                        onClick={() => { setTransOpen(true); setTransError(''); }}
+                      >
+                        Transferir stock
+                      </Button>
+                    </div>
+                  )}
+                  <Table
+                    dataSource={stockSucursal}
+                    columns={stockSucursalColumns}
+                    rowKey={r => `${r.branchId}-${r.productoId}`}
+                    size="small"
+                    scroll={{ x: 700 }}
+                    pagination={{
+                      pageSize: 20,
+                      showSizeChanger: true,
+                      showTotal: (t, range) => `${range[0]}–${range[1]} de ${t} registros`,
+                    }}
+                    locale={{
+                      emptyText: (
+                        <div style={{ padding: 40, textAlign: 'center' }}>
+                          <InboxOutlined style={{ fontSize: 32, color: C.textDisabled }} />
+                          <div style={{ marginTop: 8, color: C.textMuted }}>
+                            Sin stock registrado por sucursal. Realiza una venta o ajuste para ver datos aquí.
+                          </div>
+                        </div>
+                      ),
+                    }}
+                  />
+                </>
+              ),
+            }] : []),
           ]}
         />
       </Card>
@@ -1776,6 +1972,114 @@ export default function InventarioClient({
           </Button>
         </div>
       </Modal>
+
+      {/* ══════════════════════════════════════════════════════
+          Modal: Transferencia de stock entre sucursales
+      ══════════════════════════════════════════════════════ */}
+      {showTransferBtn && (
+        <Modal
+          open={transOpen}
+          onCancel={() => setTransOpen(false)}
+          title={
+            <Space>
+              <SwapOutlined style={{ color: primary }} />
+              <span>Transferir stock entre sucursales</span>
+            </Space>
+          }
+          footer={null}
+          destroyOnHidden
+          width={480}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
+            <FormField label="Producto *">
+              <Select
+                showSearch
+                placeholder="Seleccionar producto..."
+                style={{ width: '100%' }}
+                value={transProductoId}
+                onChange={v => setTransProductoId(v)}
+                optionFilterProp="label"
+                options={productos
+                  .filter(p => p.activo)
+                  .map(p => ({ value: p.id, label: `${p.codigo} — ${p.nombre}` }))}
+              />
+            </FormField>
+
+            <Row gutter={12}>
+              <Col span={12}>
+                <FormField label="Sucursal origen *">
+                  <Select
+                    placeholder="Desde..."
+                    style={{ width: '100%' }}
+                    value={transFromBranch}
+                    onChange={v => setTransFromBranch(v)}
+                    options={branches.map(b => ({
+                      value: b.id,
+                      label: b.name + (b.isHeadquarters ? ' (Principal)' : ''),
+                    }))}
+                  />
+                </FormField>
+              </Col>
+              <Col span={12}>
+                <FormField label="Sucursal destino *">
+                  <Select
+                    placeholder="Hacia..."
+                    style={{ width: '100%' }}
+                    value={transToBranch}
+                    onChange={v => setTransToBranch(v)}
+                    options={branches
+                      .filter(b => b.id !== transFromBranch)
+                      .map(b => ({
+                        value: b.id,
+                        label: b.name + (b.isHeadquarters ? ' (Principal)' : ''),
+                      }))}
+                  />
+                </FormField>
+              </Col>
+            </Row>
+
+            <FormField label="Cantidad *">
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0.01}
+                step={1}
+                precision={2}
+                value={transCantidad}
+                onChange={v => setTransCantidad(v)}
+                placeholder="0"
+              />
+            </FormField>
+
+            <FormField label="Notas (opcional)">
+              <Input.TextArea
+                rows={2}
+                maxLength={300}
+                value={transNotas}
+                onChange={e => setTransNotas(e.target.value)}
+                placeholder="Motivo de la transferencia..."
+              />
+            </FormField>
+
+            {transError && (
+              <div style={{ color: '#cf1322', fontSize: 13, background: '#fff1f0', border: '1px solid #ffccc7', borderRadius: 6, padding: '6px 10px' }}>
+                {transError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <Button onClick={() => setTransOpen(false)}>Cancelar</Button>
+              <Button
+                type="primary"
+                loading={transLoading}
+                onClick={handleTransferencia}
+                style={{ background: primary, borderColor: primary }}
+              >
+                {transLoading ? 'Transfiriendo...' : 'Confirmar transferencia'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

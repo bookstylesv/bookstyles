@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { branchWhere } from '@/lib/branch-filter'
+import { upsertStockSucursal } from '@/lib/stock-sucursal'
 
 // ─── TURNOS ───────────────────────────────────────────────────────────────────
 
@@ -220,10 +221,18 @@ export async function createVenta(
   }
 ) {
   return prisma.$transaction(async (tx) => {
+    // Obtener branchId del turno para aislar stock y kardex por sucursal
+    const turnoData = await tx.barberTurno.findUnique({
+      where: { id: turnoId },
+      select: { branchId: true },
+    })
+    const branchId = turnoData?.branchId ?? null
+
     const venta = await tx.barberVenta.create({
       data: {
         tenantId,
         turnoId,
+        branchId,
         numero: data.numero,
         codigoGeneracion: data.codigoGeneracion,
         numeroControl: data.numeroControl,
@@ -278,14 +287,29 @@ export async function createVenta(
       if (!d.productoId) continue
       const prod = await tx.barberProducto.findFirst({ where: { id: d.productoId, tenantId } })
       if (!prod) throw new Error(`Producto no encontrado (id: ${d.productoId})`)
+
+      // Validar stock global
       if (Number(prod.stockActual) < d.cantidad) {
         throw new Error(`Stock insuficiente para "${prod.nombre}": disponible ${Number(prod.stockActual)}, solicitado ${d.cantidad}`)
       }
+
+      // Validar stock por sucursal si aplica
+      if (branchId != null) {
+        const stockSuc = await tx.barberStockSucursal.findUnique({
+          where: { branchId_productoId: { branchId, productoId: d.productoId } },
+        })
+        const stockSucursal = Number(stockSuc?.stockActual ?? 0)
+        if (stockSucursal < d.cantidad) {
+          throw new Error(`Stock insuficiente en sucursal para "${prod.nombre}": disponible ${stockSucursal}, solicitado ${d.cantidad}`)
+        }
+      }
+
       const stockAnterior = Number(prod.stockActual)
       const stockNuevo = parseFloat((stockAnterior - d.cantidad).toFixed(4))
       await tx.barberKardex.create({
         data: {
           tenantId,
+          branchId,
           productoId: d.productoId,
           tipoMovimiento: 'SALIDA',
           referencia: `VENTA-${venta.numero}`,
@@ -302,6 +326,11 @@ export async function createVenta(
         where: { id: d.productoId },
         data: { stockActual: stockNuevo },
       })
+
+      // Actualizar stock por sucursal
+      if (branchId != null) {
+        await upsertStockSucursal(tx, { tenantId, branchId, productoId: d.productoId, delta: -d.cantidad })
+      }
     }
 
     return venta
@@ -382,6 +411,7 @@ export async function anularVenta(id: number, tenantId: number, motivo: string) 
     if (!venta) throw new Error('Venta no encontrada')
 
     // Restaurar stock de cada producto incluido en la venta
+    const ventaBranchId = venta.branchId ?? null
     for (const d of venta.detalles) {
       if (!d.productoId) continue
       const prod = await tx.barberProducto.findFirst({ where: { id: d.productoId, tenantId } })
@@ -391,6 +421,7 @@ export async function anularVenta(id: number, tenantId: number, motivo: string) 
       await tx.barberKardex.create({
         data: {
           tenantId,
+          branchId: ventaBranchId,
           productoId: d.productoId,
           tipoMovimiento: 'ENTRADA',
           referencia: `ANULACION-${venta.numero}`,
@@ -407,6 +438,11 @@ export async function anularVenta(id: number, tenantId: number, motivo: string) 
         where: { id: d.productoId },
         data: { stockActual: stockNuevo },
       })
+
+      // Revertir stock por sucursal
+      if (ventaBranchId != null) {
+        await upsertStockSucursal(tx, { tenantId, branchId: ventaBranchId, productoId: d.productoId, delta: +Number(d.cantidad) })
+      }
     }
 
     return tx.barberVenta.update({

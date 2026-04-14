@@ -33,7 +33,7 @@ export default async function BookPage({ params }: Props) {
   });
   if (!tenant) notFound();
 
-  const [services, barbers] = await Promise.all([
+  const [services, barbers, branches] = await Promise.all([
     prisma.barberService.findMany({
       where:   { tenantId: tenant.id, active: true },
       select:  { id: true, name: true, description: true, price: true, duration: true, category: true },
@@ -41,21 +41,27 @@ export default async function BookPage({ params }: Props) {
     }),
     prisma.barber.findMany({
       where:   { tenantId: tenant.id, active: true },
-      include: { user: { select: { fullName: true, avatarUrl: true } } },
+      include: {
+        user: { select: { fullName: true, avatarUrl: true } },
+        branchAssignments: { select: { branchId: true } },
+      },
       orderBy: { id: 'asc' },
+    }),
+    prisma.barberBranch.findMany({
+      where:   { tenantId: tenant.id, status: 'ACTIVE' },
+      select:  { id: true, name: true, slug: true, address: true, city: true, phone: true, isHeadquarters: true },
+      orderBy: [{ isHeadquarters: 'desc' }, { name: 'asc' }],
     }),
   ]);
 
-  const servicesSer = services.map(s => ({
-    ...s,
-    price: Number(s.price),
-  }));
+  const servicesSer = services.map(s => ({ ...s, price: Number(s.price) }));
 
   const barbersSer = barbers.map(b => ({
     id:          b.id,
     name:        b.user.fullName,
     avatarUrl:   b.user.avatarUrl ?? null,
     specialties: b.specialties,
+    branchIds:   b.branchAssignments.map(a => a.branchId),
   }));
 
   return (
@@ -70,6 +76,7 @@ export default async function BookPage({ params }: Props) {
       }}
       services={servicesSer}
       barbers={barbersSer}
+      branches={branches}
     />
   );
 }

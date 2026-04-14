@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const { id } = await params;
     const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const result = await getKardexProducto(Number(id), user.tenantId, query);
+    const result = await getKardexProducto(Number(id), user.tenantId, query, user.branchId);
     return ok(result);
   } catch (err) {
     return apiError(err);

@@ -8,6 +8,7 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { branchWhere } from '@/lib/branch-filter';
+import { upsertStockSucursal } from '@/lib/stock-sucursal';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ export async function create(tenantId: number, data: CompraCreateInput) {
         await tx.barberKardex.create({
           data: {
             tenantId,
+            branchId:      compra.branchId ?? null,
             productoId:    det.productoId,
             tipoMovimiento: 'COMPRA',
             referencia:    `COMPRA-${compra.id} / ${data.numeroDocumento}`,
@@ -218,6 +220,16 @@ export async function create(tenantId: number, data: CompraCreateInput) {
             fecha:         data.fecha,
           },
         });
+
+        // Actualizar stock por sucursal
+        if (compra.branchId != null) {
+          await upsertStockSucursal(tx, {
+            tenantId,
+            branchId:   compra.branchId,
+            productoId: det.productoId,
+            delta:      cantidadEnUnidadVenta,
+          });
+        }
       }
     }
 
@@ -261,6 +273,7 @@ export async function anular(id: number, tenantId: number, motivo: string) {
         await tx.barberKardex.create({
           data: {
             tenantId,
+            branchId:       compra.branchId ?? null,
             productoId:     det.productoId,
             tipoMovimiento: 'ANULACION',
             referencia:     `ANULACION-COMPRA-${id}`,
@@ -273,6 +286,16 @@ export async function anular(id: number, tenantId: number, motivo: string) {
             fecha:          new Date(),
           },
         });
+
+        // Revertir stock por sucursal
+        if (compra.branchId != null) {
+          await upsertStockSucursal(tx, {
+            tenantId,
+            branchId:   compra.branchId,
+            productoId: det.productoId,
+            delta:      -cantidadSalida,
+          });
+        }
       }
     }
 

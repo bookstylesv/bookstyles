@@ -42,6 +42,12 @@ interface Service {
 }
 interface Barber {
   id: number; name: string; avatarUrl: string | null; specialties: string[];
+  branchIds?: number[];
+}
+interface BranchOption {
+  id: number; name: string; slug: string;
+  address: string | null; city: string | null; phone: string | null;
+  isHeadquarters: boolean;
 }
 interface TenantInfo {
   name: string; slug: string; phone: string | null;
@@ -49,9 +55,11 @@ interface TenantInfo {
 }
 
 interface Props {
-  tenant:   TenantInfo;
-  services: Service[];
-  barbers:  Barber[];
+  tenant:          TenantInfo;
+  services:        Service[];
+  barbers:         Barber[];
+  branches?:       BranchOption[];
+  initialBranchId?: number | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -160,8 +168,14 @@ function BookingHeader({ tenant }: { tenant: TenantInfo }) {
 }
 
 // ── Componente principal ────────────────────────────────
-export default function BookingWidget({ tenant, services, barbers }: Props) {
-  const [step, setStep]               = useState(0);
+export default function BookingWidget({ tenant, services, barbers, branches = [], initialBranchId }: Props) {
+  const hasMultiBranch = branches.length > 1;
+
+  // step -1 = selector de sucursal (solo si hay >1 sucursal y no viene pre-seleccionada)
+  const startStep = hasMultiBranch && !initialBranchId ? -1 : 0;
+
+  const [step, setStep]               = useState(startStep);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(initialBranchId ?? null);
   const [service, setService]         = useState<Service | null>(null);
   const [barber, setBarber]           = useState<Barber | null | 'any'>('any');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -175,6 +189,13 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
   const [msgApi, ctxHolder] = message.useMessage();
 
   const days = getNextDays(14);
+
+  // Barberos filtrados por sucursal seleccionada
+  const visibleBarbers = selectedBranchId
+    ? barbers.filter(b => !b.branchIds || b.branchIds.length === 0 || b.branchIds.includes(selectedBranchId))
+    : barbers;
+
+  const activeBranch = branches.find(b => b.id === selectedBranchId) ?? null;
 
   // Cargar slots al cambiar fecha/barbero
   const loadSlots = useCallback(async () => {
@@ -227,6 +248,7 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
           clientPhone: values.phone.trim(),
           clientEmail: values.email?.trim() || undefined,
           notes:       values.notes?.trim() || undefined,
+          branchId:    selectedBranchId ?? undefined,
         }),
       });
       const data = await res.json() as { ok: boolean; barberName?: string; startTime?: string; error?: string };
@@ -241,9 +263,10 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
   }
 
   function reset() {
-    setStep(0); setService(null); setBarber('any');
+    setStep(startStep); setService(null); setBarber('any');
     setSelectedDate(null); setSelectedTime(null);
     setSlots([]); setConfirmed(null);
+    if (!initialBranchId) setSelectedBranchId(null);
   }
 
   // ── Pantalla confirmación ──────────────────────────────
@@ -336,12 +359,70 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
   }
 
   // ── Wizard ─────────────────────────────────────────────
-  const canNext = [
-    !!service,
-    barber !== undefined,
-    !!selectedDate && !!selectedTime && slots.some(s => s.time === selectedTime && s.available),
-    true,
-  ][step] ?? false;
+  const canNext = step === -1
+    ? !!selectedBranchId
+    : ([
+        !!service,
+        barber !== undefined,
+        !!selectedDate && !!selectedTime && slots.some(s => s.time === selectedTime && s.available),
+        true,
+      ][step] ?? false);
+
+  // Si estamos en el paso de selección de sucursal, mostrar pantalla especial
+  if (step === -1) {
+    return (
+      <>
+        {ctxHolder}
+        <BookingHeader tenant={tenant} />
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '48px 16px 80px' }}>
+          <SectionTitle>¿En qué sucursal deseas tu cita?</SectionTitle>
+          <Row gutter={[16, 16]}>
+            {branches.map(branch => {
+              const isSelected = selectedBranchId === branch.id;
+              return (
+                <Col key={branch.id} xs={24} sm={12} md={8}>
+                  <button
+                    onClick={() => {
+                      setSelectedBranchId(branch.id);
+                      setStep(0);
+                    }}
+                    style={{
+                      width: '100%', textAlign: 'left', cursor: 'pointer',
+                      background: isSelected ? C.tealOverlay : '#fff',
+                      border: `2px solid ${isSelected ? C.teal : C.border}`,
+                      borderRadius: 0, padding: '20px 18px',
+                      transition: 'all .2s',
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, fontSize: 15, color: C.tealDeep, marginBottom: 4 }}>
+                      {branch.name}
+                      {branch.isHeadquarters && (
+                        <span style={{ marginLeft: 8, fontSize: 10, background: C.teal, color: '#fff', padding: '1px 6px', borderRadius: 0, verticalAlign: 'middle', letterSpacing: 1 }}>
+                          PRINCIPAL
+                        </span>
+                      )}
+                    </div>
+                    {branch.city && (
+                      <div style={{ fontSize: 12, color: C.textSub, marginBottom: 2 }}>
+                        <EnvironmentOutlined style={{ marginRight: 4 }} />
+                        {[branch.address, branch.city].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                    {branch.phone && (
+                      <div style={{ fontSize: 12, color: C.textSub }}>
+                        <PhoneOutlined style={{ marginRight: 4 }} />
+                        {branch.phone}
+                      </div>
+                    )}
+                  </button>
+                </Col>
+              );
+            })}
+          </Row>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -351,6 +432,22 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
       {/* Steps indicator */}
       <div style={{ background: '#fff', borderBottom: `2px solid ${C.border}`, padding: '20px 24px' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
+          {/* Sucursal activa (cuando hay multi-branch) */}
+          {hasMultiBranch && activeBranch && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12,
+              background: C.tealOverlay, padding: '4px 12px', fontSize: 12, color: C.teal, fontWeight: 600,
+            }}>
+              <EnvironmentOutlined />
+              {activeBranch.name}
+              <button
+                onClick={() => { setStep(-1); setSelectedBranchId(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.teal, fontSize: 11, padding: 0, marginLeft: 4, textDecoration: 'underline' }}
+              >
+                cambiar
+              </button>
+            </div>
+          )}
           <Steps
             current={step}
             size="small"
@@ -413,7 +510,7 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
                   onClick={() => setBarber('any')}
                 />
               </Col>
-              {barbers.map(b => (
+              {visibleBarbers.map(b => (
                 <Col key={b.id} xs={24} sm={12} md={8}>
                   <BarberCard
                     name={b.name}
@@ -673,14 +770,20 @@ export default function BookingWidget({ tenant, services, barbers }: Props) {
             zIndex:     100, boxShadow: '0 -4px 20px rgba(0,0,0,.08)',
           }}>
             <Button
-              onClick={() => setStep(s => s - 1)}
-              disabled={step === 0}
+              onClick={() => {
+                if (step === 0 && hasMultiBranch && !initialBranchId) {
+                  setStep(-1);
+                } else {
+                  setStep(s => s - 1);
+                }
+              }}
+              disabled={step === 0 && (!hasMultiBranch || !!initialBranchId)}
               size="large"
               style={{
                 borderRadius: 0, fontWeight: 700, letterSpacing: 2,
                 textTransform: 'uppercase', fontSize: 12,
-                borderColor: step === 0 ? '#d9d9d9' : C.teal,
-                color:        step === 0 ? '#d9d9d9' : C.teal,
+                borderColor: (step === 0 && (!hasMultiBranch || !!initialBranchId)) ? '#d9d9d9' : C.teal,
+                color:        (step === 0 && (!hasMultiBranch || !!initialBranchId)) ? '#d9d9d9' : C.teal,
               }}
             >
               <ArrowLeftOutlined /> Anterior

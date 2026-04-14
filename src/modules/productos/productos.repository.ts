@@ -5,6 +5,8 @@
 
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
+import { branchWhere } from '@/lib/branch-filter';
+import { upsertStockSucursal } from '@/lib/stock-sucursal';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ export type AjusteStockInput = {
   costoUnitario: number;
   referencia: string;
   notas?: string;
+  branchId?: number | null;
 };
 
 // ── Includes ───────────────────────────────────────────────────────────────────
@@ -230,32 +233,35 @@ export async function getKardex(
   tenantId: number,
   page = 1,
   pageSize = 20,
+  branchId?: number | null,
 ) {
   const skip = (page - 1) * pageSize;
+  const where = { productoId, tenantId, ...branchWhere(branchId) };
   const [items, total] = await Promise.all([
     prisma.barberKardex.findMany({
-      where: { productoId, tenantId },
+      where,
       include: KARDEX_INCLUDE,
       orderBy: { fecha: 'desc' },
       skip,
       take: pageSize,
     }),
-    prisma.barberKardex.count({ where: { productoId, tenantId } }),
+    prisma.barberKardex.count({ where }),
   ]);
   return { items, total };
 }
 
-export async function getKardexGeneral(tenantId: number, page = 1, pageSize = 30) {
+export async function getKardexGeneral(tenantId: number, page = 1, pageSize = 30, branchId?: number | null) {
   const skip = (page - 1) * pageSize;
+  const where = { tenantId, ...branchWhere(branchId) };
   const [items, total] = await Promise.all([
     prisma.barberKardex.findMany({
-      where: { tenantId },
+      where,
       include: KARDEX_INCLUDE,
       orderBy: { fecha: 'desc' },
       skip,
       take: pageSize,
     }),
-    prisma.barberKardex.count({ where: { tenantId } }),
+    prisma.barberKardex.count({ where }),
   ]);
   return { items, total };
 }
@@ -299,6 +305,7 @@ export async function ajustarStock(
     await tx.barberKardex.create({
       data: {
         tenantId,
+        branchId: data.branchId ?? null,
         productoId,
         tipoMovimiento: data.tipoMovimiento,
         referencia: data.referencia,
@@ -311,6 +318,14 @@ export async function ajustarStock(
         fecha: new Date(),
       },
     });
+
+    // Actualizar stock por sucursal si se especificó branchId
+    if (data.branchId != null) {
+      const delta = data.tipoMovimiento === 'SALIDA'   ? -cantidad
+                  : data.tipoMovimiento === 'ENTRADA'  ? +cantidad
+                  : cantidad - stockAnterior; // AJUSTE: delta neto
+      await upsertStockSucursal(tx, { tenantId, branchId: data.branchId, productoId, delta });
+    }
 
     // Actualizar stock y costo promedio en el producto
     const updatedProducto = await tx.barberProducto.update({
@@ -348,4 +363,27 @@ export async function getResumenInventario(tenantId: number) {
   });
 
   return { totalProductos, productosStockBajo, valorInventario, totalCategorias };
+}
+
+// ── Stock por sucursal ─────────────────────────────────────────────────────────
+
+export async function getStockSucursal(tenantId: number, branchId?: number | null) {
+  return prisma.barberStockSucursal.findMany({
+    where: {
+      tenantId,
+      ...(branchId != null ? { branchId } : {}),
+    },
+    include: {
+      producto: {
+        select: { codigo: true, nombre: true, unidadMedida: true, stockMinimo: true },
+      },
+      branch: {
+        select: { id: true, name: true, isHeadquarters: true },
+      },
+    },
+    orderBy: [
+      { branch:   { name:   'asc' } },
+      { producto: { codigo: 'asc' } },
+    ],
+  });
 }

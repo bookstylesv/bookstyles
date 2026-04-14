@@ -290,13 +290,19 @@ export async function createCategoria(tenantId: number, body: unknown) {
 
 // ── Kardex ──────────────────────────────────────────────────────────────────────
 
-export async function getKardexProducto(productoId: number, tenantId: number, query: Record<string, string> = {}) {
+export async function getKardexProducto(
+  productoId: number,
+  tenantId: number,
+  query: Record<string, string> = {},
+  branchId?: number | null,
+) {
   const p = await repo.findProductoById(productoId, tenantId);
   if (!p) throw new NotFoundError('Producto');
 
-  const page = Math.max(1, parseInt(query.page ?? '1', 10));
+  const page     = Math.max(1, parseInt(query.page  ?? '1',  10));
   const pageSize = Math.min(100, Math.max(1, parseInt(query.limit ?? '20', 10)));
-  const { items, total } = await repo.getKardex(productoId, tenantId, page, pageSize);
+  const effectiveBranchId = query.branchId ? Number(query.branchId) : branchId;
+  const { items, total } = await repo.getKardex(productoId, tenantId, page, pageSize, effectiveBranchId);
 
   return {
     items: items.map(k => serializeKardex(k as unknown as RawKardex)),
@@ -308,10 +314,15 @@ export async function getKardexProducto(productoId: number, tenantId: number, qu
   };
 }
 
-export async function getKardexGeneral(tenantId: number, query: Record<string, string> = {}) {
-  const page = Math.max(1, parseInt(query.page ?? '1', 10));
+export async function getKardexGeneral(
+  tenantId: number,
+  query: Record<string, string> = {},
+  branchId?: number | null,
+) {
+  const page     = Math.max(1, parseInt(query.page  ?? '1',  10));
   const pageSize = Math.min(100, Math.max(1, parseInt(query.limit ?? '30', 10)));
-  const { items, total } = await repo.getKardexGeneral(tenantId, page, pageSize);
+  const effectiveBranchId = query.branchId ? Number(query.branchId) : branchId;
+  const { items, total } = await repo.getKardexGeneral(tenantId, page, pageSize, effectiveBranchId);
 
   return {
     items: items.map(k => serializeKardex(k as unknown as RawKardex)),
@@ -322,7 +333,7 @@ export async function getKardexGeneral(tenantId: number, query: Record<string, s
   };
 }
 
-export async function ajustarStock(id: number, tenantId: number, body: unknown) {
+export async function ajustarStock(id: number, tenantId: number, body: unknown, branchId?: number | null) {
   const existing = await repo.findProductoById(id, tenantId);
   if (!existing) throw new NotFoundError('Producto');
 
@@ -352,12 +363,16 @@ export async function ajustarStock(id: number, tenantId: number, body: unknown) 
 
   const costoUnitario = b.costoUnitario ? Number(b.costoUnitario) : Number(existing.costoPromedio);
 
+  // branchId: puede venir del body o del parámetro (JWT del usuario)
+  const effectiveBranchId = b.branchId != null ? Number(b.branchId) : (branchId ?? null);
+
   const updated = await repo.ajustarStock(id, tenantId, {
     tipoMovimiento,
     cantidad,
     costoUnitario,
     referencia: String(b.referencia).trim(),
-    notas: b.notas ? String(b.notas).trim() : undefined,
+    notas:   b.notas ? String(b.notas).trim() : undefined,
+    branchId: effectiveBranchId,
   });
 
   return serializeProducto(updated);

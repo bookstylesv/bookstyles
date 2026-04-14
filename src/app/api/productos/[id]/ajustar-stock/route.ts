@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const { id } = await params;
     const body = await req.json();
-    const updated = await ajustarStock(Number(id), user.tenantId, body);
+    const updated = await ajustarStock(Number(id), user.tenantId, body, user.branchId);
     return ok(updated);
   } catch (err) {
     return apiError(err);

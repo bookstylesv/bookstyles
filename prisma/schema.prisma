@@ -131,7 +131,11 @@ model BarberTenant {
   cargos BarberCargo[]
 
   // Sucursales
-  branches BarberBranch[]
+  branches       BarberBranch[]
+
+  // Inventario por sucursal
+  stockSucursal  BarberStockSucursal[]
+  transferencias BarberTransferencia[]
 
   @@map("barber_tenants")
 }
@@ -200,6 +204,11 @@ model BarberBranch {
   dayOverrides  BarberDayOverride[]
   correlativos  BarberCorrelativo[]
   notasCredito  BarberNotaCredito[]
+
+  // Inventario por sucursal
+  stockSucursal        BarberStockSucursal[]
+  transferenciasOrigen BarberTransferencia[] @relation("TransferenciaOrigen")
+  transferenciasDest   BarberTransferencia[] @relation("TransferenciaDestino")
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -527,6 +536,8 @@ model BarberProducto {
   kardex         BarberKardex[]
   detallesCompra BarberDetalleCompra[]
   detallesVenta  BarberDetalleVenta[]
+  stockSucursal  BarberStockSucursal[]
+  transferencias BarberTransferencia[]
 
   @@unique([tenantId, codigo])
   @@index([tenantId])
@@ -555,6 +566,54 @@ model BarberKardex {
   @@index([productoId])
   @@index([branchId])
   @@map("barber_kardex")
+}
+
+// ══════════════════════════════════════════════════════
+// INVENTARIO POR SUCURSAL
+// BarberStockSucursal: stock actual de cada producto en cada sucursal
+// BarberTransferencia: movimiento de stock entre sucursales
+// ══════════════════════════════════════════════════════
+
+model BarberStockSucursal {
+  id          Int            @id @default(autoincrement())
+  tenantId    Int
+  tenant      BarberTenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId    Int
+  branch      BarberBranch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  productoId  Int
+  producto    BarberProducto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  stockActual Decimal        @default(0) @db.Decimal(10, 2)
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([branchId, productoId])
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([productoId])
+  @@map("barber_stock_sucursal")
+}
+
+model BarberTransferencia {
+  id            Int            @id @default(autoincrement())
+  tenantId      Int
+  tenant        BarberTenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productoId    Int
+  producto      BarberProducto @relation(fields: [productoId], references: [id])
+  fromBranchId  Int
+  fromBranch    BarberBranch   @relation("TransferenciaOrigen", fields: [fromBranchId], references: [id])
+  toBranchId    Int
+  toBranch      BarberBranch   @relation("TransferenciaDestino", fields: [toBranchId], references: [id])
+  cantidad      Decimal        @db.Decimal(10, 2)
+  costoUnitario Decimal        @db.Decimal(10, 2)
+  notas         String?
+  estado        String         @default("COMPLETADA") // COMPLETADA | ANULADA
+  fecha         DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+
+  @@index([tenantId])
+  @@index([fromBranchId])
+  @@index([toBranchId])
+  @@index([productoId])
+  @@map("barber_transferencias")
 }
 
 // ══════════════════════════════════════════════════════

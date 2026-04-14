@@ -11,6 +11,8 @@ import {
   getResumenInventario,
   getKardexGeneral,
 } from '@/modules/productos/productos.service';
+import { getStockPorSucursal } from '@/modules/inventario/inventario.service';
+import { findActiveBranches } from '@/modules/branches/branches.repository';
 import InventarioClient from '@/components/inventario/InventarioClient';
 
 export default async function InventarioPage() {
@@ -18,12 +20,15 @@ export default async function InventarioPage() {
   if (!user) redirect('/login');
   if (user.role !== 'OWNER') redirect('/dashboard');
 
-  const [productosResult, categorias, resumen, kardexResult] = await Promise.all([
-    listProductos(user.tenantId, { limit: '100' }),
-    listCategorias(user.tenantId),
-    getResumenInventario(user.tenantId),
-    getKardexGeneral(user.tenantId, { limit: '50' }),
-  ]);
+  const [productosResult, categorias, resumen, kardexResult, stockSucursal, branches] =
+    await Promise.all([
+      listProductos(user.tenantId, { limit: '100' }),
+      listCategorias(user.tenantId),
+      getResumenInventario(user.tenantId),
+      getKardexGeneral(user.tenantId, { limit: '50' }, user.branchId),
+      getStockPorSucursal(user.tenantId, user.branchId),
+      findActiveBranches(user.tenantId),
+    ]);
 
   return (
     <div>
@@ -47,6 +52,10 @@ export default async function InventarioPage() {
         initialResumen={resumen}
         initialKardex={kardexResult.items}
         initialKardexTotal={kardexResult.total}
+        initialStockSucursal={stockSucursal.items}
+        branches={branches}
+        currentBranchId={user.branchId ?? null}
+        isOwner={user.role === 'OWNER'}
       />
     </div>
   );

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!user) throw new UnauthorizedError();
 
     const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const result = await getKardexGeneral(user.tenantId, query);
+    const result = await getKardexGeneral(user.tenantId, query, user.branchId);
     return ok(result);
   } catch (err) {
     return apiError(err);
