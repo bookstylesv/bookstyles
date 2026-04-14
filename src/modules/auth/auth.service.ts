@@ -6,7 +6,7 @@
 import bcrypt from 'bcryptjs';
 import { authRepository } from './auth.repository';
 import { tenantsRepository } from '@/modules/tenants/tenants.repository';
-import { signAccessToken, signRefreshToken } from '@/lib/auth';
+import { signAccessToken, signRefreshToken, resolveBranchForLogin } from '@/lib/auth';
 import { UnauthorizedError, NotFoundError, TenantSuspendedError } from '@/lib/errors';
 
 export const authService = {
@@ -25,14 +25,25 @@ export const authService = {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid)                               throw new UnauthorizedError('Credenciales inválidas');
 
-    // 4. Generar tokens
-    const payload = { sub: String(user.id), tenantId: tenant.id, role: user.role, slug: tenant.slug, name: user.fullName };
+    // 4. Resolver sucursal activa según el rol del usuario
+    const { branchId, branchSlug } = await resolveBranchForLogin(user.id, tenant.id, user.role);
+
+    // 5. Generar tokens
+    const payload = {
+      sub:        String(user.id),
+      tenantId:   tenant.id,
+      role:       user.role,
+      slug:       tenant.slug,
+      name:       user.fullName,
+      branchId,
+      branchSlug,
+    };
     const [accessToken, refreshToken] = await Promise.all([
       signAccessToken(payload),
       signRefreshToken(user.id),
     ]);
 
-    // 5. Persistir sesión (refresh token)
+    // 6. Persistir sesión (refresh token)
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await authRepository.createSession({
       userId:       user.id,

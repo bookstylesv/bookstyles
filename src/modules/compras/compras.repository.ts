@@ -7,6 +7,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { branchWhere } from '@/lib/branch-filter';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export type CompraFilters = {
   to?: Date;
   page?: number;
   limit?: number;
+  branchId?: number | null;
 };
 
 export type DetalleInput = {
@@ -77,6 +79,7 @@ export async function findAll(tenantId: number, filters: CompraFilters = {}) {
 
   const where: Prisma.BarberCompraWhereInput = {
     tenantId,
+    ...branchWhere(filters.branchId),
     ...(tipoCompra && { tipoCompra }),
     ...(estado && { estado }),
     ...(condicionPago && { condicionPago }),
@@ -337,18 +340,19 @@ export async function getHistorialPagos(tenantId: number, compraId: number) {
 
 // ── KPIs / Stats ─────────────────────────────────────────────────────────────
 
-export async function getStats(tenantId: number) {
+export async function getStats(tenantId: number, branchId?: number | null) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const mesStart   = new Date(now.getFullYear(), now.getMonth(), 1);
   const mesEnd     = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const bWhere     = branchWhere(branchId);
 
   const [hoyAgg, mesAgg, creditosPendientes, productosMes, gastosMes] = await Promise.all([
     // Compras del día (no anuladas)
     prisma.barberCompra.aggregate({
       where: {
-        tenantId,
+        tenantId, ...bWhere,
         fecha:  { gte: todayStart, lt: todayEnd },
         estado: { not: 'ANULADA' },
       },
@@ -357,7 +361,7 @@ export async function getStats(tenantId: number) {
     // Compras del mes (no anuladas)
     prisma.barberCompra.aggregate({
       where: {
-        tenantId,
+        tenantId, ...bWhere,
         fecha:  { gte: mesStart, lt: mesEnd },
         estado: { not: 'ANULADA' },
       },
@@ -366,7 +370,7 @@ export async function getStats(tenantId: number) {
     // Créditos pendientes (CREDITO + REGISTRADA)
     prisma.barberCompra.count({
       where: {
-        tenantId,
+        tenantId, ...bWhere,
         condicionPago: 'CREDITO',
         estado:        'REGISTRADA',
       },
@@ -374,7 +378,7 @@ export async function getStats(tenantId: number) {
     // Total en productos del mes
     prisma.barberCompra.aggregate({
       where: {
-        tenantId,
+        tenantId, ...bWhere,
         tipoCompra: 'PRODUCTO',
         fecha:      { gte: mesStart, lt: mesEnd },
         estado:     { not: 'ANULADA' },
@@ -384,7 +388,7 @@ export async function getStats(tenantId: number) {
     // Total en gastos/servicios del mes
     prisma.barberCompra.aggregate({
       where: {
-        tenantId,
+        tenantId, ...bWhere,
         tipoCompra: 'GASTO_SERVICIO',
         fecha:      { gte: mesStart, lt: mesEnd },
         estado:     { not: 'ANULADA' },

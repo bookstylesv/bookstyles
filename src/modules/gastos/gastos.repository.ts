@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { branchWhere } from '@/lib/branch-filter';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ export type GastoFilters = {
   hasta?: Date;
   page?: number;
   limit?: number;
+  branchId?: number | null;
 };
 
 export type CategoriaCreateInput = {
@@ -114,6 +116,7 @@ export async function findAll(tenantId: number, filters: GastoFilters = {}) {
 
   const where = {
     tenantId,
+    ...branchWhere(filters.branchId),
     ...(categoriaId && { categoriaId }),
     ...((desde || hasta) && {
       fecha: {
@@ -186,13 +189,13 @@ export async function deleteGasto(id: number, tenantId: number) {
 
 // ── Resumen por categoría (mes/año) ───────────────────────────────────────────
 
-export async function resumenPorCategoria(tenantId: number, mes: number, anio: number) {
+export async function resumenPorCategoria(tenantId: number, mes: number, anio: number, branchId?: number | null) {
   const desde = new Date(anio, mes - 1, 1);
   const hasta = new Date(anio, mes, 1);
 
   const grupos = await prisma.barberGasto.groupBy({
     by:    ['categoriaId'],
-    where: { tenantId, fecha: { gte: desde, lt: hasta } },
+    where: { tenantId, ...branchWhere(branchId), fecha: { gte: desde, lt: hasta } },
     _sum:  { monto: true },
     _count: { _all: true },
   });
@@ -218,31 +221,32 @@ export async function resumenPorCategoria(tenantId: number, mes: number, anio: n
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 
-export async function getStats(tenantId: number) {
+export async function getStats(tenantId: number, branchId?: number | null) {
   const now       = new Date();
   const hoyInicio = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const hoyFin    = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1);
   const mesFin    = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const anioInicio = new Date(now.getFullYear(), 0, 1);
+  const bWhere = branchWhere(branchId);
 
   const [hoyAgg, mesAgg, anioAgg, resumenMes] = await Promise.all([
     prisma.barberGasto.aggregate({
-      where: { tenantId, fecha: { gte: hoyInicio, lt: hoyFin } },
+      where: { tenantId, ...bWhere, fecha: { gte: hoyInicio, lt: hoyFin } },
       _sum:  { monto: true },
     }),
     prisma.barberGasto.aggregate({
-      where: { tenantId, fecha: { gte: mesInicio, lt: mesFin } },
+      where: { tenantId, ...bWhere, fecha: { gte: mesInicio, lt: mesFin } },
       _sum:  { monto: true },
     }),
     prisma.barberGasto.aggregate({
-      where: { tenantId, fecha: { gte: anioInicio } },
+      where: { tenantId, ...bWhere, fecha: { gte: anioInicio } },
       _sum:  { monto: true },
     }),
     // Agrupación para obtener categoría top del mes
     prisma.barberGasto.groupBy({
       by:    ['categoriaId'],
-      where: { tenantId, fecha: { gte: mesInicio, lt: mesFin } },
+      where: { tenantId, ...bWhere, fecha: { gte: mesInicio, lt: mesFin } },
       _sum:  { monto: true },
       orderBy: { _sum: { monto: 'desc' } },
       take: 1,

@@ -40,6 +40,10 @@ import {
   ClockClockwise,
   FileText,
   PaintBrush,
+  Buildings,
+  CaretDown,
+  CaretUp,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import ThemeSelector from '@/components/shared/ThemeSelector';
 import { useBarberTheme } from '@/context/ThemeContext';
@@ -70,6 +74,7 @@ const NAV_ITEMS_BARBER: NavItem[] = [
   { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
   { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
+  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: ['OWNER'],                    module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
 ];
 
@@ -91,6 +96,7 @@ const NAV_ITEMS_SALON: NavItem[] = [
   { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
   { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
+  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: ['OWNER'],                    module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
 ];
 
@@ -98,14 +104,23 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
+type BranchOption = {
+  id: number;
+  name: string;
+  slug: string;
+  isHeadquarters: boolean;
+};
+
 type Props = {
   role:           BarberUserRole;
   slug:           string;
   name:           string;
   enabledModules: Record<string, boolean>;
+  branches?:      BranchOption[];
+  currentBranchId?: number | null;
 };
 
-export default function DashboardSidebar({ role, slug, name, enabledModules }: Props) {
+export default function DashboardSidebar({ role, slug, name, enabledModules, branches = [], currentBranchId }: Props) {
   const pathname       = usePathname();
   const { theme }      = useBarberTheme();
   const isSalon        = theme.category === 'femenino';
@@ -124,11 +139,34 @@ export default function DashboardSidebar({ role, slug, name, enabledModules }: P
     ? "'Playfair Display', Georgia, serif"
     : 'var(--font-inter, Inter, system-ui, sans-serif)';
 
-  const [collapsed,       setCollapsed]       = useState(false);
-  const [mounted,         setMounted]         = useState(false);
-  const [isMobile,        setIsMobile]        = useState(false);
-  const [mobileOpen,      setMobileOpen]      = useState(false);
+  const [collapsed,         setCollapsed]         = useState(false);
+  const [mounted,           setMounted]           = useState(false);
+  const [isMobile,          setIsMobile]          = useState(false);
+  const [mobileOpen,        setMobileOpen]        = useState(false);
   const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
+  const [branchDropOpen,    setBranchDropOpen]    = useState(false);
+  const [switchingBranch,   setSwitchingBranch]   = useState(false);
+
+  const showBranchSelector = role === 'OWNER' && branches.length > 1;
+  const activeBranch = branches.find(b => b.id === currentBranchId);
+
+  async function switchBranch(branchId: number | null) {
+    if (switchingBranch) return;
+    setSwitchingBranch(true);
+    setBranchDropOpen(false);
+    try {
+      const res = await fetch('/api/auth/switch-branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId }),
+      });
+      if (res.ok) {
+        window.location.href = '/dashboard';
+      }
+    } finally {
+      setSwitchingBranch(false);
+    }
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -215,6 +253,90 @@ export default function DashboardSidebar({ role, slug, name, enabledModules }: P
           </div>
         )}
       </div>
+
+      {/* ── Selector de Sucursal (solo OWNER con 2+ sucursales) ─────────── */}
+      {showBranchSelector && (
+        <div style={{ position: 'relative', borderBottom: '1px solid hsl(var(--sidebar-border))' }}>
+          <button
+            type="button"
+            onClick={() => setBranchDropOpen(p => !p)}
+            title={effectiveCollapsed ? (activeBranch?.name ?? 'Todas las sucursales') : undefined}
+            disabled={switchingBranch}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: effectiveCollapsed ? 0 : 8,
+              justifyContent: effectiveCollapsed ? 'center' : 'space-between',
+              padding: effectiveCollapsed ? '10px 0' : '8px 14px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'hsl(var(--sidebar-fg))',
+              fontSize: 12,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <Buildings size={15} weight="bold" style={{ flexShrink: 0, color: 'hsl(var(--brand-primary))' }} />
+              {!effectiveCollapsed && (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                  {activeBranch?.name ?? 'Todas las sucursales'}
+                </span>
+              )}
+            </div>
+            {!effectiveCollapsed && (
+              branchDropOpen ? <CaretUp size={12} /> : <CaretDown size={12} />
+            )}
+          </button>
+
+          {branchDropOpen && !effectiveCollapsed && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+              background: 'hsl(var(--sidebar-bg))',
+              border: '1px solid hsl(var(--sidebar-border))',
+              borderRadius: '0 0 8px 8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+            }}>
+              {/* Opción: todas las sucursales */}
+              <button
+                type="button"
+                onClick={() => switchBranch(null)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '9px 14px', background: 'transparent', border: 'none',
+                  cursor: 'pointer', fontSize: 12,
+                  color: currentBranchId === null ? 'hsl(var(--brand-primary))' : 'hsl(var(--sidebar-fg))',
+                  fontWeight: currentBranchId === null ? 600 : 400,
+                }}
+              >
+                {currentBranchId === null && <CheckCircle size={13} weight="fill" />}
+                <span>Todas las sucursales</span>
+              </button>
+              {branches.map(b => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => switchBranch(b.id)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '9px 14px', background: 'transparent', border: 'none',
+                    borderTop: '1px solid hsl(var(--sidebar-border))',
+                    cursor: 'pointer', fontSize: 12,
+                    color: currentBranchId === b.id ? 'hsl(var(--brand-primary))' : 'hsl(var(--sidebar-fg))',
+                    fontWeight: currentBranchId === b.id ? 600 : 400,
+                  }}
+                >
+                  {currentBranchId === b.id && <CheckCircle size={13} weight="fill" />}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {b.name}{b.isHeadquarters ? ' ★' : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Navegación ───────────────────────────────────────────────────── */}
       <nav style={{ flex: 1, padding: '8px 0' }}>

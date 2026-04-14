@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { CONFIG_DEFAULTS } from './planilla.service';
+import { branchWhere } from '@/lib/branch-filter';
 
 // ── Config global del tenant ─────────────────────────
 export async function getConfigPlanilla(tenantId: number) {
@@ -63,9 +64,9 @@ export async function upsertConfigBarbero(
 }
 
 // ── Planillas ────────────────────────────────────────
-export async function listarPlanillas(tenantId: number) {
+export async function listarPlanillas(tenantId: number, branchId?: number | null) {
   return prisma.barberPlanilla.findMany({
-    where:   { tenantId },
+    where:   { tenantId, ...branchWhere(branchId) },
     include: { detalles: { select: { id: true } } },
     orderBy: { periodo: 'desc' },
   });

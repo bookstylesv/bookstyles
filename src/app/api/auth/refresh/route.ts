@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { signAccessToken, type JwtPayload } from '@/lib/auth'
+import { signAccessToken, resolveBranchForLogin, type JwtPayload } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,12 +68,19 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 3. Emitir nuevo access token ──────────────────────────────────────
+    const { branchId, branchSlug } = await resolveBranchForLogin(
+      session.user.id,
+      session.tenant.id,
+      session.user.role,
+    );
     const payload: JwtPayload = {
-      sub:      String(session.user.id),
-      tenantId: session.tenant.id,
-      role:     session.user.role,
-      slug:     session.tenant.slug,
-      name:     session.user.fullName,
+      sub:        String(session.user.id),
+      tenantId:   session.tenant.id,
+      role:       session.user.role,
+      slug:       session.tenant.slug,
+      name:       session.user.fullName,
+      branchId,
+      branchSlug,
     }
     const newAccessToken = await signAccessToken(payload)
 

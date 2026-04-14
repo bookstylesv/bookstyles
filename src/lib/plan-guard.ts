@@ -87,9 +87,9 @@ export async function checkBarberLimit(
 export async function checkBranchLimit(
   tenantId: number,
 ): Promise<{ allowed: boolean; current: number; max: number }> {
-  const limits = await getPlanLimits(tenantId);
-
-  // Hasta que exista la tabla branches, retornamos siempre permitido
-  // (se actualiza en Fase 2 cuando BarberBranch esté disponible)
-  return { allowed: true, current: 1, max: limits.maxBranches };
+  const [limits, current] = await Promise.all([
+    getPlanLimits(tenantId),
+    prisma.barberBranch.count({ where: { tenantId, status: 'ACTIVE' } }),
+  ]);
+  return { allowed: current < limits.maxBranches, current, max: limits.maxBranches };
 }

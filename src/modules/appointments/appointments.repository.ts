@@ -5,12 +5,14 @@
 
 import { prisma } from '@/lib/prisma';
 import type { BarberAppointmentStatus } from '@prisma/client';
+import { branchWhere } from '@/lib/branch-filter';
 
 export type AppointmentFilters = {
   status?: BarberAppointmentStatus;
   barberId?: number;
   from?: Date;
   to?: Date;
+  branchId?: number | null;
 };
 
 export type AppointmentCreateInput = {
@@ -37,6 +39,7 @@ export async function findAllAppointments(tenantId: number, filters: Appointment
   return prisma.barberAppointment.findMany({
     where: {
       tenantId,
+      ...branchWhere(filters.branchId),
       ...(filters.status && { status: filters.status }),
       ...(filters.barberId && { barberId: filters.barberId }),
       ...((filters.from || filters.to) ? {

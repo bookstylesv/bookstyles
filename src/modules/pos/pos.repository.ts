@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { branchWhere } from '@/lib/branch-filter'
 
 // ─── TURNOS ───────────────────────────────────────────────────────────────────
 
-export async function getTurnoActivo(tenantId: number) {
+export async function getTurnoActivo(tenantId: number, branchId?: number | null) {
   return prisma.barberTurno.findFirst({
-    where: { tenantId, estado: 'ABIERTO' },
+    where: { tenantId, ...branchWhere(branchId), estado: 'ABIERTO' },
     include: {
       usuarioApertura: { select: { fullName: true } },
       _count: { select: { ventas: true } },
@@ -77,11 +78,12 @@ export async function cerrarTurno(
   })
 }
 
-export async function getTurnos(tenantId: number, page = 1, limit = 20) {
+export async function getTurnos(tenantId: number, page = 1, limit = 20, branchId?: number | null) {
   const skip = (page - 1) * limit
+  const bWhere = branchWhere(branchId)
   const [items, total] = await Promise.all([
     prisma.barberTurno.findMany({
-      where: { tenantId },
+      where: { tenantId, ...bWhere },
       include: {
         usuarioApertura: { select: { fullName: true } },
         usuarioCierre: { select: { fullName: true } },
@@ -91,7 +93,7 @@ export async function getTurnos(tenantId: number, page = 1, limit = 20) {
       skip,
       take: limit,
     }),
-    prisma.barberTurno.count({ where: { tenantId } }),
+    prisma.barberTurno.count({ where: { tenantId, ...bWhere } }),
   ])
   return { items, total, page, limit }
 }
@@ -314,12 +316,14 @@ export async function getVentas(tenantId: number, filters: {
   hasta?: Date
   page?: number
   limit?: number
+  branchId?: number | null
 }) {
   const { page = 1, limit = 20 } = filters
   const skip = (page - 1) * limit
 
   const where: Prisma.BarberVentaWhereInput = {
     tenantId,
+    ...branchWhere(filters.branchId),
     ...(filters.estado && { estado: filters.estado as 'ACTIVA' | 'ANULADA' }),
     ...(filters.tipoDte && { tipoDte: filters.tipoDte }),
     ...(filters.turnoId && { turnoId: filters.turnoId }),
@@ -436,18 +440,19 @@ export async function getNotasCredito(tenantId: number) {
 
 // ─── STATS POS ────────────────────────────────────────────────────────────────
 
-export async function getPosStats(tenantId: number) {
+export async function getPosStats(tenantId: number, branchId?: number | null) {
   const hoy = new Date()
   const inicioHoy = new Date(hoy.setHours(0, 0, 0, 0))
   const finHoy = new Date(new Date().setHours(23, 59, 59, 999))
   const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const bWhere = branchWhere(branchId)
 
   const [ventasHoy, ventasMes, turnoActivo, totalVentasHoy] = await Promise.all([
-    prisma.barberVenta.count({ where: { tenantId, estado: 'ACTIVA', createdAt: { gte: inicioHoy, lte: finHoy } } }),
-    prisma.barberVenta.count({ where: { tenantId, estado: 'ACTIVA', createdAt: { gte: inicioMes } } }),
-    prisma.barberTurno.findFirst({ where: { tenantId, estado: 'ABIERTO' }, select: { id: true, fechaApertura: true, montoInicial: true } }),
+    prisma.barberVenta.count({ where: { tenantId, ...bWhere, estado: 'ACTIVA', createdAt: { gte: inicioHoy, lte: finHoy } } }),
+    prisma.barberVenta.count({ where: { tenantId, ...bWhere, estado: 'ACTIVA', createdAt: { gte: inicioMes } } }),
+    prisma.barberTurno.findFirst({ where: { tenantId, ...bWhere, estado: 'ABIERTO' }, select: { id: true, fechaApertura: true, montoInicial: true } }),
     prisma.barberVenta.aggregate({
-      where: { tenantId, estado: 'ACTIVA', createdAt: { gte: inicioHoy, lte: finHoy } },
+      where: { tenantId, ...bWhere, estado: 'ACTIVA', createdAt: { gte: inicioHoy, lte: finHoy } },
       _sum: { total: true },
     }),
   ])
