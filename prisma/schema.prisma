@@ -130,7 +130,99 @@ model BarberTenant {
   // Cargos de empleados
   cargos BarberCargo[]
 
+  // Sucursales
+  branches BarberBranch[]
+
   @@map("barber_tenants")
+}
+
+// ──────────────────────────────────────────────────────
+// PLAN CONFIG — configuración de cada plan (módulos,
+// límites). Administrado desde el panel de control vía
+// endpoints superadmin.
+// ──────────────────────────────────────────────────────
+
+model BarberPlanConfig {
+  id          Int        @id @default(autoincrement())
+  plan        BarberPlan @unique
+  displayName String
+  description String?
+  maxBarbers  Int        @default(3)
+  maxBranches Int        @default(1)
+  modules     Json       @default("{}")
+  price       Decimal?   @db.Decimal(10, 2)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("barber_plan_configs")
+}
+
+// ──────────────────────────────────────────────────────
+// BRANCH — sucursales de un tenant
+// isHeadquarters=true → casa matriz (creada automáticamente)
+// Datos operativos (ventas, citas, etc.) se aislan por branchId.
+// Catálogo de servicios y clientes son compartidos (tenantId).
+// ──────────────────────────────────────────────────────
+
+enum BarberBranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model BarberBranch {
+  id              Int                @id @default(autoincrement())
+  tenantId        Int
+  tenant          BarberTenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String             // "principal", "centro", "escalon"
+  address         String?
+  phone           String?
+  email           String?
+  city            String?
+  businessHours   Json               @default("[]")
+  isHeadquarters  Boolean            @default(false)
+  status          BarberBranchStatus @default(ACTIVE)
+  managerId       Int?               // FK a BarberUser (encargado)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  barberAssignments BarberBranchAssignment[]
+
+  // Relaciones de datos operativos aislados por sucursal
+  appointments  BarberAppointment[]
+  turnos        BarberTurno[]
+  ventas        BarberVenta[]
+  gastos        BarberGasto[]
+  compras       BarberCompra[]
+  planillas     BarberPlanilla[]
+  kardex        BarberKardex[]
+  dayOverrides  BarberDayOverride[]
+  correlativos  BarberCorrelativo[]
+  notasCredito  BarberNotaCredito[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("barber_branches")
+}
+
+// ──────────────────────────────────────────────────────
+// BRANCH ASSIGNMENT — qué barberos trabajan en qué sucursales
+// Un barbero puede estar asignado a varias sucursales.
+// isPrimary = sucursal predeterminada del barbero.
+// ──────────────────────────────────────────────────────
+
+model BarberBranchAssignment {
+  id        Int          @id @default(autoincrement())
+  branchId  Int
+  branch    BarberBranch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  barberId  Int
+  barber    Barber       @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  isPrimary Boolean      @default(false)
+  createdAt DateTime     @default(now())
+
+  @@unique([branchId, barberId])
+  @@map("barber_branch_assignments")
 }
 
 // ──────────────────────────────────────────────────────
@@ -213,11 +305,12 @@ model Barber {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  schedules      BarberSchedule[]
-  appointments   BarberAppointment[]
-  reviews        BarberReview[]
-  configPlanilla BarberConfigBarbero?
-  detallesVenta  BarberDetalleVenta[]
+  schedules         BarberSchedule[]
+  appointments      BarberAppointment[]
+  reviews           BarberReview[]
+  configPlanilla    BarberConfigBarbero?
+  detallesVenta     BarberDetalleVenta[]
+  branchAssignments BarberBranchAssignment[]
 
   @@map("barbers")
 }
@@ -296,6 +389,8 @@ model BarberAppointment {
   id           Int                     @id @default(autoincrement())
   tenantId     Int
   tenant       BarberTenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     Int?
+  branch       BarberBranch?           @relation(fields: [branchId], references: [id])
   clientId     Int
   client       BarberUser              @relation("ClientAppointments", fields: [clientId], references: [id])
   barberId     Int
@@ -315,6 +410,7 @@ model BarberAppointment {
 
   @@unique([barberId, startTime])
   @@index([tenantId, status])
+  @@index([branchId])
   @@map("barber_appointments")
 }
 
@@ -440,6 +536,8 @@ model BarberProducto {
 model BarberKardex {
   id             Int            @id @default(autoincrement())
   tenantId       Int
+  branchId       Int?
+  branch         BarberBranch?  @relation(fields: [branchId], references: [id])
   productoId     Int
   producto       BarberProducto @relation(fields: [productoId], references: [id])
   tipoMovimiento String         // COMPRA | ENTRADA | SALIDA | AJUSTE | ANULACION
@@ -455,6 +553,7 @@ model BarberKardex {
 
   @@index([tenantId])
   @@index([productoId])
+  @@index([branchId])
   @@map("barber_kardex")
 }
 
@@ -486,6 +585,8 @@ model BarberCompra {
   id              Int              @id @default(autoincrement())
   tenantId        Int
   tenant          BarberTenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId        Int?
+  branch          BarberBranch?    @relation(fields: [branchId], references: [id])
   proveedorId     Int?
   proveedor       BarberProveedor? @relation(fields: [proveedorId], references: [id])
   numeroDocumento String
@@ -505,6 +606,7 @@ model BarberCompra {
   pagos    BarberPagoCxP[]
 
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_compras")
 }
 
@@ -584,6 +686,8 @@ model BarberGasto {
   id          Int                 @id @default(autoincrement())
   tenantId    Int
   tenant      BarberTenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId    Int?
+  branch      BarberBranch?       @relation(fields: [branchId], references: [id])
   categoriaId Int
   categoria   BarberCategoriaGasto @relation(fields: [categoriaId], references: [id])
   descripcion String
@@ -594,6 +698,7 @@ model BarberGasto {
   updatedAt   DateTime            @updatedAt
 
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_gastos")
 }
 
@@ -638,6 +743,8 @@ model BarberPlanilla {
   id               Int                    @id @default(autoincrement())
   tenantId         Int
   tenant           BarberTenant           @relation("PlanillaTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId         Int?
+  branch           BarberBranch?          @relation(fields: [branchId], references: [id])
   periodo          String                 // YYYY-MM
   estado           String                 @default("BORRADOR")  // BORRADOR | APROBADA | PAGADA
   totalBruto       Decimal                @default(0) @db.Decimal(10, 2)
@@ -656,6 +763,7 @@ model BarberPlanilla {
 
   @@unique([tenantId, periodo])
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_planillas")
 }
 
@@ -710,6 +818,8 @@ model BarberTurno {
   id                      Int               @id @default(autoincrement())
   tenantId                Int
   tenant                  BarberTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId                Int?
+  branch                  BarberBranch?     @relation(fields: [branchId], references: [id])
   usuarioAperturaId       Int
   usuarioApertura         BarberUser        @relation("TurnoApertura", fields: [usuarioAperturaId], references: [id])
   usuarioCierreId         Int?
@@ -736,6 +846,7 @@ model BarberTurno {
   ventas BarberVenta[]
 
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_turnos")
 }
 
@@ -744,6 +855,8 @@ model BarberVenta {
   id               Int               @id @default(autoincrement())
   tenantId         Int
   tenant           BarberTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId         Int?
+  branch           BarberBranch?     @relation(fields: [branchId], references: [id])
   turnoId          Int
   turno            BarberTurno       @relation(fields: [turnoId], references: [id])
   numero           Int               // correlativo interno del tenant
@@ -785,6 +898,7 @@ model BarberVenta {
   @@index([tenantId])
   @@index([tenantId, estado])
   @@index([turnoId])
+  @@index([branchId])
   @@map("barber_ventas")
 }
 
@@ -828,9 +942,11 @@ model BarberPagoVenta {
 
 // Nota de Crédito (DTE-05)
 model BarberNotaCredito {
-  id               Int         @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   tenantId         Int
   tenant           BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId         Int?
+  branch           BarberBranch? @relation(fields: [branchId], references: [id])
   ventaOriginalId  Int
   ventaOriginal    BarberVenta @relation(fields: [ventaOriginalId], references: [id])
   codigoGeneracion String      @unique
@@ -847,15 +963,18 @@ model BarberNotaCredito {
 
 // Correlativo DTE — numeración secuencial por tipo y año fiscal
 model BarberCorrelativo {
-  id         Int          @id @default(autoincrement())
+  id         Int           @id @default(autoincrement())
   tenantId   Int
-  tenant     BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tipoDte    String       // "01", "03", "05", "interno"
+  tenant     BarberTenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId   Int?
+  branch     BarberBranch? @relation(fields: [branchId], references: [id])
+  tipoDte    String        // "01", "03", "05", "interno"
   anioFiscal Int
-  siguiente  Int          @default(1)
+  siguiente  Int           @default(1)
 
   @@unique([tenantId, tipoDte, anioFiscal])
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_correlativos")
 }
 
@@ -864,19 +983,22 @@ model BarberCorrelativo {
 // ══════════════════════════════════════════════════════
 
 model BarberDayOverride {
-  id        Int          @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   tenantId  Int
-  tenant    BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  date      DateTime     @db.Date
-  isOpen    Boolean      @default(false)
-  openTime  String?      // "07:00" si difiere del default
-  closeTime String?      // "12:00" si difiere del default
+  tenant    BarberTenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId  Int?
+  branch    BarberBranch? @relation(fields: [branchId], references: [id])
+  date      DateTime      @db.Date
+  isOpen    Boolean       @default(false)
+  openTime  String?       // "07:00" si difiere del default
+  closeTime String?       // "12:00" si difiere del default
   reason    String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@unique([tenantId, date])
   @@index([tenantId])
+  @@index([branchId])
   @@map("barber_day_overrides")
 }
 

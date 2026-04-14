@@ -45,51 +45,52 @@ import ThemeSelector from '@/components/shared/ThemeSelector';
 import { useBarberTheme } from '@/context/ThemeContext';
 
 type NavItem = {
-  href:  string;
-  label: string;
-  icon:  React.ElementType;
-  roles: BarberUserRole[];
+  href:   string;
+  label:  string;
+  icon:   React.ElementType;
+  roles:  BarberUserRole[];
+  module?: string; // módulo requerido; si es undefined el item siempre es visible
 };
 
 const NAV_ITEMS_BARBER: NavItem[] = [
   { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'] },
-  { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: ['OWNER'] },
-  { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: ['OWNER'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'],          module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'],          module: 'pos' },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'],                    module: 'billing_dte' },
+  { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: ['OWNER', 'BARBER', 'CLIENT'],module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: ['OWNER'],                    module: 'appointments' },
+  { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: ['OWNER'],                    module: 'loyalty' },
   { href: '/barbers',        label: 'Barberos',         icon: Users,          roles: ['OWNER'] },
   { href: '/services',       label: 'Servicios',        icon: Scissors,       roles: ['OWNER'] },
-  { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'] },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'] },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'] },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'] },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'] },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'] },
-  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'] },
+  { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: ['OWNER', 'BARBER'],          module: 'clients' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'],                    module: 'products' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'],                    module: 'products' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'],                    module: 'products' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'],                    module: 'products' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
 ];
 
 const NAV_ITEMS_SALON: NavItem[] = [
   { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'] },
-  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'] },
-  { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: ['OWNER'] },
-  { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: ['OWNER'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'BARBER'],          module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'BARBER'],          module: 'pos' },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER'],                    module: 'billing_dte' },
+  { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: ['OWNER', 'BARBER', 'CLIENT'],module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: ['OWNER'],                    module: 'appointments' },
+  { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: ['OWNER'],                    module: 'loyalty' },
   { href: '/barbers',        label: 'Estilistas',       icon: UsersThree,     roles: ['OWNER'] },
   { href: '/services',       label: 'Tratamientos',     icon: Sparkle,        roles: ['OWNER'] },
-  { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: ['OWNER', 'BARBER'] },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'] },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'] },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'] },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'] },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'] },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'] },
-  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'] },
+  { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: ['OWNER', 'BARBER'],          module: 'clients' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'],                    module: 'products' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'],                    module: 'products' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'],                    module: 'products' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'],                    module: 'products' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
 ];
 
@@ -97,14 +98,26 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-type Props = { role: BarberUserRole; slug: string; name: string };
+type Props = {
+  role:           BarberUserRole;
+  slug:           string;
+  name:           string;
+  enabledModules: Record<string, boolean>;
+};
 
-export default function DashboardSidebar({ role, slug, name }: Props) {
+export default function DashboardSidebar({ role, slug, name, enabledModules }: Props) {
   const pathname       = usePathname();
   const { theme }      = useBarberTheme();
   const isSalon        = theme.category === 'femenino';
   const navConfig      = isSalon ? NAV_ITEMS_SALON : NAV_ITEMS_BARBER;
-  const items          = navConfig.filter(i => i.roles.includes(role));
+  const items          = navConfig.filter(i => {
+    if (!i.roles.includes(role)) return false;
+    // Si el item no tiene módulo asignado, siempre es visible
+    if (!i.module) return true;
+    // Si no hay configuración de módulos aún (BD sin seed), mostrar todo
+    if (Object.keys(enabledModules).length === 0) return true;
+    return enabledModules[i.module] === true;
+  });
   const initials       = getInitials(name || 'U');
   const LogoIcon       = isSalon ? Flower : Scissors;
   const navFont        = isSalon

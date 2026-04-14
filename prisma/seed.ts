@@ -21,8 +21,80 @@ const pool    = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma  = new PrismaClient({ adapter });
 
+const PLAN_CONFIGS = [
+  {
+    plan: 'TRIAL' as const,
+    displayName: 'Trial',
+    description: 'Prueba gratuita por 30 días',
+    maxBarbers: 3,
+    maxBranches: 2,
+    modules: {
+      appointments: true, pos: true, clients: true, products: false,
+      expenses: false, reports_basic: false, accounts_receivable: false,
+      payroll: false, billing_dte: false, reports_advanced: false,
+      branches: false, api_integrations: false, loyalty: false,
+    },
+  },
+  {
+    plan: 'BASIC' as const,
+    displayName: 'Básico',
+    description: 'Plan básico para negocios pequeños',
+    maxBarbers: 5,
+    maxBranches: 1,
+    modules: {
+      appointments: true, pos: true, clients: true, products: true,
+      expenses: true, reports_basic: true, accounts_receivable: false,
+      payroll: false, billing_dte: false, reports_advanced: false,
+      branches: false, api_integrations: false, loyalty: false,
+    },
+  },
+  {
+    plan: 'PRO' as const,
+    displayName: 'Profesional',
+    description: 'Plan profesional con módulos avanzados',
+    maxBarbers: 10,
+    maxBranches: 3,
+    modules: {
+      appointments: true, pos: true, clients: true, products: true,
+      expenses: true, reports_basic: true, accounts_receivable: true,
+      payroll: true, billing_dte: true, reports_advanced: true,
+      branches: true, api_integrations: false, loyalty: true,
+    },
+  },
+  {
+    plan: 'ENTERPRISE' as const,
+    displayName: 'Empresarial',
+    description: 'Plan completo sin restricciones',
+    maxBarbers: 999,
+    maxBranches: 10,
+    modules: {
+      appointments: true, pos: true, clients: true, products: true,
+      expenses: true, reports_basic: true, accounts_receivable: true,
+      payroll: true, billing_dte: true, reports_advanced: true,
+      branches: true, api_integrations: true, loyalty: true,
+    },
+  },
+];
+
 async function main() {
   console.log('🌱  Iniciando seed...\n');
+
+  // ── 0. Plan configs ──────────────────────────────────────
+  console.log('📋  Seeding plan configs...');
+  for (const cfg of PLAN_CONFIGS) {
+    await prisma.barberPlanConfig.upsert({
+      where: { plan: cfg.plan },
+      update: {
+        displayName: cfg.displayName,
+        description: cfg.description,
+        maxBarbers: cfg.maxBarbers,
+        maxBranches: cfg.maxBranches,
+        modules: cfg.modules,
+      },
+      create: cfg,
+    });
+    console.log(`    ✓ ${cfg.plan} → ${cfg.displayName}`);
+  }
 
   // ── 1. Limpiar datos anteriores del demo ─────────────────
   console.log('🗑️   Limpiando datos demo anteriores...');
