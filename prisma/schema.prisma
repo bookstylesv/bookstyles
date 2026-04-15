@@ -1141,3 +1141,19 @@ model BarberMunicipio {
   @@unique([departamentoCod, codigo])
   @@map("barber_municipios")
 }
+
+// ══════════════════════════════════════════════════════
+// SEGURIDAD — Rate limiting de intentos de login
+// Persiste entre instancias serverless (Vercel Fluid Compute)
+// ══════════════════════════════════════════════════════
+
+model BarberLoginAttempt {
+  id          Int      @id @default(autoincrement())
+  ip          String
+  slug        String   // tenant slug — limita por IP+tenant
+  failedAt    DateTime @default(now())
+
+  @@index([ip, slug])
+  @@index([failedAt])
+  @@map("barber_login_attempts")
+}
