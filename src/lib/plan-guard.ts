@@ -1,11 +1,11 @@
 /**
  * plan-guard.ts — Helpers para validar módulos y límites según el plan del tenant.
  *
- * Estrategia de resolución de módulos:
- *   1. Se carga BarberPlanConfig del plan asignado al tenant.
- *   2. El campo BarberTenant.modules actúa como override opcional
- *      (superadmin puede habilitar/deshabilitar módulos por tenant sin cambiar su plan).
- *   3. Resultado = merge(planModules, tenantOverride).
+ * Resolución del plan:
+ *   1. tenant.planSlug → slug de un plan custom creado desde el panel
+ *   2. tenant.plan (enum) → fallback: "BASIC" → slug "basic"
+ *   3. Si no hay BarberPlanConfig, usa maxBarbers del tenant y módulos vacíos.
+ *   4. BarberTenant.modules actúa como override opcional por tenant.
  */
 
 import { prisma } from '@/lib/prisma';
@@ -18,7 +18,6 @@ export type PlanLimits = {
   modules:     PlanModules;
 };
 
-// Cache en memoria para el ciclo de vida de la request (suficiente para SSR)
 const configCache = new Map<string, PlanLimits>();
 
 export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
@@ -26,37 +25,30 @@ export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
   if (configCache.has(cacheKey)) return configCache.get(cacheKey)!;
 
   const tenant = await prisma.barberTenant.findUnique({
-    where: { id: tenantId },
-    select: { plan: true, modules: true, maxBarbers: true },
+    where:  { id: tenantId },
+    select: { plan: true, planSlug: true, modules: true, maxBarbers: true },
   });
 
-  if (!tenant) {
-    return { maxBarbers: 3, maxBranches: 1, modules: {} };
-  }
+  if (!tenant) return { maxBarbers: 3, maxBranches: 1, modules: {} };
+
+  // Resolver el slug: custom plan tiene prioridad sobre el enum
+  const slug = tenant.planSlug ?? tenant.plan.toLowerCase();
 
   const planConfig = await prisma.barberPlanConfig.findUnique({
-    where: { plan: tenant.plan },
+    where:  { slug },
     select: { maxBarbers: true, maxBranches: true, modules: true },
   });
 
-  // Si no hay plan config aún (BD sin seed), usar valores del tenant
   if (!planConfig) {
-    return {
-      maxBarbers:  tenant.maxBarbers,
-      maxBranches: 1,
-      modules:     (tenant.modules as PlanModules) ?? {},
-    };
+    return { maxBarbers: tenant.maxBarbers, maxBranches: 1, modules: (tenant.modules as PlanModules) ?? {} };
   }
 
-  const planModules   = (planConfig.modules  as PlanModules) ?? {};
-  const tenantOverride = (tenant.modules     as PlanModules) ?? {};
+  const planModules    = (planConfig.modules as PlanModules) ?? {};
+  const tenantOverride = (tenant.modules    as PlanModules) ?? {};
 
-  // Override: los módulos explícitamente seteados en el tenant tienen prioridad
   const resolved: PlanModules = { ...planModules };
   for (const key of Object.keys(tenantOverride)) {
-    if (typeof tenantOverride[key] === 'boolean') {
-      resolved[key] = tenantOverride[key];
-    }
+    if (typeof tenantOverride[key] === 'boolean') resolved[key] = tenantOverride[key];
   }
 
   const limits: PlanLimits = {

@@ -74,6 +74,7 @@ model BarberTenant {
   slug        String             @unique
   name        String
   plan        BarberPlan         @default(TRIAL)
+  planSlug    String?            // slug del plan custom asignado (override del enum plan)
   status      BarberTenantStatus @default(TRIAL)
   trialEndsAt DateTime?
   paidUntil   DateTime?
@@ -147,17 +148,18 @@ model BarberTenant {
 // ──────────────────────────────────────────────────────
 
 model BarberPlanConfig {
-  id          Int        @id @default(autoincrement())
-  plan        BarberPlan @unique
+  id          Int         @id @default(autoincrement())
+  slug        String      @unique               // identificador único — "basic", "pro", "premium-v2"…
+  plan        BarberPlan?                       // solo para los 4 planes del sistema (nullable en custom)
   displayName String
   description String?
-  maxBarbers  Int        @default(3)
-  maxBranches Int        @default(1)
-  modules     Json       @default("{}")
-  price       Decimal?   @db.Decimal(10, 2)
-  active      Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  maxBarbers  Int         @default(3)
+  maxBranches Int         @default(1)
+  modules     Json        @default("{}")
+  price       Decimal?    @db.Decimal(10, 2)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@map("barber_plan_configs")
 }
