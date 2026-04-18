@@ -58,7 +58,7 @@ function UsersIcon({ stroke }: { stroke: string }) {
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
-  brandName: 'Speeddan',
+  brandName: 'BookStyles',
   tagline: 'Sistema de gestion para barberias',
   features: [
     { title: 'Gestion de Citas', description: 'Agenda online en tiempo real' },

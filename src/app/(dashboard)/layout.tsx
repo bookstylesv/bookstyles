@@ -9,18 +9,21 @@ import { findActiveBranches }  from '@/modules/branches/branches.repository';
 import { redirect }            from 'next/navigation';
 import DashboardSidebar        from '@/components/layout/DashboardSidebar';
 import AntdProvider            from '@/components/shared/AntdProvider';
+import { prisma }              from '@/lib/prisma';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
-  const [{ modules }, branches] = await Promise.all([
+  const [{ modules }, branches, globalConfig] = await Promise.all([
     getPlanLimits(user.tenantId),
     // Solo cargamos sucursales si el módulo está habilitado en el plan
     user.role === 'OWNER'
       ? findActiveBranches(user.tenantId)
       : Promise.resolve([]),
+    prisma.barberGlobalConfig.findUnique({ where: { id: 1 }, select: { brandName: true } }),
   ]);
+  const brandName = globalConfig?.brandName || 'BookStyles';
 
   return (
     <AntdProvider>
@@ -32,6 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           enabledModules={modules}
           branches={branches}
           currentBranchId={user.branchId}
+          brandName={brandName}
         />
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0, padding: 'clamp(12px, 3vw, 24px) clamp(12px, 3vw, 32px)' }}>
           {children}

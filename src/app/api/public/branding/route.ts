@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const DEFAULT = {
-  brandName: 'Speeddan',
+  brandName: 'BookStyles',
   tagline: 'Sistema de gestión para barberías',
   features: [
     { title: 'Gestión de Citas', description: 'Agenda online en tiempo real' },

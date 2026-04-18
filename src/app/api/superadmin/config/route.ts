@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const config = await prisma.barberGlobalConfig.findUnique({ where: { id: 1 } });
 
   return NextResponse.json({
-    brandName: config?.brandName ?? 'Speeddan',
+    brandName: config?.brandName ?? 'BookStyles',
     tagline: config?.tagline ?? 'Sistema de gestión para barberías',
     features: config?.features ?? DEFAULT_FEATURES,
   });
@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest) {
     },
     create: {
       id: 1,
-      brandName: body.brandName?.trim() ?? 'Speeddan',
+      brandName: body.brandName?.trim() ?? 'BookStyles',
       tagline: body.tagline?.trim() ?? 'Sistema de gestión para barberías',
       features: body.features ?? DEFAULT_FEATURES,
     },

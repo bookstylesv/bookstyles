@@ -118,9 +118,10 @@ type Props = {
   enabledModules: Record<string, boolean>;
   branches?:      BranchOption[];
   currentBranchId?: number | null;
+  brandName?:     string;
 };
 
-export default function DashboardSidebar({ role, slug, name, enabledModules, branches = [], currentBranchId }: Props) {
+export default function DashboardSidebar({ role, slug, name, enabledModules, branches = [], currentBranchId, brandName }: Props) {
   const pathname       = usePathname();
   const { theme }      = useBarberTheme();
   const isSalon        = theme.category === 'femenino';
@@ -245,7 +246,7 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, bra
         {!effectiveCollapsed && (
           <div style={{ overflow: 'hidden' }}>
             <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 700, fontSize: 14.5, letterSpacing: isSalon ? '0.2px' : '-0.2px', whiteSpace: 'nowrap', fontFamily: navFont }}>
-              {isSalon ? 'Speeddan Salón' : 'Speeddan'}
+              {brandName || (isSalon ? 'BookStyles Salón' : 'BookStyles')}
             </div>
             <div style={{ color: 'hsl(var(--sidebar-muted))', fontSize: 10, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {slug}
