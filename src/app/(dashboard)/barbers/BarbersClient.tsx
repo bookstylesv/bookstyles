@@ -15,7 +15,8 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined, EditOutlined, UserOutlined, CheckCircleOutlined,
   ScissorOutlined, ClockCircleOutlined, TagsOutlined, DeleteOutlined,
-  SettingOutlined, CalendarOutlined,
+  SettingOutlined, CalendarOutlined, BarChartOutlined,
+  TrophyOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button as SdButton } from '@/components/ui/button';
@@ -53,6 +54,16 @@ type BarberDetail = Barber & {
     tipoPago: string; salarioBase: number; valorPorUnidad: number;
     porcentajeServicio: number; aplicaRenta: boolean; fechaIngreso: string | null;
   } | null;
+};
+
+type BarberAnalytics = {
+  barberName: string;
+  kpis: {
+    total: number; completadas: number; canceladas: number;
+    noShow: number; pendientes: number; ingresos: number; tasaCompletacion: number;
+  };
+  topServicios: { name: string; count: number; ingresos: number }[];
+  meses: { label: string; citas: number; ingresos: number }[];
 };
 type CreateForm = { fullName: string; email: string; password: string; phone: string; bio: string; cargo: string; specialtiesInput: string };
 type CargoItem  = { id: number; nombre: string; descripcion: string | null; activo: boolean };
@@ -110,6 +121,10 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
   const [sched,      setSched]      = useState<Schedule[]>(DEFAULT_SCHED);
   const [schedSaving, setSchedSaving] = useState(false);
 
+  // Tab Analíticas
+  const [analytics,        setAnalytics]        = useState<BarberAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
   // ── Estado cargos ────────────────────────────────────────
   const [cargos,      setCargos]      = useState<CargoItem[]>([]);
   const [cargoLoad,   setCargoLoad]   = useState(false);
@@ -130,9 +145,20 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
 
   function setField(f: keyof CreateForm, v: string) { setForm(p => ({ ...p, [f]: v })); }
 
+  // ── Cargar analíticas ────────────────────────────────────
+  async function loadAnalytics(barberId: number) {
+    setAnalyticsLoading(true);
+    try {
+      const res  = await fetch(`/api/barbers/${barberId}/analytics`);
+      const json = await res.json();
+      if (json.success) setAnalytics(json.data);
+    } catch { /* silencioso */ } finally { setAnalyticsLoading(false); }
+  }
+
   // ── Abrir drawer ─────────────────────────────────────────
   async function openDrawer(b: Barber) {
     setDrawerTab('general');
+    setAnalytics(null);
     setDrawer(b as BarberDetail);
     setGenBio(b.bio ?? ''); setGenCargo(b.cargo ?? ''); setGenSpec(b.specialties.join(', '));
     setSched(normSchedule(b.schedules));
@@ -623,6 +649,111 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
                     Guardar horarios
                   </Button>
                 </div>
+              </div>
+            ),
+          },
+          /* ── Tab 4: Analíticas ── */
+          {
+            key: 'analytics',
+            label: <span><BarChartOutlined /> Analíticas</span>,
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {!analytics && !analyticsLoading && (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <Button type="primary" icon={<BarChartOutlined />} onClick={() => drawer && loadAnalytics(drawer.id)}>
+                      Cargar analíticas
+                    </Button>
+                  </div>
+                )}
+
+                {analyticsLoading && (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'hsl(var(--text-muted))' }}>
+                    Cargando datos…
+                  </div>
+                )}
+
+                {analytics && !analyticsLoading && (
+                  <>
+                    {/* KPIs */}
+                    <Row gutter={[8, 8]}>
+                      {[
+                        { label: 'Total citas',    value: analytics.kpis.total,           color: primary },
+                        { label: 'Completadas',    value: analytics.kpis.completadas,      color: '#52c41a' },
+                        { label: 'Canceladas',     value: analytics.kpis.canceladas,       color: '#ff4d4f' },
+                        { label: 'Tasa completac.',value: `${analytics.kpis.tasaCompletacion}%`, color: '#0284c7' },
+                      ].map(k => (
+                        <Col xs={12} key={k.label}>
+                          <Card size="small" style={{ borderRadius: 10, textAlign: 'center' }}>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+                            <div style={{ fontSize: 11, color: 'hsl(var(--text-muted))', marginTop: 2 }}>{k.label}</div>
+                          </Card>
+                        </Col>
+                      ))}
+                      <Col xs={24}>
+                        <Card size="small" style={{ borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <DollarOutlined style={{ color: '#52c41a', fontSize: 18 }} />
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#52c41a', display: 'inline', marginLeft: 8 }}>
+                              ${analytics.kpis.ingresos.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'hsl(var(--text-muted))', marginLeft: 8, display: 'inline' }}>ingresos generados</div>
+                          </div>
+                        </Card>
+                      </Col>
+                    </Row>
+
+                    {/* Top servicios */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--text-secondary))', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <TrophyOutlined style={{ color: '#f59e0b' }} /> Top servicios
+                      </div>
+                      {analytics.topServicios.length === 0 ? (
+                        <Text type="secondary" style={{ fontSize: 12 }}>Sin servicios registrados.</Text>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {analytics.topServicios.map((s, i) => {
+                            const max = analytics.topServicios[0].count;
+                            const pct = max > 0 ? Math.round((s.count / max) * 100) : 0;
+                            return (
+                              <div key={s.name}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                                  <span style={{ fontWeight: i === 0 ? 700 : 500 }}>
+                                    {i === 0 && '🥇 '}{i === 1 && '🥈 '}{i === 2 && '🥉 '}{s.name}
+                                  </span>
+                                  <span style={{ color: 'hsl(var(--text-muted))' }}>{s.count} citas · ${s.ingresos.toFixed(2)}</span>
+                                </div>
+                                <div style={{ height: 5, borderRadius: 3, background: 'hsl(var(--border-default))' }}>
+                                  <div style={{ height: '100%', borderRadius: 3, background: primary, width: `${pct}%`, transition: 'width .4s' }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Citas por mes */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--text-secondary))', marginBottom: 8 }}>
+                        <CalendarOutlined style={{ marginRight: 6 }} />Citas últimos 6 meses
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 64 }}>
+                        {analytics.meses.map(m => {
+                          const max = Math.max(...analytics.meses.map(x => x.citas), 1);
+                          const h   = Math.round((m.citas / max) * 56);
+                          return (
+                            <Tooltip key={m.label} title={`${m.label}: ${m.citas} citas · $${m.ingresos.toFixed(2)}`}>
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                                <div style={{ width: '100%', height: h || 3, borderRadius: 3, background: primary, minHeight: 3, transition: 'height .4s' }} />
+                                <div style={{ fontSize: 9, color: 'hsl(var(--text-muted))', textAlign: 'center', lineHeight: 1.1 }}>{m.label}</div>
+                              </div>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ),
           },

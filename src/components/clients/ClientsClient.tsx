@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
-  Table, Card, Input, Button, Space, Row, Col,
+  Table, Card, Input, Button, Space, Row, Col, Modal,
   Statistic, Tag, Tooltip, Popconfirm, Typography, Select, Divider, Radio, InputNumber,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -16,6 +16,7 @@ import {
   SearchOutlined, PlusOutlined, ReloadOutlined,
   TeamOutlined, EditOutlined, DeleteOutlined,
   PhoneOutlined, CheckCircleOutlined, MailOutlined, IdcardOutlined, PercentageOutlined,
+  HistoryOutlined, CalendarOutlined, DollarOutlined, TrophyOutlined,
 } from '@ant-design/icons';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -37,6 +38,19 @@ type Client = {
 };
 
 type FormValues = { fullName: string; email: string; phone: string; numDocumento: string; nrc: string; nombreComercial: string; complemento: string; descuentoValor: string };
+
+type ClientHistory = {
+  clientName: string;
+  kpis: {
+    total: number; completadas: number; canceladas: number;
+    gastado: number; ultimaVisita: string | null; servicioFavorito: string | null;
+  };
+  appointments: {
+    id: number; startTime: string; status: string;
+    servicio: string; categoria: string | null; precio: number;
+    barbero: string; pagado: boolean; montoPagado: number | null; metodoPago: string | null;
+  }[];
+};
 
 type Departamento = { id: number; codigo: string; nombre: string; totalMunicipios: number };
 type Municipio    = { id: number; codigo: string; nombre: string; departamentoCod: string; departamento: { nombre: string } };
@@ -75,6 +89,22 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState('');
   const [search,        setSearch]        = useState('');
+
+  // Historial de cliente
+  const [history,        setHistory]        = useState<ClientHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyOpen,    setHistoryOpen]    = useState(false);
+
+  async function openHistory(c: Client) {
+    setHistoryOpen(true);
+    setHistory(null);
+    setHistoryLoading(true);
+    try {
+      const res  = await fetch(`/api/clients/${c.id}/history`);
+      const json = await res.json();
+      if (json.success) setHistory(json.data);
+    } catch { /* silencioso */ } finally { setHistoryLoading(false); }
+  }
 
   // Datos fiscales (estado local — selects no bindeados a react-hook-form)
   const [tipoPersona,    setTipoPersona]    = useState<'NATURAL' | 'JURIDICA'>('NATURAL');
@@ -317,10 +347,13 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
     {
       title:  'Acciones',
       key:    'actions',
-      width:  90,
+      width:  110,
       fixed:  'right',
       render: (_, record) => (
         <Space size={4}>
+          <Tooltip title="Ver historial">
+            <Button size="small" icon={<HistoryOutlined />} onClick={() => openHistory(record)} />
+          </Tooltip>
           <Tooltip title="Editar">
             <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => handleEditar(record)} />
           </Tooltip>
@@ -417,6 +450,114 @@ export default function ClientsClient({ initialClients }: { initialClients: Clie
           }}
         />
       </Card>
+
+      {/* ── Modal Historial ── */}
+      <Modal
+        open={historyOpen}
+        onCancel={() => setHistoryOpen(false)}
+        title={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <HistoryOutlined style={{ color: '#0d9488' }} />
+            {history ? `Historial — ${history.clientName}` : 'Historial del cliente'}
+          </span>
+        }
+        footer={null}
+        width={620}
+        destroyOnHidden
+      >
+        {historyLoading && (
+          <div style={{ padding: '32px 0', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Cargando historial…</div>
+        )}
+
+        {!historyLoading && history && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* KPIs */}
+            <Row gutter={[8, 8]}>
+              {[
+                { icon: <CalendarOutlined style={{ color: '#0d9488' }} />, label: 'Total citas',    value: history.kpis.total },
+                { icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />, label: 'Completadas', value: history.kpis.completadas },
+                { icon: <DollarOutlined style={{ color: '#0284c7' }} />, label: 'Total gastado',   value: `$${history.kpis.gastado.toFixed(2)}` },
+                { icon: <TrophyOutlined style={{ color: '#f59e0b' }} />, label: 'Serv. favorito',  value: history.kpis.servicioFavorito ?? '—' },
+              ].map(k => (
+                <Col xs={12} key={k.label}>
+                  <Card size="small" style={{ borderRadius: 10 }}>
+                    <Space>
+                      {k.icon}
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{k.value}</div>
+                        <div style={{ fontSize: 11, color: 'hsl(var(--text-muted))' }}>{k.label}</div>
+                      </div>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+
+            {history.kpis.ultimaVisita && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Última visita: {formatDate(history.kpis.ultimaVisita)}
+              </Text>
+            )}
+
+            {/* Lista de citas */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--text-secondary))' }}>
+              Últimas {history.appointments.length} citas
+            </div>
+            <Table
+              dataSource={history.appointments}
+              rowKey="id"
+              size="small"
+              scroll={{ x: 500 }}
+              pagination={{ pageSize: 8, showSizeChanger: false, showTotal: (t, r) => `${r[0]}–${r[1]} de ${t}` }}
+              columns={[
+                {
+                  title: 'Fecha', key: 'fecha', width: 120,
+                  render: (_, r) => (
+                    <Text style={{ fontSize: 12 }}>
+                      {formatDate(r.startTime)}
+                    </Text>
+                  ),
+                },
+                {
+                  title: 'Servicio', key: 'servicio',
+                  render: (_, r) => (
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 12 }}>{r.servicio}</div>
+                      {r.categoria && <Text type="secondary" style={{ fontSize: 11 }}>{r.categoria}</Text>}
+                    </div>
+                  ),
+                },
+                {
+                  title: 'Barbero', dataIndex: 'barbero', key: 'barbero', width: 130,
+                  render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+                },
+                {
+                  title: 'Estado', key: 'status', width: 100,
+                  render: (_, r) => {
+                    const cfg: Record<string, string> = {
+                      COMPLETED: 'success', CANCELLED: 'error', NO_SHOW: 'error',
+                      PENDING: 'warning', CONFIRMED: 'processing', IN_PROGRESS: 'processing',
+                    };
+                    const lbl: Record<string, string> = {
+                      COMPLETED: 'Completada', CANCELLED: 'Cancelada', NO_SHOW: 'No asistió',
+                      PENDING: 'Pendiente', CONFIRMED: 'Confirmada', IN_PROGRESS: 'En curso',
+                    };
+                    return <Tag color={cfg[r.status] ?? 'default'} style={{ fontSize: 11 }}>{lbl[r.status] ?? r.status}</Tag>;
+                  },
+                },
+                {
+                  title: 'Precio', key: 'precio', width: 80, align: 'right',
+                  render: (_, r) => (
+                    <Text style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                      ${r.precio.toFixed(2)}
+                    </Text>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        )}
+      </Modal>
 
       {/* ── Modal Crear / Editar ── */}
       <Dialog open={open} onOpenChange={v => { if (!v) setOpen(false); }}>
