@@ -240,6 +240,31 @@ export async function getStats(tenantId: number) {
     utilidad: parseFloat((v.ingresos - v.gastos).toFixed(2)),
   }));
 
+  // ── Ranking de barberos (mes actual) ──────────────────
+  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+  const apptsMes  = await prisma.barberAppointment.findMany({
+    where: { tenantId, startTime: { gte: inicioMes } },
+    include: {
+      barber:  { include: { user: { select: { fullName: true } } } },
+      payment: { select: { amount: true, status: true } },
+    },
+  });
+  const barberMap = new Map<number, { nombre: string; citas: number; completadas: number; ingresos: number }>();
+  for (const a of apptsMes) {
+    const prev = barberMap.get(a.barberId) ?? { nombre: a.barber.user.fullName, citas: 0, completadas: 0, ingresos: 0 };
+    const ingreso = a.payment?.status === 'PAID' ? Number(a.payment.amount) : 0;
+    barberMap.set(a.barberId, {
+      nombre:      a.barber.user.fullName,
+      citas:       prev.citas + 1,
+      completadas: prev.completadas + (a.status === 'COMPLETED' ? 1 : 0),
+      ingresos:    prev.ingresos + ingreso,
+    });
+  }
+  const rankingBarberos = Array.from(barberMap.values())
+    .sort((a, b) => b.completadas - a.completadas)
+    .slice(0, 5)
+    .map(b => ({ ...b, ingresos: parseFloat(b.ingresos.toFixed(2)) }));
+
   // ── Top servicios por ingreso (últimos 30 días) ─────────
   const mapaServ = new Map<string, { total: number; cantidad: number }>();
   for (const d of detallesTop) {
@@ -264,9 +289,10 @@ export async function getStats(tenantId: number) {
     ingresosPosHoy: parseFloat(ingresosPosHoy.toFixed(2)),
     ventasSemana,
     ticketPromedio,
-    // Gráficas nuevas
+    // Gráficas
     ingresosVsGastos,
     topServicios,
+    rankingBarberos,
   };
 }
 

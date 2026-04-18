@@ -25,6 +25,7 @@ type WeekDay  = { day: string; count: number };
 type VentaDay = { day: string; total: number; count: number };
 type MesData  = { mes: string; ingresos: number; gastos: number; utilidad: number };
 type ServicioTop = { nombre: string; total: number; cantidad: number };
+type BarberRank  = { nombre: string; citas: number; completadas: number; ingresos: number };
 
 type Stats = {
   citasHoy:        number;
@@ -37,9 +38,10 @@ type Stats = {
   ingresosPosHoy: number;
   ventasSemana:   VentaDay[];
   ticketPromedio: number;
-  // Gráficas nuevas
+  // Gráficas
   ingresosVsGastos: MesData[];
   topServicios:     ServicioTop[];
+  rankingBarberos:  BarberRank[];
 };
 
 // ── Links rápidos ───────────────────────────────────────
@@ -437,6 +439,99 @@ export default function DashboardClient({
                 </Link>
               ))}
             </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ── Citas semana + Ranking de barberos ── */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        {/* Citas por día — últimos 7 días */}
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Title level={5} style={{ margin: 0 }}>Citas — últimos 7 días</Title>
+                <Tag color="blue" style={{ fontSize: 11 }}>Diario</Tag>
+              </div>
+            }
+            size="small"
+          >
+            {stats.citasSemana.some(d => d.count > 0) ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={stats.citasSemana} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <ReTooltip
+                    cursor={{ fill: C.bgPrimaryLow }}
+                    contentStyle={{ background: C.bgSurface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: unknown) => [`${v} citas`, 'Citas']}
+                  />
+                  <Bar dataKey="count" name="Citas" fill="#0891b2" radius={[4, 4, 0, 0]} maxBarSize={44} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: C.textDisabled }}>
+                <CalendarOutlined style={{ fontSize: 36, marginBottom: 10 }} />
+                <Text type="secondary">Sin citas esta semana</Text>
+              </div>
+            )}
+          </Card>
+        </Col>
+
+        {/* Ranking de barberos — mes actual */}
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Title level={5} style={{ margin: 0 }}>Ranking barberos — mes</Title>
+                <Tag color="purple" style={{ fontSize: 11 }}>Completadas</Tag>
+              </div>
+            }
+            size="small"
+          >
+            {stats.rankingBarberos.length > 0 ? (
+              <div style={{ paddingTop: 4 }}>
+                {stats.rankingBarberos.map((b, i) => {
+                  const max = stats.rankingBarberos[0].completadas;
+                  const pct = max > 0 ? (b.completadas / max) * 100 : 0;
+                  const medals = ['🥇', '🥈', '🥉'];
+                  return (
+                    <div key={b.nombre} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Space size={6}>
+                          <span style={{ fontSize: 14, lineHeight: 1 }}>{medals[i] ?? `${i + 1}.`}</span>
+                          <span style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: C.textPrimary }}>
+                            {b.nombre}
+                          </span>
+                        </Space>
+                        <Space size={12}>
+                          <span style={{ fontSize: 12, color: primary, fontWeight: 700 }}>
+                            {b.completadas} <span style={{ fontWeight: 400, color: C.textMuted }}>citas</span>
+                          </span>
+                          <span style={{ fontSize: 12, color: token.colorSuccess, fontWeight: 700 }}>
+                            ${b.ingresos.toFixed(2)}
+                          </span>
+                        </Space>
+                      </div>
+                      <div style={{ background: C.border, borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 4,
+                          background: i === 0 ? primary : `${primary}80`,
+                          width: `${pct}%`,
+                          transition: 'width 0.6s ease',
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: C.textDisabled }}>
+                <ScissorOutlined style={{ fontSize: 36, marginBottom: 10 }} />
+                <Text type="secondary">Sin datos de barberos este mes</Text>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>
