@@ -10,7 +10,6 @@ interface BookingConfirmationParams {
   clientName:  string;
   tenantName:  string;
   services:    string;
-  barberName:  string;
   dateStr:     string;
   timeStr:     string;
   totalPrice?: number;
@@ -44,7 +43,6 @@ export async function sendBookingConfirmation(p: BookingConfirmationParams) {
           <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;">
             <tr><td style="padding:8px 0;color:#666;font-size:14px;">📍 Negocio</td><td style="padding:8px 0;font-size:14px;font-weight:600;color:#222;">${p.tenantName}</td></tr>
             <tr><td style="padding:8px 0;color:#666;font-size:14px;border-top:1px solid #f0f0f0;">✂️ Servicios</td><td style="padding:8px 0;font-size:14px;font-weight:600;color:#222;border-top:1px solid #f0f0f0;">${p.services}</td></tr>
-            <tr><td style="padding:8px 0;color:#666;font-size:14px;border-top:1px solid #f0f0f0;">👨 Profesional</td><td style="padding:8px 0;font-size:14px;font-weight:600;color:#222;border-top:1px solid #f0f0f0;">${p.barberName}</td></tr>
             <tr><td style="padding:8px 0;color:#666;font-size:14px;border-top:1px solid #f0f0f0;">📅 Fecha</td><td style="padding:8px 0;font-size:14px;font-weight:600;color:#222;border-top:1px solid #f0f0f0;">${p.dateStr}</td></tr>
             <tr><td style="padding:8px 0;color:#666;font-size:14px;border-top:1px solid #f0f0f0;">🕙 Hora</td><td style="padding:8px 0;font-size:14px;font-weight:600;color:#222;border-top:1px solid #f0f0f0;">${p.timeStr}</td></tr>
             ${priceRow}

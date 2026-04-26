@@ -323,7 +323,6 @@ export async function POST(
       clientName,
       tenantName: tenant.name,
       services:   serviceNames,
-      barberName,
       dateStr:    dtStr,
       timeStr:    tmStr,
       totalPrice,
