@@ -12,8 +12,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma }      from '@/lib/prisma';
-import { addMinutes }  from 'date-fns';
+import { prisma }                   from '@/lib/prisma';
+import { addMinutes }               from 'date-fns';
+import { sendBookingConfirmation }  from '@/lib/email';
 
 // ── Sanitizar texto libre (evita XSS en notas/nombres) ──
 function sanitize(s: string, maxLen = 200): string {
@@ -303,17 +304,33 @@ export async function POST(
     cursor = svcEnd;
   }
 
-  const first       = appointments[0];
-  const barberName  = first.barber.user.fullName;
+  const first        = appointments[0];
+  const barberName   = first.barber.user.fullName;
   const serviceNames = appointments.map(a => a.service.name).join(', ');
 
-  // ── 10. Construir URL WhatsApp de notificación al negocio ──
   const dtStr = first.startTime.toLocaleDateString('es-SV', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
   const tmStr = first.startTime.toLocaleTimeString('es-SV', {
     hour: '2-digit', minute: '2-digit', hour12: true,
   });
+
+  // ── 10. Enviar email de confirmación al cliente (si proporcionó correo real) ──
+  if (clientEmail) {
+    const totalPrice = services.reduce((sum, s) => sum + Number(s.price), 0);
+    sendBookingConfirmation({
+      to:         clientEmail,
+      clientName,
+      tenantName: tenant.name,
+      services:   serviceNames,
+      barberName,
+      dateStr:    dtStr,
+      timeStr:    tmStr,
+      totalPrice,
+    }).catch(() => {}); // fire-and-forget: no bloquea la respuesta si falla
+  }
+
+  // ── 11. Construir URL WhatsApp de notificación al negocio ──
   const waText = encodeURIComponent(
     `📅 Nueva reserva web — BookStyle\n` +
     `👤 Cliente: ${clientName} (${clientPhone})\n` +
