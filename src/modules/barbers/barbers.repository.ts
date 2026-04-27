@@ -44,16 +44,24 @@ export type BarberUpdateInput = {
 export type BarberCreateInput = {
   fullName:    string;
   email:       string;
-  password:    string;
+  password?:   string; // Opcional — se genera automáticamente si no se provee
   phone?:      string;
   bio?:        string;
   cargo?:      string;
   specialties?: string[];
 };
 
+/** Genera una contraseña temporal segura de 10 caracteres */
+function generateTempPassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$';
+  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export async function createBarber(tenantId: number, data: BarberCreateInput) {
   const bcrypt = await import('bcryptjs');
-  const hashed = await bcrypt.hash(data.password, 10);
+  const tempPassword = data.password ? null : generateTempPassword();
+  const rawPassword  = data.password ?? tempPassword!;
+  const hashed = await bcrypt.hash(rawPassword, 10);
 
   return prisma.$transaction(async tx => {
     const user = await tx.barberUser.create({
@@ -85,7 +93,7 @@ export async function createBarber(tenantId: number, data: BarberCreateInput) {
       },
     });
 
-    return barber;
+    return { barber, tempPassword };
   });
 }
 

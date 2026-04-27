@@ -31,9 +31,12 @@ enum BarberTenantStatus {
 }
 
 enum BarberUserRole {
-  OWNER
-  BARBER
-  CLIENT
+  OWNER    // Dueño del negocio / super-admin del tenant
+  ADMIN    // Administrador del sistema (acceso completo sin ser dueño)
+  GERENTE  // Gerente de sucursal (acceso operativo, sin configuración)
+  IT       // Soporte técnico / configuración
+  BARBER   // Estilista / barbero (solo POS y su perfil)
+  CLIENT   // Cliente del negocio (portal de citas)
 }
 
 enum BarberAppointmentStatus {

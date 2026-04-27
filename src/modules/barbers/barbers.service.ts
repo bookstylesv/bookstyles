@@ -43,11 +43,14 @@ export async function createBarber(tenantId: number, body: unknown) {
   const data = body as repo.BarberCreateInput;
   if (!data.fullName?.trim()) throw new ValidationError('El nombre es obligatorio');
   if (!data.email?.trim())    throw new ValidationError('El email es obligatorio');
-  if (!data.password?.trim()) throw new ValidationError('La contraseña es obligatoria');
 
   try {
-    const barber = await repo.createBarber(tenantId, data);
-    return { ...barber, scheduleText: formatSchedule(barber.schedules) };
+    const { barber, tempPassword } = await repo.createBarber(tenantId, data);
+    return {
+      ...barber,
+      scheduleText: formatSchedule(barber.schedules),
+      tempPassword, // null si el admin proveyó contraseña; string si fue autogenerada
+    };
   } catch (err: unknown) {
     if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2002') {
       throw new ConflictError('El email ya está registrado');

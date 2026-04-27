@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button as SdButton } from '@/components/ui/button';
 import { Input as SdInput }  from '@/components/ui/input';
 import { FormField }         from '@/components/shared/FormField';
-import { Eye, EyeSlash }     from '@phosphor-icons/react';
+import { Key }               from '@phosphor-icons/react';
 import { useBarberTheme }    from '@/context/ThemeContext';
 import dayjs                 from 'dayjs';
 
@@ -65,7 +65,7 @@ type BarberAnalytics = {
   topServicios: { name: string; count: number; ingresos: number }[];
   meses: { label: string; citas: number; ingresos: number }[];
 };
-type CreateForm = { fullName: string; email: string; password: string; phone: string; bio: string; cargo: string; specialtiesInput: string };
+type CreateForm = { fullName: string; email: string; phone: string; bio: string; cargo: string; specialtiesInput: string };
 type CargoItem  = { id: number; nombre: string; descripcion: string | null; activo: boolean };
 type PagoForm   = { tipoPago: string; salarioBase: number; valorPorUnidad: number; porcentajeServicio: number; aplicaRenta: boolean; fechaIngreso: string | null };
 
@@ -94,10 +94,10 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
 
   // Crear barbero
   const [creating,      setCreating]      = useState(false);
-  const [showPass,      setShowPass]      = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError,   setCreateError]   = useState('');
-  const [form, setForm] = useState<CreateForm>({ fullName: '', email: '', password: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
+  const [tempPassword,  setTempPassword]  = useState<string | null>(null);
+  const [form, setForm] = useState<CreateForm>({ fullName: '', email: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
 
   // ── Drawer perfil completo ──────────────────────────────
   const [drawer,        setDrawer]        = useState<BarberDetail | null>(null);
@@ -244,25 +244,32 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
 
   // ── CRUD barbero (crear) ─────────────────────────────────
   async function handleCreate() {
-    if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
-      setCreateError('Nombre, email y contraseña son obligatorios.'); return;
+    if (!form.fullName.trim() || !form.email.trim()) {
+      setCreateError('Nombre y email son obligatorios.'); return;
     }
-    setCreateLoading(true); setCreateError('');
+    setCreateLoading(true); setCreateError(''); setTempPassword(null);
     try {
       const specialties = form.specialtiesInput.split(',').map(s => s.trim()).filter(Boolean);
       const res = await fetch('/api/barbers', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(),
-          password: form.password, phone: form.phone.trim() || undefined,
+          phone: form.phone.trim() || undefined,
           bio: form.bio.trim() || undefined, cargo: form.cargo || undefined, specialties,
         }),
       });
       const json = await res.json();
       if (!res.ok) { setCreateError(json.error?.message ?? 'Error'); toast.error(json.error?.message ?? 'Error'); return; }
-      setBarbers(prev => [...prev, json.data]);
+      const { tempPassword: tp, ...barberData } = json.data;
+      setBarbers(prev => [...prev, barberData]);
       setCreating(false);
-      toast.success(`Barbero "${form.fullName.trim()}" creado`);
+      setForm({ fullName: '', email: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
+      if (tp) {
+        setTempPassword(tp);
+        toast.success(`Empleado "${form.fullName.trim()}" creado — contraseña temporal generada`);
+      } else {
+        toast.success(`Empleado "${form.fullName.trim()}" creado`);
+      }
     } catch { setCreateError('Error de red'); toast.error('Error de red'); }
     finally { setCreateLoading(false); }
   }
@@ -414,8 +421,8 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                   <Button type="primary" icon={<PlusOutlined />}
                     onClick={() => {
-                      setForm({ fullName: '', email: '', password: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
-                      setCreateError(''); setShowPass(false); setCreating(true);
+                      setForm({ fullName: '', email: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
+                      setCreateError(''); setCreating(true);
                     }}>
                     Nuevo empleado
                   </Button>
@@ -771,16 +778,6 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
             <FormField label="Email *">
               <SdInput type="email" value={form.email} onChange={e => setField('email', e.target.value)} placeholder="carlos@barberia.com" />
             </FormField>
-            <FormField label="Contraseña *">
-              <div style={{ position: 'relative' }}>
-                <SdInput type={showPass ? 'text' : 'password'} value={form.password}
-                  onChange={e => setField('password', e.target.value)} placeholder="Mínimo 6 caracteres" style={{ paddingRight: 40 }} />
-                <button type="button" onClick={() => setShowPass(p => !p)}
-                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', padding: 0, display: 'flex' }}>
-                  {showPass ? <EyeSlash size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </FormField>
             <FormField label="Teléfono">
               <SdInput value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="+503 7000-0000" />
             </FormField>
@@ -800,6 +797,26 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Modal contraseña temporal ───────────────────── */}
+      <Modal
+        open={!!tempPassword}
+        title={<span><Key size={16} style={{ marginRight: 6 }} />Contraseña temporal generada</span>}
+        onCancel={() => setTempPassword(null)}
+        footer={[<Button key="ok" type="primary" onClick={() => setTempPassword(null)}>Entendido</Button>]}
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <p style={{ marginBottom: 8, color: 'hsl(var(--text-muted))', fontSize: 13 }}>
+            Comparte esta contraseña con el empleado. Puede cambiarla desde su perfil.
+          </p>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, background: 'hsl(var(--bg-muted))', padding: '12px 24px', borderRadius: 8, display: 'inline-block', fontFamily: 'monospace' }}>
+            {tempPassword}
+          </div>
+          <p style={{ marginTop: 10, color: '#d97706', fontSize: 12 }}>
+            ⚠ Esta contraseña no se volverá a mostrar. Anótala ahora.
+          </p>
+        </div>
+      </Modal>
 
       {/* ── Modal CRUD cargo ─────────────────────────────── */}
       <Modal open={!!modalCargo}
