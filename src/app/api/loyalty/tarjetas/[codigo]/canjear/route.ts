@@ -11,7 +11,7 @@ type Params = { params: Promise<{ codigo: string }> }
 export async function POST(req: NextRequest, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) throw new UnauthorizedError()
-  if (user.role !== 'OWNER' && user.role !== 'BARBER') throw new ForbiddenError()
+  if (user.role === 'OWNER') throw new ForbiddenError()
 
   const { codigo } = await params
   const body = await req.json().catch(() => ({}))

@@ -11,7 +11,7 @@ import ClientsClient from '@/components/clients/ClientsClient';
 export default async function ClientsPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER' && user.role !== 'BARBER') redirect('/dashboard');
+  if (user.role === 'OWNER') redirect('/dashboard');
 
   const clients = await listClients(user.tenantId);
 

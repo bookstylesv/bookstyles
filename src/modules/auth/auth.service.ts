@@ -21,22 +21,33 @@ export const authService = {
     const user = await authRepository.findUserByEmail(email.toLowerCase(), tenant.id);
     if (!user || !user.active)                throw new UnauthorizedError('Credenciales inválidas');
 
-    // 3. Verificar contraseña
+    // 3. Bloquear roles sin acceso al ERP
+    if (user.role === 'CLIENT') {
+      throw new UnauthorizedError('Este portal es exclusivo para el equipo administrativo');
+    }
+
+    // 4. Verificar contraseña
     const valid = await bcrypt.compare(password, user.password);
     if (!valid)                               throw new UnauthorizedError('Credenciales inválidas');
 
-    // 4. Resolver sucursal activa según el rol del usuario
+    // 5. Resolver sucursal activa según el rol del usuario
     const { branchId, branchSlug } = await resolveBranchForLogin(user.id, tenant.id, user.role);
 
-    // 5. Generar tokens
+    // 6. Obtener módulos asignados (solo para rol USUARIO)
+    const moduleAccess = user.role === 'USUARIO'
+      ? (Array.isArray(user.moduleAccess) ? user.moduleAccess as string[] : null)
+      : null;
+
+    // 7. Generar tokens
     const payload = {
-      sub:        String(user.id),
-      tenantId:   tenant.id,
-      role:       user.role,
-      slug:       tenant.slug,
-      name:       user.fullName,
+      sub:          String(user.id),
+      tenantId:     tenant.id,
+      role:         user.role,
+      slug:         tenant.slug,
+      name:         user.fullName,
       branchId,
       branchSlug,
+      moduleAccess,
     };
     const [accessToken, refreshToken] = await Promise.all([
       signAccessToken(payload),

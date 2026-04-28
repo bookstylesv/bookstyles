@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER' && user.role !== 'BARBER') throw new ForbiddenError();
+    if (user.role === 'OWNER') throw new ForbiddenError();
 
     const body = await req.json();
     const payment = await registerPayment(user.tenantId, body);

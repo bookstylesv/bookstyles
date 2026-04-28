@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) throw new UnauthorizedError()
-    if (user.role !== 'OWNER' && user.role !== 'BARBER') throw new ForbiddenError('Sin permiso para abrir turno')
+    if (user.role === 'OWNER') throw new ForbiddenError('Sin permiso para abrir turno')
 
     const { montoInicial } = await req.json()
     const turno = await abrirTurno(user.tenantId, Number(user.sub), montoInicial || 0)

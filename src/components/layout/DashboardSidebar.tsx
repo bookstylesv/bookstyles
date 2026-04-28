@@ -57,50 +57,53 @@ type NavItem = {
   module?: string; // módulo requerido; si es undefined el item siempre es visible
 };
 
+// Roles operativos con acceso a módulos (SUPERADMIN y GERENTE ven todo, USUARIO filtra por moduleAccess)
+const OP_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USUARIO'];
+
 const NAV_ITEMS_BARBER: NavItem[] = [
-  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER'],          module: 'pos' },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER'],          module: 'pos' },
-  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER', 'ADMIN'],           module: 'billing_dte' },
-  { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER', 'CLIENT'],module: 'appointments' },
-  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: ['OWNER', 'ADMIN', 'GERENTE'],module: 'appointments' },
-  { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: ['OWNER', 'ADMIN'],           module: 'loyalty' },
-  { href: '/barbers',        label: 'Barberos',         icon: Users,          roles: ['OWNER', 'ADMIN', 'GERENTE'] },
-  { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['OWNER', 'ADMIN', 'IT'] },
-  { href: '/services',       label: 'Servicios',        icon: Scissors,       roles: ['OWNER', 'ADMIN', 'GERENTE'] },
-  { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: ['OWNER', 'ADMIN', 'BARBER', 'GERENTE'], module: 'clients' },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'],                    module: 'products' },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'],                    module: 'products' },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'],                    module: 'products' },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'],                    module: 'products' },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
-  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
-  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: ['OWNER'],                    module: 'branches' },
-  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USUARIO'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
+  { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: OP_ROLES, module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: OP_ROLES, module: 'appointments' },
+  { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: OP_ROLES, module: 'loyalty' },
+  { href: '/barbers',        label: 'Barberos',         icon: Users,          roles: OP_ROLES, module: 'barbers' },
+  { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['SUPERADMIN'] },
+  { href: '/services',       label: 'Servicios',        icon: Scissors,       roles: OP_ROLES, module: 'services' },
+  { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: OP_ROLES, module: 'clients' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'products' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'products' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'products' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'products' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'expenses' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'expenses' },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
+  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
+  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
 ];
 
 const NAV_ITEMS_SALON: NavItem[] = [
-  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'BARBER', 'CLIENT'] },
-  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER'],          module: 'pos' },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER'],          module: 'pos' },
-  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: ['OWNER', 'ADMIN'],           module: 'billing_dte' },
-  { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: ['OWNER', 'ADMIN', 'GERENTE', 'BARBER', 'CLIENT'],module: 'appointments' },
-  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: ['OWNER', 'ADMIN', 'GERENTE'],module: 'appointments' },
-  { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: ['OWNER', 'ADMIN'],           module: 'loyalty' },
-  { href: '/barbers',        label: 'Estilistas',       icon: UsersThree,     roles: ['OWNER', 'ADMIN', 'GERENTE'] },
-  { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['OWNER', 'ADMIN', 'IT'] },
-  { href: '/services',       label: 'Tratamientos',     icon: Sparkle,        roles: ['OWNER', 'ADMIN', 'GERENTE'] },
-  { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: ['OWNER', 'ADMIN', 'BARBER', 'GERENTE'], module: 'clients' },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: ['OWNER'],                    module: 'products' },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: ['OWNER'],                    module: 'products' },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: ['OWNER'],                    module: 'products' },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: ['OWNER'],                    module: 'products' },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: ['OWNER'],                    module: 'expenses' },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: ['OWNER'],                    module: 'accounts_receivable' },
-  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: ['OWNER'],                    module: 'payroll' },
-  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: ['OWNER'],                    module: 'branches' },
-  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: ['OWNER'] },
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USUARIO'] },
+  { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
+  { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: OP_ROLES, module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: OP_ROLES, module: 'appointments' },
+  { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: OP_ROLES, module: 'loyalty' },
+  { href: '/barbers',        label: 'Estilistas',       icon: UsersThree,     roles: OP_ROLES, module: 'barbers' },
+  { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['SUPERADMIN'] },
+  { href: '/services',       label: 'Tratamientos',     icon: Sparkle,        roles: OP_ROLES, module: 'services' },
+  { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: OP_ROLES, module: 'clients' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'products' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'products' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'products' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'products' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'expenses' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'expenses' },
+  { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
+  { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
+  { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
 ];
 
 function getInitials(name: string) {
@@ -115,27 +118,35 @@ type BranchOption = {
 };
 
 type Props = {
-  role:           BarberUserRole;
-  slug:           string;
-  name:           string;
-  enabledModules: Record<string, boolean>;
-  branches?:      BranchOption[];
+  role:             BarberUserRole;
+  slug:             string;
+  name:             string;
+  enabledModules:   Record<string, boolean>;
+  userModuleAccess: string[] | null;
+  branches?:        BranchOption[];
   currentBranchId?: number | null;
-  brandName?:     string;
+  brandName?:       string;
 };
 
-export default function DashboardSidebar({ role, slug, name, enabledModules, branches = [], currentBranchId, brandName }: Props) {
+export default function DashboardSidebar({ role, slug, name, enabledModules, userModuleAccess, branches = [], currentBranchId, brandName }: Props) {
   const pathname       = usePathname();
   const { theme }      = useBarberTheme();
   const isSalon        = theme.category === 'femenino';
   const navConfig      = isSalon ? NAV_ITEMS_SALON : NAV_ITEMS_BARBER;
   const items          = navConfig.filter(i => {
+    // 1. Verificar que el rol tiene acceso a este item
     if (!i.roles.includes(role)) return false;
-    // Si el item no tiene módulo asignado, siempre es visible
+    // 2. Si no tiene módulo, siempre visible (ej: Dashboard, Usuarios)
     if (!i.module) return true;
-    // Si no hay configuración de módulos aún (BD sin seed), mostrar todo
-    if (Object.keys(enabledModules).length === 0) return true;
-    return enabledModules[i.module] === true;
+    // 3. OWNER: solo ve dashboard (ya filtrado arriba por roles)
+    if (role === 'OWNER') return false;
+    // 4. Módulo habilitado en el plan del tenant
+    const tenantEnabled = Object.keys(enabledModules).length === 0 || enabledModules[i.module] === true;
+    if (!tenantEnabled) return false;
+    // 5. SUPERADMIN y GERENTE: ven todos los módulos habilitados del tenant
+    if (role === 'SUPERADMIN' || role === 'GERENTE') return true;
+    // 6. USUARIO: solo los módulos explícitamente asignados
+    return Array.isArray(userModuleAccess) && userModuleAccess.includes(i.module);
   });
   const initials       = getInitials(name || 'U');
   const LogoIcon       = isSalon ? Flower : Scissors;
@@ -151,7 +162,7 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, bra
   const [branchDropOpen,    setBranchDropOpen]    = useState(false);
   const [switchingBranch,   setSwitchingBranch]   = useState(false);
 
-  const showBranchSelector = role === 'OWNER' && branches.length > 1;
+  const showBranchSelector = (role === 'OWNER' || role === 'SUPERADMIN') && branches.length > 1;
   const activeBranch = branches.find(b => b.id === currentBranchId);
 
   async function switchBranch(branchId: number | null) {

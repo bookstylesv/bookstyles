@@ -213,7 +213,7 @@ async function main() {
         password: hashBarbero,
         fullName: b.fullName,
         phone:    b.phone,
-        role:     'BARBER',
+        role:     'CLIENT',
         active:   true,
       },
     })

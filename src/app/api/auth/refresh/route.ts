@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         user: {
-          select: { id: true, fullName: true, role: true, active: true },
+          select: { id: true, fullName: true, role: true, active: true, moduleAccess: true },
         },
         tenant: {
           select: { id: true, slug: true, status: true },
@@ -73,14 +73,18 @@ export async function GET(req: NextRequest) {
       session.tenant.id,
       session.user.role,
     );
+    const moduleAccess = session.user.role === 'USUARIO'
+      ? (Array.isArray(session.user.moduleAccess) ? session.user.moduleAccess as string[] : null)
+      : null;
     const payload: JwtPayload = {
-      sub:        String(session.user.id),
-      tenantId:   session.tenant.id,
-      role:       session.user.role,
-      slug:       session.tenant.slug,
-      name:       session.user.fullName,
+      sub:          String(session.user.id),
+      tenantId:     session.tenant.id,
+      role:         session.user.role,
+      slug:         session.tenant.slug,
+      name:         session.user.fullName,
       branchId,
       branchSlug,
+      moduleAccess,
     }
     const newAccessToken = await signAccessToken(payload)
 

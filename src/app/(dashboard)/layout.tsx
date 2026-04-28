@@ -15,12 +15,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
+  const showBranches = user.role === 'OWNER' || user.role === 'SUPERADMIN';
+
   const [{ modules }, branches, globalConfig] = await Promise.all([
     getPlanLimits(user.tenantId),
-    // Solo cargamos sucursales si el módulo está habilitado en el plan
-    user.role === 'OWNER'
-      ? findActiveBranches(user.tenantId)
-      : Promise.resolve([]),
+    showBranches ? findActiveBranches(user.tenantId) : Promise.resolve([]),
     prisma.barberGlobalConfig.findUnique({ where: { id: 1 }, select: { brandName: true } }),
   ]);
   const brandName = globalConfig?.brandName || 'BookStyles';
@@ -33,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           slug={user.slug}
           name={user.name}
           enabledModules={modules}
+          userModuleAccess={user.moduleAccess}
           branches={branches}
           currentBranchId={user.branchId}
           brandName={brandName}

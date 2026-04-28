@@ -11,13 +11,14 @@ import type { BarberUserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export type JwtPayload = {
-  sub:        string;
-  tenantId:   number;
-  role:       BarberUserRole;
-  slug:       string;
-  name:       string;       // fullName del usuario (para avatar con iniciales)
-  branchId:   number | null; // null = OWNER viendo todo consolidado
-  branchSlug: string | null;
+  sub:          string;
+  tenantId:     number;
+  role:         BarberUserRole;
+  slug:         string;
+  name:         string;          // fullName del usuario (para avatar con iniciales)
+  branchId:     number | null;   // null = OWNER viendo todo consolidado
+  branchSlug:   string | null;
+  moduleAccess: string[] | null; // Solo para USUARIO: módulos asignados
 };
 
 const ACCESS_TOKEN_NAME  = 'barber_access_token';
@@ -105,39 +106,20 @@ export async function getCurrentUser(): Promise<JwtPayload | null> {
 
 /**
  * Resuelve qué sucursal asignar al hacer login:
- * - OWNER → null (vista consolidada de todas las sucursales)
- * - BARBER → sucursal primaria asignada (o casa matriz si no tiene asignación)
- * - CLIENT → casa matriz
+ * - OWNER      → null (vista consolidada de todas las sucursales)
+ * - SUPERADMIN → null (acceso total, sin sucursal fija)
+ * - GERENTE / USUARIO → casa matriz (el gerente puede cambiar después con switch-branch)
  */
 export async function resolveBranchForLogin(
-  userId:   number,
+  _userId:  number,
   tenantId: number,
   role:     BarberUserRole,
 ): Promise<{ branchId: number | null; branchSlug: string | null }> {
-  if (role === 'OWNER') {
+  if (role === 'OWNER' || role === 'SUPERADMIN') {
     return { branchId: null, branchSlug: null };
   }
 
-  if (role === 'BARBER') {
-    // Buscar perfil del barbero y su sucursal primaria
-    const barberProfile = await prisma.barber.findUnique({
-      where: { userId },
-      select: {
-        branchAssignments: {
-          where:   { isPrimary: true },
-          select:  { branch: { select: { id: true, slug: true } } },
-          take:    1,
-        },
-      },
-    });
-
-    const primary = barberProfile?.branchAssignments[0]?.branch;
-    if (primary) {
-      return { branchId: primary.id, branchSlug: primary.slug };
-    }
-  }
-
-  // Fallback: casa matriz del tenant
+  // GERENTE / USUARIO → casa matriz del tenant
   const headquarters = await prisma.barberBranch.findFirst({
     where:  { tenantId, isHeadquarters: true },
     select: { id: true, slug: true },

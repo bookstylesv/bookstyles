@@ -31,12 +31,11 @@ enum BarberTenantStatus {
 }
 
 enum BarberUserRole {
-  OWNER    // Dueño del negocio / super-admin del tenant
-  ADMIN    // Administrador del sistema (acceso completo sin ser dueño)
-  GERENTE  // Gerente de sucursal (acceso operativo, sin configuración)
-  IT       // Soporte técnico / configuración
-  BARBER   // Estilista / barbero (solo POS y su perfil)
-  CLIENT   // Cliente del negocio (portal de citas)
+  OWNER      // Dueño del negocio — solo dashboard y reportes
+  SUPERADMIN // Administrador total — acceso completo + gestión de usuarios
+  GERENTE    // Gerente de sucursal — todos los módulos operativos de su sucursal
+  USUARIO    // Rol configurable — acceso solo a los módulos asignados
+  CLIENT     // Cliente del negocio — solo portal de reservas públicas (sin acceso al ERP)
 }
 
 enum BarberAppointmentStatus {
@@ -265,8 +264,9 @@ model BarberUser {
   descuentoTipo   String?  // "PORCENTAJE" | "MONTO"
   descuentoValor  Float?   // valor numérico (ej: 10 para 10% o $10.00)
   avatarUrl       String?
-  role      BarberUserRole @default(CLIENT)
-  active    Boolean        @default(true)
+  role         BarberUserRole @default(CLIENT)
+  moduleAccess Json?          // Solo para USUARIO: array de módulos asignados ej. ["pos","clients"]
+  active       Boolean        @default(true)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 

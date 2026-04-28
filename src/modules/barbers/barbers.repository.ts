@@ -71,7 +71,7 @@ export async function createBarber(tenantId: number, data: BarberCreateInput) {
         fullName: data.fullName.trim(),
         phone:    data.phone?.trim(),
         password: hashed,
-        role:     'BARBER',
+        role:     'CLIENT', // Barberos como entidad de datos — no usan el ERP
         active:   true,
       },
     });

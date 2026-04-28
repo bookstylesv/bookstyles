@@ -45,26 +45,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 404 });
     }
 
-    // BARBER: solo puede cambiar a sucursales donde esté asignado
-    if (user.role === 'BARBER') {
-      const barber = await prisma.barber.findUnique({
-        where: { userId: Number(user.sub) },
-        select: { id: true },
-      });
-
-      if (!barber) {
-        return NextResponse.json({ error: 'Perfil de barbero no encontrado' }, { status: 404 });
-      }
-
-      const assignment = await prisma.barberBranchAssignment.findUnique({
-        where: { branchId_barberId: { branchId: branch.id, barberId: barber.id } },
-      });
-
-      if (!assignment) {
-        return NextResponse.json({ error: 'No estás asignado a esa sucursal' }, { status: 403 });
-      }
-    }
-
     // Emitir nuevo token con branchId actualizado
     const newToken = await signAccessToken({ ...user, branchId: branch.id, branchSlug: branch.slug });
     const refreshToken = await getRefreshTokenFromCookie();

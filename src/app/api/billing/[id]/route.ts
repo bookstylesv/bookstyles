@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER' && user.role !== 'BARBER') throw new ForbiddenError();
+    if (user.role === 'OWNER') throw new ForbiddenError();
 
     const { id } = await params;
     const body = await req.json();

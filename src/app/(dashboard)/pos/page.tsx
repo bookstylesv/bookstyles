@@ -12,7 +12,7 @@ export default async function PosPage({
 }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'OWNER' && user.role !== 'BARBER') redirect('/dashboard')
+  if (user.role === 'OWNER') redirect('/dashboard')
 
   const { appointmentId } = await searchParams
   const preloadAppointmentId = appointmentId ? Number(appointmentId) : undefined

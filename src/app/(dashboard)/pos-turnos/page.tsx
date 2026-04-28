@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function PosTurnosPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'OWNER' && user.role !== 'BARBER') redirect('/dashboard')
+  if (user.role === 'OWNER') redirect('/dashboard')
 
   const [turnoData, historialData] = await Promise.all([
     getTurnoActivo(user.tenantId),
