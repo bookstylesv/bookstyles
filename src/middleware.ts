@@ -98,14 +98,18 @@ export async function middleware(req: NextRequest) {
   }
 
   // API routes — buscar módulo por prefijo
-  const matched = API_MODULE_MAP.find(([prefix]) => pathname.startsWith(prefix));
-  if (matched) {
-    const [, apiModule] = matched;
-    if (!canAccess(user.role, apiModule, user.moduleAccess)) {
-      return NextResponse.json(
-        { success: false, error: { message: 'No tienes acceso a este módulo', code: 'FORBIDDEN' } },
-        { status: 403 },
-      );
+  // OWNER: los route handlers controlan internamente qué puede hacer;
+  // no aplicar module-guard aquí para no bloquear sus reportes de lectura.
+  if (user.role !== 'OWNER') {
+    const matched = API_MODULE_MAP.find(([prefix]) => pathname.startsWith(prefix));
+    if (matched) {
+      const [, apiModule] = matched;
+      if (!canAccess(user.role, apiModule, user.moduleAccess)) {
+        return NextResponse.json(
+          { success: false, error: { message: 'No tienes acceso a este módulo', code: 'FORBIDDEN' } },
+          { status: 403 },
+        );
+      }
     }
   }
 
