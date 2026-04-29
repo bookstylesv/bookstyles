@@ -198,7 +198,7 @@ export default function OwnerDashboardClient({
     if (pending) return;
     setPending(key);
     try {
-      const XLSX   = (await import('xlsx')).default;
+      const XLSX   = await import('xlsx');
       const wb     = XLSX.utils.book_new();
       const label  = `${NOMBRES_MESES[mesFiltro - 1]} ${anioFiltro}`;
       const slug   = label.replace(' ', '-').toLowerCase();
