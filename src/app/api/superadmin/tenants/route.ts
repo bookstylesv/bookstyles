@@ -94,6 +94,17 @@ export async function POST(req: NextRequest) {
     select: TENANT_SELECT,
   });
 
+  // Crear casa matriz automáticamente
+  await prisma.barberBranch.create({
+    data: {
+      tenantId:       tenant.id,
+      name:           `${body.name.trim()} — Casa Matriz`,
+      slug:           'casa-matriz',
+      isHeadquarters: true,
+      status:         'ACTIVE',
+    },
+  });
+
   if (body.owner) {
     const hashed = await bcrypt.hash(body.owner.password, 10);
     await prisma.barberUser.create({
