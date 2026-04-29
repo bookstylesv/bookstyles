@@ -132,17 +132,15 @@ type Props = {
 };
 
 // ── Sidebar exclusivo OWNER ──────────────────────────────────────────────────
-const GOLD_MAIN   = '#d4a017';
-const GOLD_LIGHT  = '#f5c842';
-const GOLD_BORDER = 'rgba(212,160,23,0.22)';
-const GOLD_SOFT   = 'rgba(212,160,23,0.08)';
-
 function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: string; slug: string }) {
   const pathname    = usePathname();
+  const { theme: barberTheme } = useBarberTheme();
+  const primary     = barberTheme.colorPrimary;
   const [collapsed, setCollapsed] = useState(false);
   const [mounted,   setMounted]   = useState(false);
   const [isMobile,  setIsMobile]  = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
 
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -183,8 +181,8 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
       <aside style={{
         width:         isMobile && mobileOpen ? 240 : W,
         minHeight:     '100vh',
-        background:    'linear-gradient(180deg, #0d1117 0%, #111827 50%, #0d1117 100%)',
-        borderRight:   `1px solid ${GOLD_BORDER}`,
+        background:    'hsl(var(--sidebar-bg))',
+        borderRight:   '1px solid hsl(var(--sidebar-border))',
         display:       'flex',
         flexDirection: 'column',
         flexShrink:    0,
@@ -194,16 +192,16 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         ...(isMobile && mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 } : {}),
       }}>
 
-        {/* Decoración dorada superior */}
+        {/* Acento superior del tema */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-          background: `linear-gradient(90deg, transparent 0%, ${GOLD_MAIN} 50%, transparent 100%)`,
+          background: `linear-gradient(90deg, transparent 0%, ${primary} 50%, transparent 100%)`,
         }} />
 
         {/* Logo / Header */}
         <div style={{
           padding:        effectiveCollapsed ? '22px 0 16px' : '20px 16px 16px',
-          borderBottom:   `1px solid ${GOLD_BORDER}`,
+          borderBottom:   '1px solid hsl(var(--sidebar-border))',
           display:        'flex',
           alignItems:     'center',
           gap:            10,
@@ -211,18 +209,18 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: `linear-gradient(135deg, ${GOLD_MAIN} 0%, ${GOLD_MAIN}99 100%)`,
+            background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 4px 12px ${GOLD_MAIN}50`,
+            boxShadow: `0 4px 12px ${primary}50`,
           }}>
             <Crown size={18} weight="fill" color="#fff" />
           </div>
           {!effectiveCollapsed && (
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
                 {brandName || 'Mi Negocio'}
               </div>
-              <div style={{ color: GOLD_LIGHT, fontSize: 10, marginTop: 1, fontWeight: 600, letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'hsl(var(--sidebar-muted))', fontSize: 10, marginTop: 1, fontWeight: 600, letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
                 PROPIETARIO
               </div>
             </div>
@@ -233,25 +231,25 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         {!effectiveCollapsed && (
           <div style={{
             margin: '12px 12px 4px',
-            background: GOLD_SOFT,
-            border: `1px solid ${GOLD_BORDER}`,
+            background: `${primary}10`,
+            border: `1px solid ${primary}30`,
             borderRadius: 10,
             padding: '10px 12px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: `linear-gradient(135deg, ${GOLD_MAIN} 0%, ${GOLD_MAIN}80 100%)`,
+                background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10.5, fontWeight: 800, color: '#fff', flexShrink: 0,
               }}>
                 {initials}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: 12, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ color: 'hsl(var(--sidebar-fg))', fontWeight: 600, fontSize: 12, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {name}
                 </div>
-                <div style={{ color: GOLD_LIGHT, fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
+                <div style={{ color: 'hsl(var(--sidebar-muted))', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
                   Propietario · {slug}
                 </div>
               </div>
@@ -280,9 +278,9 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
                   textDecoration: 'none',
                   fontSize:       13,
                   fontWeight:     active ? 700 : 400,
-                  color:          active ? GOLD_LIGHT : 'rgba(255,255,255,0.55)',
-                  background:     active ? GOLD_SOFT  : 'transparent',
-                  borderLeft:     active ? `3px solid ${GOLD_MAIN}` : '3px solid transparent',
+                  color:          active ? 'hsl(var(--brand-primary))' : 'hsl(var(--sidebar-fg))',
+                  background:     active ? 'hsl(var(--brand-primary) / 0.12)' : 'transparent',
+                  borderLeft:     active ? '3px solid hsl(var(--brand-primary))' : '3px solid transparent',
                   borderRadius:   active ? '0 8px 8px 0' : 4,
                   transition:     'all 0.15s',
                   whiteSpace:     'nowrap',
@@ -290,23 +288,42 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
                   marginBottom:   2,
                 }}
               >
-                <Icon size={18} weight={active ? 'bold' : 'regular'} style={{ flexShrink: 0, color: active ? GOLD_MAIN : undefined }} />
+                <Icon size={18} weight={active ? 'bold' : 'regular'} style={{ flexShrink: 0, color: active ? primary : undefined }} />
                 {!effectiveCollapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
               </a>
             );
           })}
         </nav>
 
+        {/* Botón Tema */}
+        <button
+          type="button"
+          onClick={() => setThemeSelectorOpen(true)}
+          title="Cambiar tema visual"
+          className="sidebar-toggle-btn"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '100%', padding: '9px 0', background: 'transparent', border: 'none',
+            borderTop: '1px solid hsl(var(--sidebar-border))',
+            color: 'hsl(var(--sidebar-muted))', cursor: 'pointer',
+            gap: 6, fontSize: 11, transition: 'color 0.15s',
+          }}
+        >
+          <PaintBrush size={15} weight="bold" />
+          {!effectiveCollapsed && !isMobile && <span>Tema: {barberTheme.emoji} {barberTheme.name}</span>}
+        </button>
+
         {/* Toggle */}
         <button
           type="button"
           onClick={toggle}
           title={effectiveCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+          className="sidebar-toggle-btn"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: '100%', padding: '9px 0', background: 'transparent', border: 'none',
-            borderTop: `1px solid ${GOLD_BORDER}`,
-            color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+            borderTop: '1px solid hsl(var(--sidebar-border))',
+            color: 'hsl(var(--sidebar-muted))', cursor: 'pointer',
             gap: 6, fontSize: 11, transition: 'color 0.15s',
           }}
         >
@@ -316,11 +333,17 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
           }
         </button>
 
+        {/* ThemeSelector Modal */}
+        <ThemeSelector
+          open={themeSelectorOpen}
+          onClose={() => setThemeSelectorOpen(false)}
+        />
+
         {/* Logout */}
         <div style={{ padding: effectiveCollapsed ? '10px 0' : '10px 12px 16px' }}>
           {effectiveCollapsed ? (
             <form action="/api/auth/logout" method="post" style={{ display: 'flex', justifyContent: 'center' }}>
-              <button type="submit" title="Cerrar sesión" style={{ display: 'flex', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 6 }}>
+              <button type="submit" title="Cerrar sesión" style={{ display: 'flex', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--sidebar-muted))', padding: 6 }}>
                 <SignOut size={16} weight="bold" />
               </button>
             </form>
@@ -329,8 +352,8 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
               <button type="submit" style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '8px', background: 'transparent',
-                border: `1px solid ${GOLD_BORDER}`,
-                borderRadius: 8, color: 'rgba(255,255,255,0.35)', fontSize: 12,
+                border: '1px solid hsl(var(--sidebar-border))',
+                borderRadius: 8, color: 'hsl(var(--sidebar-muted))', fontSize: 12,
                 cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
               }}>
                 <SignOut size={13} weight="bold" />

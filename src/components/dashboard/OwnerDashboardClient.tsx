@@ -54,15 +54,6 @@ export type OwnerStats = {
   mesPasadoMostrado: string;
 };
 
-// ── Paleta dorada para OWNER ───────────────────────────────
-const GOLD = {
-  main:   '#d4a017',
-  light:  '#f5c842',
-  dark:   '#a07810',
-  soft:   'rgba(212,160,23,0.10)',
-  border: 'rgba(212,160,23,0.22)',
-};
-
 const PIE_COLORS = ['#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4', '#ccfbf1'];
 
 // ── Tooltip financiero ─────────────────────────────────────
@@ -74,17 +65,17 @@ function TooltipFinanciero({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: '#1a1a2e', border: `1px solid ${GOLD.border}`,
+      background: 'hsl(var(--bg-surface))', border: '1px solid hsl(var(--border-default))',
       borderRadius: 10, padding: '10px 16px', fontSize: 12,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.3)', minWidth: 160,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.2)', minWidth: 160,
     }}>
-      <div style={{ fontWeight: 700, marginBottom: 8, color: '#fff', fontSize: 13 }}>{label}</div>
+      <div style={{ fontWeight: 700, marginBottom: 8, color: 'hsl(var(--text-primary))', fontSize: 13 }}>{label}</div>
       {payload.map(p => (
         <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 4 }}>
           <span style={{ color: p.color, fontWeight: 600 }}>
             {p.name === 'ingresos' ? 'Ingresos' : p.name === 'gastos' ? 'Gastos' : 'Utilidad'}
           </span>
-          <span style={{ fontWeight: 700, color: '#fff' }}>
+          <span style={{ fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
             ${p.value.toLocaleString('es-SV', { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -255,50 +246,50 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-      {/* ── Header ejecutivo premium ── */}
+      {/* ── Header ejecutivo ── */}
       <div style={{
         marginBottom: 24,
-        background: 'linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #0d1117 100%)',
-        border: `1px solid ${GOLD.border}`,
+        background: 'hsl(var(--bg-surface))',
+        border: `1px solid ${primary}30`,
         borderRadius: 18,
         padding: '24px 28px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: 16,
-        boxShadow: `0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${GOLD.border}`,
+        boxShadow: `0 4px 24px ${primary}10`,
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Decoración de fondo */}
+        {/* Acento decorativo */}
         <div style={{
           position: 'absolute', top: -40, right: -40,
           width: 200, height: 200, borderRadius: '50%',
-          background: `radial-gradient(circle, ${GOLD.main}15 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${primary}12 0%, transparent 70%)`,
           pointerEvents: 'none',
         }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14,
-            background: `linear-gradient(135deg, ${GOLD.main} 0%, ${GOLD.dark} 100%)`,
+            background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 4px 12px ${GOLD.main}50`,
+            boxShadow: `0 4px 12px ${primary}40`,
             flexShrink: 0,
           }}>
             <CrownOutlined style={{ fontSize: 24, color: '#fff' }} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 20 }}>
+              <Title level={4} style={{ margin: 0, fontSize: 20 }}>
                 Panel Ejecutivo
               </Title>
               <Tag style={{
-                background: `linear-gradient(135deg, ${GOLD.main} 0%, ${GOLD.dark} 100%)`,
+                background: 'linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%)',
                 border: 'none', color: '#fff', fontWeight: 700,
                 fontSize: 11, borderRadius: 12, padding: '2px 10px',
               }}>
                 PROPIETARIO
               </Tag>
             </div>
-            <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
               Bienvenido, {userName.split(' ')[0]} · Resumen de {stats.mesMostrado}
             </Text>
           </div>
@@ -320,9 +311,6 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
             loading={exportLoading}
             icon={<FileExcelOutlined />}
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: `1px solid ${GOLD.border}`,
-              color: GOLD.light,
               borderRadius: 10,
               fontWeight: 600,
               height: 38,
@@ -377,7 +365,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
             value={stats.ingresoYTD}
             suffix="YTD"
             icon={<BarChartOutlined />}
-            color={GOLD.main}
+            color={primary}
             extra={
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
                 Acumulado del año en curso
@@ -484,8 +472,8 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                       <stop offset="95%" stopColor={C.error} stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="gUtilidad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor={GOLD.main} stopOpacity={0.20} />
-                      <stop offset="95%" stopColor={GOLD.main} stopOpacity={0.02} />
+                      <stop offset="5%"  stopColor={primary} stopOpacity={0.20} />
+                      <stop offset="95%" stopColor={primary} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -501,7 +489,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                   />
                   <Area type="monotone" dataKey="ingresos" name="ingresos" stroke={primary} strokeWidth={2.5} fill="url(#gIngresos)" dot={{ r: 4, fill: primary, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   <Area type="monotone" dataKey="gastos"   name="gastos"   stroke={C.error}  strokeWidth={2}   strokeDasharray="5 3" fill="url(#gGastos)"   dot={{ r: 4, fill: C.error,  strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                  <Area type="monotone" dataKey="utilidad" name="utilidad" stroke={GOLD.main} strokeWidth={2} fill="url(#gUtilidad)" dot={{ r: 3, fill: GOLD.main, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                  <Area type="monotone" dataKey="utilidad" name="utilidad" stroke={primary} strokeWidth={2} fill="url(#gUtilidad)" dot={{ r: 3, fill: primary, strokeWidth: 0 }} activeDot={{ r: 5 }} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -578,7 +566,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
             title={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ThunderboltOutlined style={{ color: GOLD.main }} />
+                  <ThunderboltOutlined style={{ color: primary }} />
                   <Text strong style={{ fontSize: 14 }}>Rendimiento por barbero — {stats.mesMostrado}</Text>
                 </div>
                 <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('barberos')} style={{ fontSize: 11 }}>
@@ -596,15 +584,15 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                     tickFormatter={(v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
                   />
                   <ReTooltip
-                    contentStyle={{ background: '#1a1a2e', border: `1px solid ${GOLD.border}`, borderRadius: 10, fontSize: 12 }}
+                    contentStyle={{ background: 'hsl(var(--bg-surface))', border: '1px solid hsl(var(--border-default))', borderRadius: 10, fontSize: 12 }}
                     formatter={(val: unknown, name: unknown): [string, string] => [
                       name === 'Ingresos' ? `$${Number(val).toFixed(2)}` : String(val),
                       String(name),
                     ]}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Ingresos" fill={primary} radius={[6, 6, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="Citas"    fill={GOLD.main}  radius={[6, 6, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="Ingresos" fill={primary}    radius={[6, 6, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="Citas"    fill={C.warning}  radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -650,7 +638,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                       ))}
                     </Pie>
                     <ReTooltip
-                      contentStyle={{ background: '#1a1a2e', border: `1px solid ${GOLD.border}`, borderRadius: 10, fontSize: 12 }}
+                      contentStyle={{ background: 'hsl(var(--bg-surface))', border: '1px solid hsl(var(--border-default))', borderRadius: 10, fontSize: 12 }}
                       formatter={(val: unknown) => [`$${Number(val).toFixed(2)}`, 'Total']}
                     />
                   </PieChart>
@@ -696,7 +684,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
               {[
                 { label: 'Ingresos', actual: stats.ingresosMesAct, pasado: stats.ingresosMesPas, color: C.success },
                 { label: 'Gastos',   actual: stats.gastosMesAct,   pasado: stats.gastosMesPas,   color: C.error },
-                { label: 'Utilidad', actual: stats.utilidadMesAct, pasado: stats.utilidadMesPas, color: GOLD.main },
+                { label: 'Utilidad', actual: stats.utilidadMesAct, pasado: stats.utilidadMesPas, color: primary },
               ].map(row => {
                 const max = Math.max(Math.abs(row.actual), Math.abs(row.pasado), 1);
                 const pctAct = (Math.abs(row.actual) / max) * 100;
@@ -733,10 +721,10 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
             title={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TrophyOutlined style={{ color: GOLD.main }} />
+                  <TrophyOutlined style={{ color: primary }} />
                   <Text strong style={{ fontSize: 14 }}>Ranking barberos — {stats.mesMostrado}</Text>
                 </div>
-                <Tag style={{ background: GOLD.soft, border: `1px solid ${GOLD.border}`, color: GOLD.light, borderRadius: 10, fontSize: 11 }}>
+                <Tag style={{ background: `${primary}12`, border: `1px solid ${primary}30`, color: primary, borderRadius: 10, fontSize: 11 }}>
                   Por ingresos
                 </Tag>
               </div>
@@ -748,13 +736,13 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                   const max = stats.rankingBarberos[0].ingresos;
                   const pct = max > 0 ? (b.ingresos / max) * 100 : 0;
                   const medal = ['🥇', '🥈', '🥉'][i] ?? null;
-                  const rowColor = i === 0 ? GOLD.main : i === 1 ? '#bbb' : i === 2 ? '#cd7f32' : primary;
+                  const rowColor = i === 0 ? primary : i === 1 ? '#bbb' : i === 2 ? '#cd7f32' : C.textMuted;
                   return (
                     <div key={b.nombre} style={{
                       display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14,
                       padding: '10px 14px', borderRadius: 10,
-                      background: i === 0 ? `${GOLD.main}10` : 'rgba(255,255,255,0.03)',
-                      border: i === 0 ? `1px solid ${GOLD.border}` : '1px solid rgba(255,255,255,0.05)',
+                      background: i === 0 ? `${primary}10` : 'hsl(var(--bg-subtle))',
+                      border: i === 0 ? `1px solid ${primary}30` : '1px solid hsl(var(--border-default))',
                     }}>
                       {/* Posición */}
                       <div style={{ width: 30, textAlign: 'center', flexShrink: 0 }}>
@@ -767,7 +755,7 @@ export default function OwnerDashboardClient({ stats, userName }: { stats: Owner
                       {/* Nombre + barra */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                          <span style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? '#fff' : '#ccc' }}>
+                          <span style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? primary : 'hsl(var(--text-secondary))' }}>
                             {b.nombre}
                           </span>
                           <Space size={12}>
