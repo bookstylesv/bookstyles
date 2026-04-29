@@ -55,18 +55,19 @@ function ChartTooltip({ active, payload, label, currency = true }: {
   label?: string;
   currency?: boolean;
 }) {
+  const { token: t } = theme.useToken();
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'hsl(var(--bg-surface))', border: '1px solid hsl(var(--border-default))',
+      background: t.colorBgElevated, border: `1px solid ${t.colorBorderSecondary}`,
       borderRadius: 10, padding: '10px 16px', fontSize: 12,
       boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: 150,
     }}>
-      <div style={{ fontWeight: 700, marginBottom: 8, color: 'hsl(var(--text-primary))', fontSize: 13 }}>{label}</div>
+      <div style={{ fontWeight: 700, marginBottom: 8, color: t.colorText, fontSize: 13 }}>{label}</div>
       {payload.map(p => (
         <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 3 }}>
           <span style={{ color: p.color, fontWeight: 600 }}>{p.name}</span>
-          <span style={{ fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
+          <span style={{ fontWeight: 700, color: t.colorText }}>
             {currency ? `$${Number(p.value).toLocaleString('es-SV', { minimumFractionDigits: 2 })}` : p.value}
           </span>
         </div>
@@ -77,7 +78,7 @@ function ChartTooltip({ active, payload, label, currency = true }: {
 
 // ── Badge variación ────────────────────────────────────────
 function VarBadge({ value }: { value: number | null }) {
-  if (value === null) return <span style={{ fontSize: 11, color: '#666' }}>—</span>;
+  if (value === null) return <span style={{ fontSize: 11, color: 'hsl(var(--text-secondary))' }}>—</span>;
   const up = value > 0; const neutral = value === 0;
   return (
     <span style={{
@@ -97,10 +98,11 @@ function KpiCard({ label, value, suffix, icon, color, badge, extra, precision = 
   label: string; value: number; suffix?: string; icon: React.ReactNode;
   color: string; badge?: React.ReactNode; extra?: React.ReactNode; precision?: number;
 }) {
+  const { token: t } = theme.useToken();
   return (
     <Card size="small" style={{
       borderRadius: 14, border: `1px solid ${color}30`,
-      background: `linear-gradient(135deg, ${color}08 0%, transparent 100%)`,
+      background: `linear-gradient(135deg, ${color}10 0%, ${t.colorBgContainer} 65%)`,
       boxShadow: `0 2px 12px ${color}15`, height: '100%',
     }} styles={{ body: { padding: '16px 18px' } }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -116,7 +118,7 @@ function KpiCard({ label, value, suffix, icon, color, badge, extra, precision = 
         suffix={suffix ? <span style={{ fontSize: 11, opacity: 0.6 }}>{suffix}</span> : undefined}
         valueStyle={{ color, fontSize: 22, fontWeight: 800, lineHeight: 1.1 }}
       />
-      <div style={{ fontSize: 11, color: '#888', fontWeight: 500, marginTop: 2, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 11, color: t.colorTextSecondary, fontWeight: 500, marginTop: 2, marginBottom: 6 }}>{label}</div>
       {extra}
     </Card>
   );
@@ -217,7 +219,7 @@ export default function OwnerDashboardClient({
     success:   token.colorSuccess,
     error:     token.colorError,
     warning:   token.colorWarning,
-    textMuted: 'rgba(150,150,150,0.9)',
+    textMuted: token.colorTextSecondary,
   };
 
   // ── Cambiar filtro mes/año ─────────────────────────────
@@ -279,7 +281,7 @@ export default function OwnerDashboardClient({
     return { value: a, label: String(a) };
   });
 
-  const tooltipStyle = { background: 'hsl(var(--bg-surface))', border: '1px solid hsl(var(--border-default))', borderRadius: 10, fontSize: 12 };
+  const tooltipStyle = { background: token.colorBgElevated, border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 10, fontSize: 12, color: token.colorText };
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -437,10 +439,10 @@ export default function OwnerDashboardClient({
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border-default))" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={62} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 12, fill: token.colorText }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: token.colorTextSecondary }} axisLine={false} tickLine={false} width={62} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
                   <ReTooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10, color: token.colorText }} />
                   <Area type="monotone" dataKey="ingresos" name="Ingresos" stroke={primary}   strokeWidth={2.5} fill="url(#gIng)" dot={{ r: 4, fill: primary,   strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   <Area type="monotone" dataKey="gastos"   name="Gastos"   stroke={C.error}   strokeWidth={2}   strokeDasharray="5 3" fill="url(#gGas)" dot={{ r: 4, fill: C.error,   strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   <Area type="monotone" dataKey="utilidad" name="Utilidad" stroke={C.success} strokeWidth={2}   fill="url(#gUti)" dot={{ r: 3, fill: C.success, strokeWidth: 0 }} activeDot={{ r: 5 }} />
@@ -484,7 +486,7 @@ export default function OwnerDashboardClient({
                   ].map(s => (
                     <div key={s.label} style={{ background: `${s.color}0f`, borderRadius: 10, padding: '10px 12px', border: `1px solid ${s.color}20` }}>
                       <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                      <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{s.label}</div>
+                      <div style={{ fontSize: 10, color: token.colorTextSecondary, marginTop: 2 }}>{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -510,7 +512,7 @@ export default function OwnerDashboardClient({
                           { label: stats.mesPasadoMostrado, pct: (Math.abs(row.pasado) / max) * 100, val: row.pasado, opacity: 0.45 },
                         ].map(r => (
                           <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-                            <span style={{ fontSize: 10, color: '#666', width: 70, flexShrink: 0 }}>{r.label}</span>
+                            <span style={{ fontSize: 10, color: token.colorTextSecondary, width: 70, flexShrink: 0 }}>{r.label}</span>
                             <div style={{ flex: 1, background: 'hsl(var(--bg-subtle))', borderRadius: 6, height: 10, overflow: 'hidden' }}>
                               <div style={{ height: '100%', borderRadius: 6, background: row.color, opacity: r.opacity, width: `${r.pct}%`, transition: 'width 0.6s' }} />
                             </div>
@@ -552,10 +554,10 @@ export default function OwnerDashboardClient({
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={barberBarData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border-default))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={54} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12, fill: token.colorText }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: token.colorTextSecondary }} axisLine={false} tickLine={false} width={54} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
                       <ReTooltip contentStyle={tooltipStyle} formatter={(val: unknown, name: unknown): [string, string] => [name === 'Ingresos' ? `$${Number(val).toFixed(2)}` : String(val), String(name)]} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: token.colorText }} />
                       <Bar dataKey="Ingresos" fill={primary}    radius={[6,6,0,0]} maxBarSize={40} />
                       <Bar dataKey="Citas"    fill={C.warning}  radius={[6,6,0,0]} maxBarSize={40} />
                     </BarChart>
@@ -632,13 +634,13 @@ export default function OwnerDashboardClient({
               return (
                 <div key={b.nombre} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, padding: '10px 14px', borderRadius: 10, background: i === 0 ? `${primary}10` : 'hsl(var(--bg-subtle))', border: i === 0 ? `1px solid ${primary}30` : '1px solid hsl(var(--border-default))' }}>
                   <div style={{ width: 30, textAlign: 'center', flexShrink: 0 }}>
-                    {medal ? <span style={{ fontSize: 20 }}>{medal}</span> : <span style={{ fontSize: 13, fontWeight: 700, color: '#666' }}>#{i+1}</span>}
+                    {medal ? <span style={{ fontSize: 20 }}>{medal}</span> : <span style={{ fontSize: 13, fontWeight: 700, color: token.colorTextSecondary }}>#{i+1}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? primary : 'hsl(var(--text-secondary))' }}>{b.nombre}</span>
+                      <span style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? primary : token.colorText }}>{b.nombre}</span>
                       <Space size={12}>
-                        <span style={{ fontSize: 11, color: '#777' }}>{b.completadas} citas</span>
+                        <span style={{ fontSize: 11, color: token.colorTextSecondary }}>{b.completadas} citas</span>
                         <span style={{ fontSize: 13, fontWeight: 800, color: rowColor }}>${b.ingresos.toFixed(2)}</span>
                       </Space>
                     </div>
@@ -750,8 +752,8 @@ export default function OwnerDashboardClient({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border-default))" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={60} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
+                    <XAxis dataKey="mes" tick={{ fontSize: 12, fill: token.colorText }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: token.colorTextSecondary }} axisLine={false} tickLine={false} width={60} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
                     <ReTooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`$${Number(v).toFixed(2)}`, 'Gastos']} />
                     <Area type="monotone" dataKey="total" name="Gastos" stroke={C.error} strokeWidth={2.5} fill="url(#gGastosEvo)" dot={{ r: 4, fill: C.error, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   </AreaChart>
@@ -805,10 +807,10 @@ export default function OwnerDashboardClient({
                 <ResponsiveContainer width="100%" height={270}>
                   <BarChart data={extendedStats.comprasEvolucion} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border-default))" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={60} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
+                    <XAxis dataKey="mes" tick={{ fontSize: 12, fill: token.colorText }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: token.colorTextSecondary }} axisLine={false} tickLine={false} width={60} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
                     <ReTooltip contentStyle={tooltipStyle} formatter={(v: unknown, n: unknown) => [`$${Number(v).toFixed(2)}`, String(n)]} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: token.colorText }} />
                     <Bar dataKey="productos" name="Productos" fill={primary}    radius={[4,4,0,0]} maxBarSize={36} stackId="a" />
                     <Bar dataKey="servicios" name="Servicios" fill="#6366f1"   radius={[4,4,0,0]} maxBarSize={36} stackId="a" />
                   </BarChart>
@@ -904,10 +906,10 @@ export default function OwnerDashboardClient({
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={extendedStats.planillaEvolucion} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border-default))" />
-                  <XAxis dataKey="periodo" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={64} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
+                  <XAxis dataKey="periodo" tick={{ fontSize: 12, fill: token.colorText }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: token.colorTextSecondary }} axisLine={false} tickLine={false} width={64} tickFormatter={(v: number) => `$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`} />
                   <ReTooltip contentStyle={tooltipStyle} formatter={(v: unknown, n: unknown) => [`$${Number(v).toFixed(2)}`, String(n)]} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: token.colorText }} />
                   <Bar dataKey="totalBruto"       name="Salario bruto"   fill={primary}    radius={[4,4,0,0]} maxBarSize={32} />
                   <Bar dataKey="totalNeto"        name="Salario neto"    fill={C.success}  radius={[4,4,0,0]} maxBarSize={32} />
                   <Bar dataKey="totalDeducciones" name="Deducciones"     fill={C.error}    radius={[4,4,0,0]} maxBarSize={32} />
@@ -933,7 +935,7 @@ export default function OwnerDashboardClient({
                   <thead>
                     <tr style={{ background: 'hsl(var(--bg-subtle))', borderBottom: '1px solid hsl(var(--border-default))' }}>
                       {['Período','Salario bruto','Deducciones','Salario neto','Costo patronal','Estado'].map(h => (
-                        <th key={h} style={{ padding: '10px 16px', textAlign: h === 'Período' || h === 'Estado' ? 'left' : 'right', fontWeight: 600, fontSize: 12, color: 'hsl(var(--text-secondary))' }}>{h}</th>
+                        <th key={h} style={{ padding: '10px 16px', textAlign: h === 'Período' || h === 'Estado' ? 'left' : 'right', fontWeight: 600, fontSize: 12, color: token.colorTextSecondary }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
