@@ -1,10 +1,11 @@
 'use client';
 
 // ══════════════════════════════════════════════════════════
-// OWNER DASHBOARD — 6 tabs + filtro mes/año
-// Panel Ejecutivo | Métricas | Ranking | Gastos | Compras & CxP | Planilla
+// OWNER DASHBOARD — 7 tabs + filtro mes/año
+// Panel Ejecutivo | Métricas | Ranking | Gastos | Compras & CxP | Planilla | Reportes
 // ══════════════════════════════════════════════════════════
 
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -14,15 +15,16 @@ import {
 } from 'recharts';
 import {
   Row, Col, Card, Statistic, Typography, Tag, Space, theme,
-  Progress, Button, Dropdown, Divider, Select,
+  Progress, Button, Divider, Select,
 } from 'antd';
 import { useBarberTheme } from '@/context/ThemeContext';
 import {
   DollarOutlined, RiseOutlined, FallOutlined, TeamOutlined,
   CalendarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined,
-  MinusOutlined, FileExcelOutlined, DownloadOutlined, CaretDownOutlined,
+  MinusOutlined, DownloadOutlined,
   CrownOutlined, FireOutlined, ShoppingCartOutlined, WalletOutlined,
   ExclamationCircleOutlined, CheckCircleOutlined, ClockCircleOutlined,
+  TruckOutlined, FileTextOutlined,
   TeamOutlined as TeamIcon,
 } from '@ant-design/icons';
 import type { OwnerExtendedStats } from '@/modules/owner/owner.service';
@@ -124,164 +126,6 @@ function KpiCard({ label, value, suffix, icon, color, badge, extra, precision = 
   );
 }
 
-// ── Excel Export ───────────────────────────────────────────
-async function exportToExcel(stats: OwnerStats, ext: OwnerExtendedStats, type: string, mes: number, anio: number) {
-  const XLSX  = (await import('xlsx')).default;
-  const label = `${NOMBRES_MESES[mes - 1]} ${anio}`;
-  const slug  = label.replace(' ', '-').toLowerCase();
-  const wb    = XLSX.utils.book_new();
-
-  // ── Helpers ──────────────────────────────────────────────
-  function addSheet(data: unknown[][], name: string) {
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, name);
-  }
-  function pct(v: number | null) { return v !== null ? `${v}%` : 'N/D'; }
-  function usd(v: number)        { return v; } // número; Excel formatea como moneda
-
-  // ── Panel ejecutivo (resumen completo) ───────────────────
-  if (type === 'panel') {
-    addSheet([
-      [`Resumen Ejecutivo — ${label}`], [],
-      // Financiero
-      ['── KPIs Financieros ──'],
-      ['Concepto', label, stats.mesPasadoMostrado, 'Variación'],
-      ['Ingresos (USD)',  usd(stats.ingresosMesAct),  usd(stats.ingresosMesPas),  pct(stats.varIngresos)],
-      ['Gastos (USD)',    usd(stats.gastosMesAct),    usd(stats.gastosMesPas),    pct(stats.varGastos)],
-      ['Utilidad (USD)',  usd(stats.utilidadMesAct),  usd(stats.utilidadMesPas),  pct(stats.varUtilidad)],
-      ['Margen (%)',      stats.margenMes,             '',                         ''],
-      ['Ingresos YTD (USD)', usd(stats.ingresoYTD),  '',                         ''],
-      [],
-      // Operativo
-      ['── KPIs Operativos ──'],
-      ['Concepto', 'Valor'],
-      ['Total Clientes',         stats.totalClientes],
-      ['Clientes Nuevos (mes)',  stats.clientesNuevosMes],
-      ['Citas del mes',          stats.citasMesAct],
-      ['Citas Completadas',      stats.citasCompletadasMes],
-      ['Tasa Completación (%)',  stats.tasaCompletacion],
-      ['Compras del Mes (USD)',  usd(ext.comprasMes)],
-      ['Órdenes de Compra',      ext.comprasCount],
-      [],
-      // Flujo 6 meses
-      ['── Flujo Financiero — Últimos 6 Meses ──'],
-      ['Mes', 'Ingresos (USD)', 'Gastos (USD)', 'Utilidad (USD)'],
-      ...stats.ingresosVsGastos.map(m => [m.mes, usd(m.ingresos), usd(m.gastos), usd(m.utilidad)]),
-    ], 'Resumen Ejecutivo');
-    XLSX.writeFile(wb, `resumen-ejecutivo-${slug}.xlsx`);
-
-  // ── Métricas: financiero + comparativa + operativo ───────
-  } else if (type === 'metricas') {
-    addSheet([
-      [`Métricas — ${label}`], [],
-      ['── Flujo Financiero — Últimos 6 Meses ──'],
-      ['Mes', 'Ingresos (USD)', 'Gastos (USD)', 'Utilidad (USD)'],
-      ...stats.ingresosVsGastos.map(m => [m.mes, usd(m.ingresos), usd(m.gastos), usd(m.utilidad)]),
-      [],
-      ['── Comparativa: Mes Actual vs Mes Anterior ──'],
-      ['Concepto', label, stats.mesPasadoMostrado, 'Variación'],
-      ['Ingresos (USD)', usd(stats.ingresosMesAct), usd(stats.ingresosMesPas), pct(stats.varIngresos)],
-      ['Gastos (USD)',   usd(stats.gastosMesAct),   usd(stats.gastosMesPas),   pct(stats.varGastos)],
-      ['Utilidad (USD)', usd(stats.utilidadMesAct), usd(stats.utilidadMesPas), pct(stats.varUtilidad)],
-      [],
-      ['── Rendimiento Operativo ──'],
-      ['Concepto', 'Valor'],
-      ['Citas del mes',         stats.citasMesAct],
-      ['Citas Completadas',     stats.citasCompletadasMes],
-      ['Tasa Completación (%)', stats.tasaCompletacion],
-      ['Total Clientes',        stats.totalClientes],
-      ['Clientes Nuevos',       stats.clientesNuevosMes],
-    ], 'Métricas');
-    XLSX.writeFile(wb, `metricas-${slug}.xlsx`);
-
-  // ── Ranking barberos ──────────────────────────────────────
-  } else if (type === 'barberos') {
-    addSheet([
-      [`Ranking Barberos — ${label}`], [],
-      ['#', 'Barbero', 'Citas', 'Completadas', 'Ingresos (USD)'],
-      ...stats.rankingBarberos.map((b, i) => [i + 1, b.nombre, b.citas, b.completadas, usd(b.ingresos)]),
-    ], 'Ranking Barberos');
-    XLSX.writeFile(wb, `ranking-barberos-${slug}.xlsx`);
-
-  // ── Top servicios ─────────────────────────────────────────
-  } else if (type === 'servicios') {
-    addSheet([
-      [`Top Servicios — ${label}`], [],
-      ['#', 'Servicio', 'Ingresos (USD)', 'Cantidad'],
-      ...stats.topServicios.map((s, i) => [i + 1, s.nombre, usd(s.total), s.cantidad]),
-    ], 'Top Servicios');
-    XLSX.writeFile(wb, `servicios-${slug}.xlsx`);
-
-  // ── Gastos: KPIs + categorías + evolución ────────────────
-  } else if (type === 'gastos') {
-    const totalTx = ext.gastosPorCategoria.reduce((s, g) => s + g.count, 0);
-    addSheet([
-      [`Análisis de Gastos — ${label}`], [],
-      ['── Resumen ──'],
-      ['Concepto', 'Valor'],
-      ['Total Gastos (USD)',      usd(ext.gastosTotalMes)],
-      ['Transacciones',          totalTx],
-      ['Categorías Distintas',   ext.gastosPorCategoria.length],
-      ['Variación vs mes ant.',  pct(ext.gastosVarPct)],
-      [],
-      ['── Gastos por Categoría ──'],
-      ['Categoría', 'Total (USD)', 'Transacciones', '% del Total'],
-      ...ext.gastosPorCategoria.map(g => [
-        g.nombre, usd(g.total), g.count,
-        ext.gastosTotalMes > 0 ? parseFloat(((g.total / ext.gastosTotalMes) * 100).toFixed(1)) : 0,
-      ]),
-      [],
-      ['── Evolución — Últimos 6 Meses ──'],
-      ['Mes', 'Total Gastos (USD)'],
-      ...ext.gastosEvolucion.map(g => [g.mes, usd(g.total)]),
-    ], 'Gastos');
-    XLSX.writeFile(wb, `gastos-${slug}.xlsx`);
-
-  // ── Compras + CxP ────────────────────────────────────────
-  } else if (type === 'compras') {
-    addSheet([
-      [`Compras y Cuentas por Pagar — ${label}`], [],
-      ['── Resumen Compras ──'],
-      ['Concepto', 'Valor'],
-      ['Total Compras (USD)',          usd(ext.comprasMes)],
-      ['Órdenes',                      ext.comprasCount],
-      ['Compras de Productos (USD)',   usd(ext.comprasProductos)],
-      ['Servicios / Gastos Ext. (USD)', usd(ext.comprasServicios)],
-      [],
-      ['── Evolución 6 Meses — Productos vs Servicios ──'],
-      ['Mes', 'Productos (USD)', 'Servicios (USD)', 'Total (USD)'],
-      ...ext.comprasEvolucion.map(c => [c.mes, usd(c.productos), usd(c.servicios), usd(c.total)]),
-      [],
-      ['── Estado Cuentas por Pagar ──'],
-      ['Estado', 'Documentos', 'Monto (USD)'],
-      ['Vencidas',   ext.cxp.countVencidas,  usd(ext.cxp.montoVencido)],
-      ['Por Vencer', ext.cxp.countPorVencer, usd(ext.cxp.montoPorVencer)],
-      ['Vigentes',   ext.cxp.countVigentes,  usd(ext.cxp.montoVigente)],
-      ['Pagadas',    ext.cxp.countPagadas,   ''],
-      ['TOTAL',      ext.cxp.totalDocumentos, usd(ext.cxp.totalMonto)],
-    ], 'Compras y CxP');
-    XLSX.writeFile(wb, `compras-cxp-${slug}.xlsx`);
-
-  // ── Planilla ──────────────────────────────────────────────
-  } else if (type === 'planilla') {
-    addSheet([
-      [`Planilla — ${anio}`], [],
-      ['── Totales del Año ──'],
-      ['Concepto', 'Monto (USD)'],
-      ['Salario Bruto Total',    usd(ext.planillaTotalBruto)],
-      ['Deducciones Totales',    usd(ext.planillaTotalDeducciones)],
-      ['Salario Neto Total',     usd(ext.planillaTotalNeto)],
-      ['Costo Patronal Total',   usd(ext.planillaTotalPatronal)],
-      [],
-      ['── Detalle por Período ──'],
-      ['Período', 'Salario Bruto (USD)', 'Deducciones (USD)', 'Salario Neto (USD)', 'Costo Patronal (USD)', 'Estado'],
-      ...ext.planillaEvolucion.map(p => [p.periodo, usd(p.totalBruto), usd(p.totalDeducciones), usd(p.totalNeto), usd(p.costoPatronal), p.estado]),
-      [],
-      ['TOTALES', usd(ext.planillaTotalBruto), usd(ext.planillaTotalDeducciones), usd(ext.planillaTotalNeto), usd(ext.planillaTotalPatronal), ''],
-    ], 'Planilla');
-    XLSX.writeFile(wb, `planilla-${anio}.xlsx`);
-  }
-}
 
 // ═══════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
@@ -301,6 +145,7 @@ export default function OwnerDashboardClient({
   const router    = useRouter();
   const sp        = useSearchParams();
   const activeTab = sp.get('tab') ?? 'panel';
+  const [pending, setPending] = useState<string | null>(null);
 
   const C = {
     success:   token.colorSuccess,
@@ -345,21 +190,274 @@ export default function OwnerDashboardClient({
     gastos:   'Análisis de gastos',
     compras:  'Compras y cuentas por pagar',
     planilla: 'Planilla y nómina',
+    reportes: 'Reportes',
   };
 
-  const exportMenuPorTab: Record<string, { key: string; label: string; icon: React.ReactNode }[]> = {
-    panel:    [{ key: 'panel',    label: 'Resumen ejecutivo completo', icon: <BarChartOutlined /> }],
-    metricas: [{ key: 'metricas', label: 'Métricas y comparativa',    icon: <LineChartOutlined /> }],
-    ranking:  [
-      { key: 'barberos',  label: 'Ranking barberos', icon: <TrophyOutlined /> },
-      { key: 'servicios', label: 'Top servicios',    icon: <BarChartOutlined /> },
-    ],
-    gastos:   [{ key: 'gastos',   label: 'Análisis de gastos completo',  icon: <WalletOutlined /> }],
-    compras:  [{ key: 'compras',  label: 'Compras y cuentas por pagar', icon: <ShoppingCartOutlined /> }],
-    planilla: [{ key: 'planilla', label: 'Planilla del año',            icon: <TeamIcon /> }],
-  };
+  // ── Descarga de reportes desde BD ─────────────────────
+  async function downloadReport(key: string) {
+    if (pending) return;
+    setPending(key);
+    try {
+      const XLSX   = (await import('xlsx')).default;
+      const wb     = XLSX.utils.book_new();
+      const label  = `${NOMBRES_MESES[mesFiltro - 1]} ${anioFiltro}`;
+      const slug   = label.replace(' ', '-').toLowerCase();
+      const inicio = new Date(anioFiltro, mesFiltro - 1, 1).toISOString().split('T')[0];
+      const fin    = new Date(anioFiltro, mesFiltro, 0).toISOString().split('T')[0];
 
-  function handleExport(type: string) { exportToExcel(stats, extendedStats, type, mesFiltro, anioFiltro); }
+      function hoja(rows: unknown[][], nombre: string) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), nombre);
+      }
+      async function apiFetch(url: string) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        return json.data;
+      }
+      // Extrae el array del response independiente de la forma
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function toArray(raw: any): any[] {
+        if (Array.isArray(raw)) return raw;
+        if (raw?.items)      return raw.items;
+        if (raw?.ventas)     return raw.ventas;
+        if (raw?.gastos)     return raw.gastos;
+        if (raw?.compras)    return raw.compras;
+        if (raw?.clientes)   return raw.clientes;
+        if (raw?.proveedores) return raw.proveedores;
+        if (raw?.productos)  return raw.productos;
+        return [];
+      }
+
+      switch (key) {
+        // ── Ventas ──────────────────────────────────────────────
+        case 'ventas': {
+          const raw   = await apiFetch(`/api/pos/venta?desde=${inicio}&hasta=${fin}&estado=ACTIVA`);
+          const items = toArray(raw);
+          hoja([
+            [`Reporte de Ventas — ${label}`], [],
+            ['#','Fecha','No. Venta','Cliente','Subtotal','IVA','Total','Tipo Doc.'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((v: any, i: number) => [
+              i + 1,
+              v.createdAt ? new Date(v.createdAt).toLocaleDateString('es-SV') : '',
+              v.numero ?? '',
+              v.clienteNombre || 'Consumidor Final',
+              v.subtotal ?? 0,
+              v.iva ?? 0,
+              v.total ?? 0,
+              v.tipoDte === '01' ? 'Factura' : v.tipoDte === '03' ? 'CCF' : (v.tipoDte ?? ''),
+            ]),
+            [],
+            ['Total registros', items.length, '', '', '', '',
+              items.reduce((s: number, v: any) => s + (v.total ?? 0), 0)],
+          ], 'Ventas');
+          XLSX.writeFile(wb, `ventas-${slug}.xlsx`);
+          break;
+        }
+
+        // ── Gastos ──────────────────────────────────────────────
+        case 'gastos': {
+          const raw   = await apiFetch(`/api/gastos?desde=${inicio}&hasta=${fin}`);
+          const items = toArray(raw);
+          hoja([
+            [`Reporte de Gastos — ${label}`], [],
+            ['#','Fecha','Descripción','Categoría','Monto (USD)'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((g: any, i: number) => [
+              i + 1,
+              g.fecha ? new Date(g.fecha).toLocaleDateString('es-SV') : '',
+              g.descripcion ?? '',
+              g.categoria?.nombre ?? 'Sin categoría',
+              g.monto ?? 0,
+            ]),
+            [],
+            ['TOTAL','','','', items.reduce((s: number, g: any) => s + (g.monto ?? 0), 0)],
+          ], 'Gastos');
+          XLSX.writeFile(wb, `gastos-${slug}.xlsx`);
+          break;
+        }
+
+        // ── Compras ─────────────────────────────────────────────
+        case 'compras': {
+          const raw   = await apiFetch(`/api/compras?from=${inicio}&to=${fin}`);
+          const items = toArray(raw);
+          hoja([
+            [`Reporte de Compras — ${label}`], [],
+            ['#','Fecha','No. Doc.','Proveedor','Tipo','Subtotal','Total','Estado'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((c: any, i: number) => [
+              i + 1,
+              c.fecha ? new Date(c.fecha).toLocaleDateString('es-SV') : '',
+              c.numeroDocumento ?? '',
+              c.proveedor?.nombre ?? '',
+              c.tipoCompra === 'PRODUCTO' ? 'Producto' : 'Servicio/Gasto',
+              c.subtotal ?? 0,
+              c.total ?? 0,
+              c.estado ?? '',
+            ]),
+            [],
+            ['TOTAL','','','','', items.reduce((s: number, c: any) => s + (c.subtotal ?? 0), 0),
+              items.reduce((s: number, c: any) => s + (c.total ?? 0), 0)],
+          ], 'Compras');
+          XLSX.writeFile(wb, `compras-${slug}.xlsx`);
+          break;
+        }
+
+        // ── Citas ────────────────────────────────────────────────
+        case 'citas': {
+          const raw   = await apiFetch(`/api/appointments?from=${inicio}&to=${fin}`);
+          const items = toArray(raw);
+          hoja([
+            [`Reporte de Citas — ${label}`], [],
+            ['#','Fecha','Hora','Cliente','Barbero','Servicio','Estado','Monto'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((a: any, i: number) => [
+              i + 1,
+              a.startTime ? new Date(a.startTime).toLocaleDateString('es-SV') : '',
+              a.startTime ? new Date(a.startTime).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' }) : '',
+              a.client?.fullName ?? '',
+              a.barber?.user?.fullName ?? '',
+              a.service?.name ?? '',
+              a.status ?? '',
+              a.payment?.amount ?? a.service?.price ?? 0,
+            ]),
+            [],
+            ['Total citas', items.length],
+          ], 'Citas');
+          XLSX.writeFile(wb, `citas-${slug}.xlsx`);
+          break;
+        }
+
+        // ── Clientes ─────────────────────────────────────────────
+        case 'clientes': {
+          const raw   = await apiFetch('/api/clients');
+          const items = toArray(raw);
+          hoja([
+            ['Reporte de Clientes'], [],
+            ['#','Nombre','Email','Teléfono','DUI','Fecha Registro'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((c: any, i: number) => [
+              i + 1,
+              c.fullName ?? '',
+              c.email ?? '',
+              c.phone ?? '',
+              c.dui ?? '',
+              c.createdAt ? new Date(c.createdAt).toLocaleDateString('es-SV') : '',
+            ]),
+            [],
+            ['Total clientes', items.length],
+          ], 'Clientes');
+          XLSX.writeFile(wb, 'clientes.xlsx');
+          break;
+        }
+
+        // ── CxP ──────────────────────────────────────────────────
+        case 'cxp': {
+          const raw   = await apiFetch('/api/cxp');
+          const items = toArray(raw);
+          hoja([
+            ['Reporte Cuentas por Pagar — Estado actual'], [],
+            ['#','No. Doc.','Proveedor','Fecha','Total (USD)','Saldo (USD)','Estado','Vencimiento'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((c: any, i: number) => [
+              i + 1,
+              c.numeroDocumento ?? '',
+              c.proveedor?.nombre ?? '',
+              c.fecha ? new Date(c.fecha).toLocaleDateString('es-SV') : '',
+              c.total ?? 0,
+              c.saldo ?? 0,
+              c.estadoCxP ?? '',
+              c.fechaVencimiento ? new Date(c.fechaVencimiento).toLocaleDateString('es-SV') : '',
+            ]),
+            [],
+            ['TOTALES','','','',
+              items.reduce((s: number, c: any) => s + (c.total ?? 0), 0),
+              items.reduce((s: number, c: any) => s + (c.saldo ?? 0), 0)],
+          ], 'Cuentas por Pagar');
+          XLSX.writeFile(wb, 'cxp-estado-actual.xlsx');
+          break;
+        }
+
+        // ── Planilla (datos ya cargados) ──────────────────────────
+        case 'planilla': {
+          hoja([
+            [`Reporte de Planilla — ${anioFiltro}`], [],
+            ['── Totales del año ──'],
+            ['Concepto','Monto (USD)'],
+            ['Salario Bruto Total',   extendedStats.planillaTotalBruto],
+            ['Deducciones Totales',   extendedStats.planillaTotalDeducciones],
+            ['Salario Neto Total',    extendedStats.planillaTotalNeto],
+            ['Costo Patronal Total',  extendedStats.planillaTotalPatronal],
+            [],
+            ['── Detalle por período ──'],
+            ['Período','Salario Bruto (USD)','Deducciones (USD)','Salario Neto (USD)','Costo Patronal (USD)','Estado'],
+            ...extendedStats.planillaEvolucion.map(p =>
+              [p.periodo, p.totalBruto, p.totalDeducciones, p.totalNeto, p.costoPatronal, p.estado]),
+            [],
+            ['TOTALES', extendedStats.planillaTotalBruto, extendedStats.planillaTotalDeducciones,
+              extendedStats.planillaTotalNeto, extendedStats.planillaTotalPatronal, ''],
+          ], 'Planilla');
+          XLSX.writeFile(wb, `planilla-${anioFiltro}.xlsx`);
+          break;
+        }
+
+        // ── Proveedores ───────────────────────────────────────────
+        case 'proveedores': {
+          const raw   = await apiFetch('/api/proveedores');
+          const items = toArray(raw);
+          hoja([
+            ['Reporte de Proveedores'], [],
+            ['#','Nombre','NRC','NIT','Teléfono','Email','Dirección','Plazo Crédito (días)'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((p: any, i: number) => [
+              i + 1,
+              p.nombre ?? '',
+              p.nrc ?? '',
+              p.nit ?? '',
+              p.telefono ?? '',
+              p.email ?? '',
+              p.direccion ?? '',
+              p.plazoCredito ?? 0,
+            ]),
+            [],
+            ['Total proveedores', items.length],
+          ], 'Proveedores');
+          XLSX.writeFile(wb, 'proveedores.xlsx');
+          break;
+        }
+
+        // ── Inventario ────────────────────────────────────────────
+        case 'inventario': {
+          const raw   = await apiFetch('/api/productos');
+          const items = toArray(raw);
+          hoja([
+            ['Reporte de Inventario — Estado actual'], [],
+            ['#','Código','Producto','Categoría','Unidad','Stock','Stock Mín.','Costo (USD)','Precio Venta (USD)'],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...items.map((p: any, i: number) => [
+              i + 1,
+              p.codigo ?? '',
+              p.nombre ?? '',
+              p.categoria?.nombre ?? '',
+              p.unidadMedida ?? '',
+              p.stock ?? 0,
+              p.stockMinimo ?? 0,
+              p.costoUnitario ?? p.costo ?? 0,
+              p.precioVenta ?? p.precio ?? 0,
+            ]),
+            [],
+            ['Total productos', items.length],
+          ], 'Inventario');
+          XLSX.writeFile(wb, 'inventario.xlsx');
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Error generando reporte:', err);
+    } finally {
+      setPending(null);
+    }
+  }
 
   // ── Opciones para Select ───────────────────────────────
   const mesesOpts = NOMBRES_MESES.map((n, i) => ({ value: i + 1, label: n }));
@@ -408,7 +506,7 @@ export default function OwnerDashboardClient({
           </div>
         </div>
 
-        {/* Filtros + exportar */}
+        {/* Filtros mes/año */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Select
             value={mesFiltro}
@@ -425,18 +523,6 @@ export default function OwnerDashboardClient({
             size="small"
             style={{ width: 78 }}
           />
-          <Dropdown
-            menu={{
-              items: (exportMenuPorTab[activeTab] ?? exportMenuPorTab.panel).map(e => ({
-                key: e.key, icon: e.icon, label: e.label, onClick: () => handleExport(e.key),
-              })),
-            }}
-            placement="bottomRight"
-          >
-            <Button icon={<FileExcelOutlined />} size="small" style={{ borderRadius: 8, fontWeight: 600 }}>
-              Excel <CaretDownOutlined style={{ fontSize: 9 }} />
-            </Button>
-          </Dropdown>
         </div>
       </div>
 
@@ -504,8 +590,7 @@ export default function OwnerDashboardClient({
                   <LineChartOutlined style={{ color: primary }} />
                   <Text strong style={{ fontSize: 14 }}>Flujo financiero — últimos 6 meses</Text>
                 </div>
-                <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('metricas')} style={{ fontSize: 11 }}>Excel</Button>
-              </div>
+                              </div>
             }
           >
             {stats.ingresosVsGastos.some(m => m.ingresos > 0 || m.gastos > 0) ? (
@@ -633,8 +718,7 @@ export default function OwnerDashboardClient({
                       <BarChartOutlined style={{ color: primary }} />
                       <Text strong style={{ fontSize: 14 }}>Rendimiento por barbero — {stats.mesMostrado}</Text>
                     </div>
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('barberos')} style={{ fontSize: 11 }}>Excel</Button>
-                  </div>
+                                      </div>
                 }
               >
                 {barberBarData.length > 0 ? (
@@ -665,8 +749,7 @@ export default function OwnerDashboardClient({
                       <FireOutlined style={{ color: '#eb5757' }} />
                       <Text strong style={{ fontSize: 14 }}>Top servicios</Text>
                     </div>
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('servicios')} style={{ fontSize: 11 }}>Excel</Button>
-                  </div>
+                                      </div>
                 }
               >
                 {pieServData.length > 0 ? (
@@ -781,8 +864,7 @@ export default function OwnerDashboardClient({
                       <WalletOutlined style={{ color: C.error }} />
                       <Text strong style={{ fontSize: 14 }}>Gastos por categoría — {stats.mesMostrado}</Text>
                     </div>
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('gastos')} style={{ fontSize: 11 }}>Excel</Button>
-                  </div>
+                                      </div>
                 }
               >
                 {extendedStats.gastosPorCategoria.length > 0 ? (
@@ -887,8 +969,7 @@ export default function OwnerDashboardClient({
                       <ShoppingCartOutlined style={{ color: '#f59e0b' }} />
                       <Text strong style={{ fontSize: 14 }}>Compras últimos 6 meses — productos vs servicios</Text>
                     </div>
-                    <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('compras')} style={{ fontSize: 11 }}>Excel</Button>
-                  </div>
+                                      </div>
                 }
               >
                 <ResponsiveContainer width="100%" height={270}>
@@ -985,8 +1066,7 @@ export default function OwnerDashboardClient({
                   <BarChartOutlined style={{ color: primary }} />
                   <Text strong style={{ fontSize: 14 }}>Costo laboral por período — {anioFiltro}</Text>
                 </div>
-                <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('planilla')} style={{ fontSize: 11 }}>Excel</Button>
-              </div>
+                              </div>
             }
           >
             {extendedStats.planillaEvolucion.length > 0 ? (
@@ -1056,6 +1136,180 @@ export default function OwnerDashboardClient({
           )}
         </>
       )}
+
+      {/* ══════════════════════════════════════════════════
+          TAB REPORTES — descarga de reportes desde la BD
+      ══════════════════════════════════════════════════ */}
+      {activeTab === 'reportes' && (() => {
+        const reporteItems = [
+          {
+            key:         'ventas',
+            label:       'Ventas del mes',
+            description: 'Lista completa de ventas POS: número de venta, cliente, subtotal, IVA, total y tipo de documento (Factura / CCF).',
+            periodo:     stats.mesMostrado,
+            filtrado:    true,
+            color:       C.success,
+            icon:        <DollarOutlined />,
+          },
+          {
+            key:         'gastos',
+            label:       'Gastos del mes',
+            description: 'Registro de gastos operativos: fecha, descripción, categoría y monto.',
+            periodo:     stats.mesMostrado,
+            filtrado:    true,
+            color:       C.error,
+            icon:        <WalletOutlined />,
+          },
+          {
+            key:         'compras',
+            label:       'Compras del mes',
+            description: 'Órdenes de compra: proveedor, tipo (producto/servicio), subtotal, total y estado.',
+            periodo:     stats.mesMostrado,
+            filtrado:    true,
+            color:       '#f59e0b',
+            icon:        <ShoppingCartOutlined />,
+          },
+          {
+            key:         'citas',
+            label:       'Citas del mes',
+            description: 'Listado de citas agendadas: cliente, barbero, servicio, estado y monto cobrado.',
+            periodo:     stats.mesMostrado,
+            filtrado:    true,
+            color:       '#0891b2',
+            icon:        <CalendarOutlined />,
+          },
+          {
+            key:         'planilla',
+            label:       'Planilla del año',
+            description: 'Nómina por período: salario bruto, deducciones (ISSS/AFP/Renta), salario neto y costo patronal.',
+            periodo:     String(anioFiltro),
+            filtrado:    false,
+            color:       primary,
+            icon:        <TeamIcon />,
+          },
+          {
+            key:         'cxp',
+            label:       'Cuentas por Pagar',
+            description: 'Estado actual de deudas con proveedores: saldo pendiente, vencimiento y clasificación.',
+            periodo:     'Estado actual',
+            filtrado:    false,
+            color:       C.warning,
+            icon:        <ClockCircleOutlined />,
+          },
+          {
+            key:         'clientes',
+            label:       'Clientes',
+            description: 'Directorio completo de clientes: nombre, email, teléfono, DUI y fecha de registro.',
+            periodo:     'Todos los registros',
+            filtrado:    false,
+            color:       '#722ed1',
+            icon:        <TeamOutlined />,
+          },
+          {
+            key:         'proveedores',
+            label:       'Proveedores',
+            description: 'Directorio de proveedores: NRC, NIT, teléfono, email y plazo de crédito.',
+            periodo:     'Todos los registros',
+            filtrado:    false,
+            color:       '#f59e0b',
+            icon:        <TruckOutlined />,
+          },
+          {
+            key:         'inventario',
+            label:       'Inventario actual',
+            description: 'Stock actual de productos con costo unitario, precio de venta y stock mínimo.',
+            periodo:     'Estado actual',
+            filtrado:    false,
+            color:       '#0891b2',
+            icon:        <BarChartOutlined />,
+          },
+        ];
+
+        return (
+          <>
+            {/* Descripción */}
+            <Card style={{ borderRadius: 14, border: '1px solid hsl(var(--border-default))', marginBottom: 18 }}
+              styles={{ body: { padding: '14px 20px' } }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <FileTextOutlined style={{ fontSize: 18, color: primary }} />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>Reportes del sistema</div>
+                  <div style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 2 }}>
+                    Los reportes marcados con <Tag color="blue" style={{ fontSize: 10, margin: '0 4px' }}>período</Tag>
+                    usan el mes y año seleccionados en el filtro. Los demás traen datos actuales del sistema.
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Grid de reportes */}
+            <Row gutter={[14, 14]}>
+              {reporteItems.map(r => (
+                <Col xs={24} sm={12} lg={8} key={r.key}>
+                  <Card
+                    style={{
+                      borderRadius: 14,
+                      border: `1px solid ${r.color}30`,
+                      background: `linear-gradient(135deg, ${r.color}08 0%, ${token.colorBgContainer} 65%)`,
+                      height: '100%',
+                    }}
+                    styles={{ body: { padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 } }}
+                  >
+                    {/* Cabecera */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+                        background: `${r.color}15`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 20, color: r.color,
+                      }}>
+                        {r.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: token.colorText }}>{r.label}</div>
+                        <Tag
+                          style={{
+                            marginTop: 4, fontSize: 10, borderRadius: 8, padding: '0 7px',
+                            background: r.filtrado ? `${primary}12` : `${token.colorFillSecondary}`,
+                            border: r.filtrado ? `1px solid ${primary}30` : `1px solid ${token.colorBorderSecondary}`,
+                            color: r.filtrado ? primary : token.colorTextSecondary,
+                          }}
+                        >
+                          {r.filtrado ? `Período: ${r.periodo}` : r.periodo}
+                        </Tag>
+                      </div>
+                    </div>
+
+                    {/* Descripción */}
+                    <div style={{ fontSize: 12, color: token.colorTextSecondary, lineHeight: 1.55, flex: 1 }}>
+                      {r.description}
+                    </div>
+
+                    {/* Botón descarga */}
+                    <Button
+                      block
+                      loading={pending === r.key}
+                      disabled={pending !== null && pending !== r.key}
+                      icon={<DownloadOutlined />}
+                      onClick={() => downloadReport(r.key)}
+                      style={{
+                        borderRadius: 9, fontWeight: 600, fontSize: 13,
+                        background: pending === r.key ? undefined : r.color,
+                        borderColor: r.color,
+                        color: pending === r.key ? undefined : '#fff',
+                        height: 36,
+                      }}
+                    >
+                      {pending === r.key ? 'Generando...' : 'Descargar Excel'}
+                    </Button>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </>
+        );
+      })()}
     </div>
   );
 }
