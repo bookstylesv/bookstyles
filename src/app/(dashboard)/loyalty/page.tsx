@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function LoyaltyPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'OWNER') redirect('/dashboard')
+  if (user.role === 'CLIENT') redirect('/dashboard')
 
   const tarjetas = await listTarjetas(user.tenantId)
 

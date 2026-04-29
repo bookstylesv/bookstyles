@@ -18,7 +18,7 @@ import InventarioClient from '@/components/inventario/InventarioClient';
 export default async function InventarioPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [productosResult, categorias, resumen, kardexResult, stockSucursal, branches] =
     await Promise.all([

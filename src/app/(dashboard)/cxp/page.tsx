@@ -11,7 +11,7 @@ import CxPClient from '@/components/cxp/CxPClient';
 export default async function CxPPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [cxpList, resumen] = await Promise.all([
     listCxP(user.tenantId),

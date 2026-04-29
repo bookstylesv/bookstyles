@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export default async function ProductosPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'OWNER') redirect('/dashboard')
+  if (user.role === 'CLIENT') redirect('/dashboard')
 
   const [productosResult, categorias, resumen, unidades] = await Promise.all([
     listProductos(user.tenantId, { limit: '200' }),

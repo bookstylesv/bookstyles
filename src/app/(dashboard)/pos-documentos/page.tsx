@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function PosDocumentosPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'OWNER') redirect('/dashboard')
+  if (user.role === 'CLIENT') redirect('/dashboard')
 
   const [ventasData, ncsData] = await Promise.all([
     getVentas(user.tenantId, { page: 1, limit: 200 } as any),

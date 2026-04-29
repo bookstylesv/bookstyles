@@ -16,7 +16,7 @@ export const metadata = { title: 'Proveedores — Speeddan Barbería' };
 export default async function ProveedoresPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [result, stats] = await Promise.all([
     listProveedores(user.tenantId, { page: 1, pageSize: 50 }),

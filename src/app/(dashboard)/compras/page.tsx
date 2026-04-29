@@ -14,7 +14,7 @@ export const metadata = { title: 'Compras — Speeddan Barbería' };
 export default async function ComprasPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [result, stats] = await Promise.all([
     listCompras(user.tenantId, { limit: '20' } as Record<string, string>),

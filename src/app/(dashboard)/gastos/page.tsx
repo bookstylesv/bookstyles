@@ -16,7 +16,7 @@ import GastosClient from '@/components/gastos/GastosClient';
 export default async function GastosPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const now = new Date();
   const mes  = now.getMonth() + 1;

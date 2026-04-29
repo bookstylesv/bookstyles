@@ -12,7 +12,7 @@ import BranchesClient from './BranchesClient';
 export default async function BranchesPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [branches, limits] = await Promise.all([
     branchesService.listBranches(user.tenantId),

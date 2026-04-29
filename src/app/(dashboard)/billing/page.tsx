@@ -15,7 +15,7 @@ import BillingClient from '@/components/billing/BillingClient';
 export default async function BillingPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'OWNER') redirect('/dashboard');
+  if (user.role === 'CLIENT') redirect('/dashboard');
 
   const [payments, unpaid, stats] = await Promise.all([
     listPayments(user.tenantId),
