@@ -126,74 +126,161 @@ function KpiCard({ label, value, suffix, icon, color, badge, extra, precision = 
 
 // ── Excel Export ───────────────────────────────────────────
 async function exportToExcel(stats: OwnerStats, ext: OwnerExtendedStats, type: string, mes: number, anio: number) {
-  const XLSX   = (await import('xlsx')).default;
-  const label  = `${NOMBRES_MESES[mes - 1]} ${anio}`;
-  let ws: ReturnType<typeof XLSX.utils.aoa_to_sheet>;
-  let sheetName: string;
-  let fileName: string;
+  const XLSX  = (await import('xlsx')).default;
+  const label = `${NOMBRES_MESES[mes - 1]} ${anio}`;
+  const slug  = label.replace(' ', '-').toLowerCase();
+  const wb    = XLSX.utils.book_new();
 
-  if (type === 'financiero') {
-    const rows = [
-      [`Reporte Financiero — últimos 6 meses (hasta ${label})`], [],
-      ['Mes','Ingresos (USD)','Gastos (USD)','Utilidad (USD)'],
-      ...stats.ingresosVsGastos.map(m => [m.mes, m.ingresos, m.gastos, m.utilidad]),
-      [], ['Resumen mes'],
-      ['Ingresos', stats.ingresosMesAct], ['Gastos', stats.gastosMesAct],
-      ['Utilidad', stats.utilidadMesAct], ['Margen (%)', stats.margenMes], ['YTD', stats.ingresoYTD],
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Financiero';
-    fileName = `financiero-${label.replace(' ', '-').toLowerCase()}.xlsx`;
-
-  } else if (type === 'servicios') {
-    const rows = [
-      [`Top Servicios — ${label}`], [],
-      ['#','Servicio','Ingresos (USD)','Cantidad'],
-      ...stats.topServicios.map((s, i) => [i + 1, s.nombre, s.total, s.cantidad]),
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Servicios';
-    fileName = `servicios-${label.replace(' ', '-').toLowerCase()}.xlsx`;
-
-  } else if (type === 'barberos') {
-    const rows = [
-      [`Ranking Barberos — ${label}`], [],
-      ['#','Barbero','Citas','Completadas','Ingresos (USD)'],
-      ...stats.rankingBarberos.map((b, i) => [i + 1, b.nombre, b.citas, b.completadas, b.ingresos]),
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Barberos';
-    fileName = `barberos-${label.replace(' ', '-').toLowerCase()}.xlsx`;
-
-  } else if (type === 'gastos') {
-    const rows = [
-      [`Gastos por Categoría — ${label}`], [],
-      ['Categoría','Total (USD)','Cantidad'],
-      ...ext.gastosPorCategoria.map(g => [g.nombre, g.total, g.count]),
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Gastos';
-    fileName = `gastos-${label.replace(' ', '-').toLowerCase()}.xlsx`;
-
-  } else if (type === 'compras') {
-    const rows = [
-      [`Compras — ${label}`], [],
-      ['Mes','Productos (USD)','Servicios (USD)','Total (USD)'],
-      ...ext.comprasEvolucion.map(c => [c.mes, c.productos, c.servicios, c.total]),
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Compras';
-    fileName = `compras-${label.replace(' ', '-').toLowerCase()}.xlsx`;
-
-  } else {
-    const rows = [
-      [`Planilla ${anio}`], [],
-      ['Período','Salario Bruto (USD)','Deducciones (USD)','Salario Neto (USD)','Costo Patronal (USD)','Estado'],
-      ...ext.planillaEvolucion.map(p => [p.periodo, p.totalBruto, p.totalDeducciones, p.totalNeto, p.costoPatronal, p.estado]),
-      [], ['TOTALES', ext.planillaTotalBruto, ext.planillaTotalDeducciones, ext.planillaTotalNeto, ext.planillaTotalPatronal],
-    ];
-    ws = XLSX.utils.aoa_to_sheet(rows); sheetName = 'Planilla';
-    fileName = `planilla-${anio}.xlsx`;
+  // ── Helpers ──────────────────────────────────────────────
+  function addSheet(data: unknown[][], name: string) {
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, name);
   }
+  function pct(v: number | null) { return v !== null ? `${v}%` : 'N/D'; }
+  function usd(v: number)        { return v; } // número; Excel formatea como moneda
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, fileName);
+  // ── Panel ejecutivo (resumen completo) ───────────────────
+  if (type === 'panel') {
+    addSheet([
+      [`Resumen Ejecutivo — ${label}`], [],
+      // Financiero
+      ['── KPIs Financieros ──'],
+      ['Concepto', label, stats.mesPasadoMostrado, 'Variación'],
+      ['Ingresos (USD)',  usd(stats.ingresosMesAct),  usd(stats.ingresosMesPas),  pct(stats.varIngresos)],
+      ['Gastos (USD)',    usd(stats.gastosMesAct),    usd(stats.gastosMesPas),    pct(stats.varGastos)],
+      ['Utilidad (USD)',  usd(stats.utilidadMesAct),  usd(stats.utilidadMesPas),  pct(stats.varUtilidad)],
+      ['Margen (%)',      stats.margenMes,             '',                         ''],
+      ['Ingresos YTD (USD)', usd(stats.ingresoYTD),  '',                         ''],
+      [],
+      // Operativo
+      ['── KPIs Operativos ──'],
+      ['Concepto', 'Valor'],
+      ['Total Clientes',         stats.totalClientes],
+      ['Clientes Nuevos (mes)',  stats.clientesNuevosMes],
+      ['Citas del mes',          stats.citasMesAct],
+      ['Citas Completadas',      stats.citasCompletadasMes],
+      ['Tasa Completación (%)',  stats.tasaCompletacion],
+      ['Compras del Mes (USD)',  usd(ext.comprasMes)],
+      ['Órdenes de Compra',      ext.comprasCount],
+      [],
+      // Flujo 6 meses
+      ['── Flujo Financiero — Últimos 6 Meses ──'],
+      ['Mes', 'Ingresos (USD)', 'Gastos (USD)', 'Utilidad (USD)'],
+      ...stats.ingresosVsGastos.map(m => [m.mes, usd(m.ingresos), usd(m.gastos), usd(m.utilidad)]),
+    ], 'Resumen Ejecutivo');
+    XLSX.writeFile(wb, `resumen-ejecutivo-${slug}.xlsx`);
+
+  // ── Métricas: financiero + comparativa + operativo ───────
+  } else if (type === 'metricas') {
+    addSheet([
+      [`Métricas — ${label}`], [],
+      ['── Flujo Financiero — Últimos 6 Meses ──'],
+      ['Mes', 'Ingresos (USD)', 'Gastos (USD)', 'Utilidad (USD)'],
+      ...stats.ingresosVsGastos.map(m => [m.mes, usd(m.ingresos), usd(m.gastos), usd(m.utilidad)]),
+      [],
+      ['── Comparativa: Mes Actual vs Mes Anterior ──'],
+      ['Concepto', label, stats.mesPasadoMostrado, 'Variación'],
+      ['Ingresos (USD)', usd(stats.ingresosMesAct), usd(stats.ingresosMesPas), pct(stats.varIngresos)],
+      ['Gastos (USD)',   usd(stats.gastosMesAct),   usd(stats.gastosMesPas),   pct(stats.varGastos)],
+      ['Utilidad (USD)', usd(stats.utilidadMesAct), usd(stats.utilidadMesPas), pct(stats.varUtilidad)],
+      [],
+      ['── Rendimiento Operativo ──'],
+      ['Concepto', 'Valor'],
+      ['Citas del mes',         stats.citasMesAct],
+      ['Citas Completadas',     stats.citasCompletadasMes],
+      ['Tasa Completación (%)', stats.tasaCompletacion],
+      ['Total Clientes',        stats.totalClientes],
+      ['Clientes Nuevos',       stats.clientesNuevosMes],
+    ], 'Métricas');
+    XLSX.writeFile(wb, `metricas-${slug}.xlsx`);
+
+  // ── Ranking barberos ──────────────────────────────────────
+  } else if (type === 'barberos') {
+    addSheet([
+      [`Ranking Barberos — ${label}`], [],
+      ['#', 'Barbero', 'Citas', 'Completadas', 'Ingresos (USD)'],
+      ...stats.rankingBarberos.map((b, i) => [i + 1, b.nombre, b.citas, b.completadas, usd(b.ingresos)]),
+    ], 'Ranking Barberos');
+    XLSX.writeFile(wb, `ranking-barberos-${slug}.xlsx`);
+
+  // ── Top servicios ─────────────────────────────────────────
+  } else if (type === 'servicios') {
+    addSheet([
+      [`Top Servicios — ${label}`], [],
+      ['#', 'Servicio', 'Ingresos (USD)', 'Cantidad'],
+      ...stats.topServicios.map((s, i) => [i + 1, s.nombre, usd(s.total), s.cantidad]),
+    ], 'Top Servicios');
+    XLSX.writeFile(wb, `servicios-${slug}.xlsx`);
+
+  // ── Gastos: KPIs + categorías + evolución ────────────────
+  } else if (type === 'gastos') {
+    const totalTx = ext.gastosPorCategoria.reduce((s, g) => s + g.count, 0);
+    addSheet([
+      [`Análisis de Gastos — ${label}`], [],
+      ['── Resumen ──'],
+      ['Concepto', 'Valor'],
+      ['Total Gastos (USD)',      usd(ext.gastosTotalMes)],
+      ['Transacciones',          totalTx],
+      ['Categorías Distintas',   ext.gastosPorCategoria.length],
+      ['Variación vs mes ant.',  pct(ext.gastosVarPct)],
+      [],
+      ['── Gastos por Categoría ──'],
+      ['Categoría', 'Total (USD)', 'Transacciones', '% del Total'],
+      ...ext.gastosPorCategoria.map(g => [
+        g.nombre, usd(g.total), g.count,
+        ext.gastosTotalMes > 0 ? parseFloat(((g.total / ext.gastosTotalMes) * 100).toFixed(1)) : 0,
+      ]),
+      [],
+      ['── Evolución — Últimos 6 Meses ──'],
+      ['Mes', 'Total Gastos (USD)'],
+      ...ext.gastosEvolucion.map(g => [g.mes, usd(g.total)]),
+    ], 'Gastos');
+    XLSX.writeFile(wb, `gastos-${slug}.xlsx`);
+
+  // ── Compras + CxP ────────────────────────────────────────
+  } else if (type === 'compras') {
+    addSheet([
+      [`Compras y Cuentas por Pagar — ${label}`], [],
+      ['── Resumen Compras ──'],
+      ['Concepto', 'Valor'],
+      ['Total Compras (USD)',          usd(ext.comprasMes)],
+      ['Órdenes',                      ext.comprasCount],
+      ['Compras de Productos (USD)',   usd(ext.comprasProductos)],
+      ['Servicios / Gastos Ext. (USD)', usd(ext.comprasServicios)],
+      [],
+      ['── Evolución 6 Meses — Productos vs Servicios ──'],
+      ['Mes', 'Productos (USD)', 'Servicios (USD)', 'Total (USD)'],
+      ...ext.comprasEvolucion.map(c => [c.mes, usd(c.productos), usd(c.servicios), usd(c.total)]),
+      [],
+      ['── Estado Cuentas por Pagar ──'],
+      ['Estado', 'Documentos', 'Monto (USD)'],
+      ['Vencidas',   ext.cxp.countVencidas,  usd(ext.cxp.montoVencido)],
+      ['Por Vencer', ext.cxp.countPorVencer, usd(ext.cxp.montoPorVencer)],
+      ['Vigentes',   ext.cxp.countVigentes,  usd(ext.cxp.montoVigente)],
+      ['Pagadas',    ext.cxp.countPagadas,   ''],
+      ['TOTAL',      ext.cxp.totalDocumentos, usd(ext.cxp.totalMonto)],
+    ], 'Compras y CxP');
+    XLSX.writeFile(wb, `compras-cxp-${slug}.xlsx`);
+
+  // ── Planilla ──────────────────────────────────────────────
+  } else if (type === 'planilla') {
+    addSheet([
+      [`Planilla — ${anio}`], [],
+      ['── Totales del Año ──'],
+      ['Concepto', 'Monto (USD)'],
+      ['Salario Bruto Total',    usd(ext.planillaTotalBruto)],
+      ['Deducciones Totales',    usd(ext.planillaTotalDeducciones)],
+      ['Salario Neto Total',     usd(ext.planillaTotalNeto)],
+      ['Costo Patronal Total',   usd(ext.planillaTotalPatronal)],
+      [],
+      ['── Detalle por Período ──'],
+      ['Período', 'Salario Bruto (USD)', 'Deducciones (USD)', 'Salario Neto (USD)', 'Costo Patronal (USD)', 'Estado'],
+      ...ext.planillaEvolucion.map(p => [p.periodo, usd(p.totalBruto), usd(p.totalDeducciones), usd(p.totalNeto), usd(p.costoPatronal), p.estado]),
+      [],
+      ['TOTALES', usd(ext.planillaTotalBruto), usd(ext.planillaTotalDeducciones), usd(ext.planillaTotalNeto), usd(ext.planillaTotalPatronal), ''],
+    ], 'Planilla');
+    XLSX.writeFile(wb, `planilla-${anio}.xlsx`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -261,15 +348,15 @@ export default function OwnerDashboardClient({
   };
 
   const exportMenuPorTab: Record<string, { key: string; label: string; icon: React.ReactNode }[]> = {
-    panel:    [{ key: 'financiero', label: 'Reporte financiero', icon: <BarChartOutlined /> }],
-    metricas: [{ key: 'financiero', label: 'Flujo financiero', icon: <LineChartOutlined /> }],
+    panel:    [{ key: 'panel',    label: 'Resumen ejecutivo completo', icon: <BarChartOutlined /> }],
+    metricas: [{ key: 'metricas', label: 'Métricas y comparativa',    icon: <LineChartOutlined /> }],
     ranking:  [
-      { key: 'barberos',  label: 'Ranking barberos',   icon: <TrophyOutlined /> },
-      { key: 'servicios', label: 'Top servicios',      icon: <BarChartOutlined /> },
+      { key: 'barberos',  label: 'Ranking barberos', icon: <TrophyOutlined /> },
+      { key: 'servicios', label: 'Top servicios',    icon: <BarChartOutlined /> },
     ],
-    gastos:   [{ key: 'gastos',   label: 'Gastos por categoría', icon: <WalletOutlined /> }],
-    compras:  [{ key: 'compras',  label: 'Evolución compras',    icon: <ShoppingCartOutlined /> }],
-    planilla: [{ key: 'planilla', label: 'Planilla del año',     icon: <TeamIcon /> }],
+    gastos:   [{ key: 'gastos',   label: 'Análisis de gastos completo',  icon: <WalletOutlined /> }],
+    compras:  [{ key: 'compras',  label: 'Compras y cuentas por pagar', icon: <ShoppingCartOutlined /> }],
+    planilla: [{ key: 'planilla', label: 'Planilla del año',            icon: <TeamIcon /> }],
   };
 
   function handleExport(type: string) { exportToExcel(stats, extendedStats, type, mesFiltro, anioFiltro); }
@@ -417,7 +504,7 @@ export default function OwnerDashboardClient({
                   <LineChartOutlined style={{ color: primary }} />
                   <Text strong style={{ fontSize: 14 }}>Flujo financiero — últimos 6 meses</Text>
                 </div>
-                <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('financiero')} style={{ fontSize: 11 }}>Excel</Button>
+                <Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport('metricas')} style={{ fontSize: 11 }}>Excel</Button>
               </div>
             }
           >
