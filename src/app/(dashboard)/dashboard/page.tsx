@@ -5,6 +5,7 @@
  * Demás roles → dashboard operativo (DashboardClient)
  */
 
+import { Suspense }                 from 'react';
 import { getCurrentUser }          from '@/lib/auth';
 import { redirect }                from 'next/navigation';
 import { getStats, getOwnerStats } from '@/modules/appointments/appointments.service';
@@ -21,7 +22,9 @@ export default async function DashboardPage() {
     const ownerStats = await getOwnerStats(user.tenantId);
     return (
       <div style={{ maxWidth: 1200, width: '100%' }}>
-        <OwnerDashboardClient stats={ownerStats} userName={user.name} />
+        <Suspense>
+          <OwnerDashboardClient stats={ownerStats} userName={user.name} />
+        </Suspense>
       </div>
     );
   }

@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+
 /**
  * DashboardSidebar — Sidebar profesional con Phosphor Icons + colapso.
  * - Phosphor Icons: Regular/Bold según estado activo
@@ -10,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { BarberUserRole } from '@prisma/client';
 import {
   HouseSimple,
@@ -142,6 +144,8 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
   const [mobileOpen, setMobileOpen] = useState(false);
   const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
 
+  const searchParams    = useSearchParams();
+  const activeTab       = searchParams.get('tab') ?? 'panel';
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
@@ -168,9 +172,9 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
   }
 
   const ownerNavItems = [
-    { href: '/dashboard', label: 'Panel Ejecutivo',    icon: HouseSimple },
-    { href: '#metrics',   label: 'Métricas',           icon: ChartLine   },
-    { href: '#ranking',   label: 'Ranking barberos',   icon: Trophy      },
+    { href: '/dashboard',              tab: 'panel',    label: 'Panel Ejecutivo', icon: HouseSimple },
+    { href: '/dashboard?tab=metricas', tab: 'metricas', label: 'Métricas',        icon: ChartLine   },
+    { href: '/dashboard?tab=ranking',  tab: 'ranking',  label: 'Ranking',         icon: Trophy      },
   ];
 
   return (
@@ -260,13 +264,11 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         {/* Navegación */}
         <nav style={{ flex: 1, padding: '10px 8px' }}>
           {ownerNavItems.map(item => {
-            const active = item.href === '/dashboard'
-              ? (pathname === '/dashboard' || pathname.startsWith('/dashboard/'))
-              : false;
+            const active = item.tab === activeTab;
             const Icon = item.icon;
             return (
-              <a
-                key={item.href}
+              <Link
+                key={item.tab}
                 href={item.href}
                 title={effectiveCollapsed ? item.label : undefined}
                 style={{
@@ -290,7 +292,7 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
               >
                 <Icon size={18} weight={active ? 'bold' : 'regular'} style={{ flexShrink: 0, color: active ? primary : undefined }} />
                 {!effectiveCollapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -372,9 +374,13 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
   const { theme }      = useBarberTheme();
   const isSalon        = theme.category === 'femenino';
   const navConfig      = isSalon ? NAV_ITEMS_SALON : NAV_ITEMS_BARBER;
-  // OWNER → sidebar ejecutivo premium diferenciado
+  // OWNER → sidebar ejecutivo con tabs
   if (role === 'OWNER') {
-    return <OwnerSidebar name={name} brandName={brandName} slug={slug} />;
+    return (
+      <Suspense fallback={<OwnerSidebar name={name} brandName={brandName} slug={slug} />}>
+        <OwnerSidebar name={name} brandName={brandName} slug={slug} />
+      </Suspense>
+    );
   }
 
   const items          = navConfig.filter(i => {
