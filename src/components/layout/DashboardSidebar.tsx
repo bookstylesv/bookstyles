@@ -172,9 +172,12 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
   }
 
   const ownerNavItems = [
-    { href: '/dashboard',              tab: 'panel',    label: 'Panel Ejecutivo', icon: HouseSimple },
-    { href: '/dashboard?tab=metricas', tab: 'metricas', label: 'Métricas',        icon: ChartLine   },
-    { href: '/dashboard?tab=ranking',  tab: 'ranking',  label: 'Ranking',         icon: Trophy      },
+    { href: '/dashboard',              tab: 'panel',    label: 'Panel Ejecutivo', icon: HouseSimple  },
+    { href: '/dashboard?tab=metricas', tab: 'metricas', label: 'Métricas',        icon: ChartLine    },
+    { href: '/dashboard?tab=ranking',  tab: 'ranking',  label: 'Ranking',         icon: Trophy       },
+    { href: '/dashboard?tab=gastos',   tab: 'gastos',   label: 'Gastos',          icon: Receipt      },
+    { href: '/dashboard?tab=compras',  tab: 'compras',  label: 'Compras & CxP',   icon: ShoppingCart },
+    { href: '/dashboard?tab=planilla', tab: 'planilla', label: 'Planilla',         icon: Money        },
   ];
 
   return (

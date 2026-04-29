@@ -297,14 +297,16 @@ export async function getStats(tenantId: number) {
 }
 
 // ── Owner Stats — métricas ejecutivas para el propietario ───────────────────
-export async function getOwnerStats(tenantId: number) {
+export async function getOwnerStats(tenantId: number, mes?: number, anio?: number) {
   const now        = new Date();
-  const inicioMesA = new Date(now.getFullYear(), now.getMonth(), 1);
-  const finMesA    = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  const inicioMesP = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const finMesP    = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-  const inicioAnio = new Date(now.getFullYear(), 0, 1);
-  const inicioSeisM = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const m          = mes  ?? (now.getMonth() + 1);   // 1–12
+  const y          = anio ?? now.getFullYear();
+  const inicioMesA  = new Date(y, m - 1, 1);
+  const finMesA     = new Date(y, m, 0, 23, 59, 59, 999);
+  const inicioMesP  = new Date(y, m - 2, 1);
+  const finMesP     = new Date(y, m - 1, 0, 23, 59, 59, 999);
+  const inicioAnio  = new Date(y, 0, 1);
+  const inicioSeisM = new Date(y, m - 6, 1);
 
   const [
     // Ventas POS mes actual y mes anterior
@@ -377,17 +379,17 @@ export async function getOwnerStats(tenantId: number) {
       where: { tenantId, fecha: { gte: inicioSeisM } },
       select: { monto: true, fecha: true },
     }),
-    // Top servicios 30 días
+    // Top servicios del mes seleccionado
     prisma.barberDetalleVenta.findMany({
       where: {
         servicioId: { not: null },
-        venta: { tenantId, estado: 'ACTIVA', createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
+        venta: { tenantId, estado: 'ACTIVA', createdAt: { gte: inicioMesA, lte: finMesA } },
       },
       select: { descripcion: true, subtotal: true, cantidad: true },
     }),
-    // Ranking barberos mes actual
+    // Ranking barberos mes seleccionado
     prisma.barberAppointment.findMany({
-      where: { tenantId, startTime: { gte: inicioMesA } },
+      where: { tenantId, startTime: { gte: inicioMesA, lte: finMesA } },
       include: {
         barber:  { include: { user: { select: { fullName: true } } } },
         payment: { select: { amount: true, status: true } },
@@ -414,7 +416,7 @@ export async function getOwnerStats(tenantId: number) {
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const mapaM = new Map<string, { ingresos: number; gastos: number }>();
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d = new Date(y, m - 1 - i, 1);
     mapaM.set(`${MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`, { ingresos: 0, gastos: 0 });
   }
   for (const v of ventasMensuales) {
@@ -485,8 +487,8 @@ export async function getOwnerStats(tenantId: number) {
     topServicios,
     rankingBarberos,
     // Mes de referencia
-    mesMostrado: MESES[now.getMonth()],
-    mesPasadoMostrado: MESES[inicioMesP.getMonth()],
+    mesMostrado:       `${MESES[m - 1]} ${y}`,
+    mesPasadoMostrado: `${MESES[(m - 2 + 12) % 12]} ${m === 1 ? y - 1 : y}`,
   };
 }
 
