@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import {
   Row, Col, Card, Statistic, Typography, Tag, Space, theme,
-  Progress, Button, Divider, Select,
+  Progress, Button, Divider, Select, message,
 } from 'antd';
 import { useBarberTheme } from '@/context/ThemeContext';
 import {
@@ -218,14 +218,27 @@ export default function OwnerDashboardClient({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       function toArray(raw: any): any[] {
         if (Array.isArray(raw)) return raw;
-        if (raw?.items)      return raw.items;
-        if (raw?.ventas)     return raw.ventas;
-        if (raw?.gastos)     return raw.gastos;
-        if (raw?.compras)    return raw.compras;
-        if (raw?.clientes)   return raw.clientes;
+        if (raw?.items)       return raw.items;
+        if (raw?.ventas)      return raw.ventas;
+        if (raw?.gastos)      return raw.gastos;
+        if (raw?.compras)     return raw.compras;
+        if (raw?.clientes)    return raw.clientes;
         if (raw?.proveedores) return raw.proveedores;
-        if (raw?.productos)  return raw.productos;
+        if (raw?.productos)   return raw.productos;
         return [];
+      }
+      function triggerDownload(filename: string) {
+        const buf  = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        message.success(`Reporte descargado: ${filename}`);
       }
 
       switch (key) {
@@ -233,6 +246,7 @@ export default function OwnerDashboardClient({
         case 'ventas': {
           const raw   = await apiFetch(`/api/pos/venta?desde=${inicio}&hasta=${fin}&estado=ACTIVA`);
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay ventas registradas en el período seleccionado'); break; }
           hoja([
             [`Reporte de Ventas — ${label}`], [],
             ['#','Fecha','No. Venta','Cliente','Subtotal','IVA','Total','Tipo Doc.'],
@@ -249,9 +263,10 @@ export default function OwnerDashboardClient({
             ]),
             [],
             ['Total registros', items.length, '', '', '', '',
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               items.reduce((s: number, v: any) => s + (v.total ?? 0), 0)],
           ], 'Ventas');
-          XLSX.writeFile(wb, `ventas-${slug}.xlsx`);
+          triggerDownload(`ventas-${slug}.xlsx`);
           break;
         }
 
@@ -259,6 +274,7 @@ export default function OwnerDashboardClient({
         case 'gastos': {
           const raw   = await apiFetch(`/api/gastos?desde=${inicio}&hasta=${fin}`);
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay gastos registrados en el período seleccionado'); break; }
           hoja([
             [`Reporte de Gastos — ${label}`], [],
             ['#','Fecha','Descripción','Categoría','Monto (USD)'],
@@ -271,9 +287,10 @@ export default function OwnerDashboardClient({
               g.monto ?? 0,
             ]),
             [],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ['TOTAL','','','', items.reduce((s: number, g: any) => s + (g.monto ?? 0), 0)],
           ], 'Gastos');
-          XLSX.writeFile(wb, `gastos-${slug}.xlsx`);
+          triggerDownload(`gastos-${slug}.xlsx`);
           break;
         }
 
@@ -281,6 +298,7 @@ export default function OwnerDashboardClient({
         case 'compras': {
           const raw   = await apiFetch(`/api/compras?from=${inicio}&to=${fin}`);
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay compras registradas en el período seleccionado'); break; }
           hoja([
             [`Reporte de Compras — ${label}`], [],
             ['#','Fecha','No. Doc.','Proveedor','Tipo','Subtotal','Total','Estado'],
@@ -296,10 +314,13 @@ export default function OwnerDashboardClient({
               c.estado ?? '',
             ]),
             [],
-            ['TOTAL','','','','', items.reduce((s: number, c: any) => s + (c.subtotal ?? 0), 0),
+            ['TOTAL','','','','',
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              items.reduce((s: number, c: any) => s + (c.subtotal ?? 0), 0),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               items.reduce((s: number, c: any) => s + (c.total ?? 0), 0)],
           ], 'Compras');
-          XLSX.writeFile(wb, `compras-${slug}.xlsx`);
+          triggerDownload(`compras-${slug}.xlsx`);
           break;
         }
 
@@ -307,6 +328,7 @@ export default function OwnerDashboardClient({
         case 'citas': {
           const raw   = await apiFetch(`/api/appointments?from=${inicio}&to=${fin}`);
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay citas registradas en el período seleccionado'); break; }
           hoja([
             [`Reporte de Citas — ${label}`], [],
             ['#','Fecha','Hora','Cliente','Barbero','Servicio','Estado','Monto'],
@@ -324,7 +346,7 @@ export default function OwnerDashboardClient({
             [],
             ['Total citas', items.length],
           ], 'Citas');
-          XLSX.writeFile(wb, `citas-${slug}.xlsx`);
+          triggerDownload(`citas-${slug}.xlsx`);
           break;
         }
 
@@ -332,6 +354,7 @@ export default function OwnerDashboardClient({
         case 'clientes': {
           const raw   = await apiFetch('/api/clients');
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay clientes registrados'); break; }
           hoja([
             ['Reporte de Clientes'], [],
             ['#','Nombre','Email','Teléfono','DUI','Fecha Registro'],
@@ -347,7 +370,7 @@ export default function OwnerDashboardClient({
             [],
             ['Total clientes', items.length],
           ], 'Clientes');
-          XLSX.writeFile(wb, 'clientes.xlsx');
+          triggerDownload('clientes.xlsx');
           break;
         }
 
@@ -355,6 +378,7 @@ export default function OwnerDashboardClient({
         case 'cxp': {
           const raw   = await apiFetch('/api/cxp');
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay cuentas por pagar registradas'); break; }
           hoja([
             ['Reporte Cuentas por Pagar — Estado actual'], [],
             ['#','No. Doc.','Proveedor','Fecha','Total (USD)','Saldo (USD)','Estado','Vencimiento'],
@@ -371,15 +395,18 @@ export default function OwnerDashboardClient({
             ]),
             [],
             ['TOTALES','','','',
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               items.reduce((s: number, c: any) => s + (c.total ?? 0), 0),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               items.reduce((s: number, c: any) => s + (c.saldo ?? 0), 0)],
           ], 'Cuentas por Pagar');
-          XLSX.writeFile(wb, 'cxp-estado-actual.xlsx');
+          triggerDownload('cxp-estado-actual.xlsx');
           break;
         }
 
         // ── Planilla (datos ya cargados) ──────────────────────────
         case 'planilla': {
+          if (extendedStats.planillaEvolucion.length === 0) { message.warning('No hay planillas registradas para el año seleccionado'); break; }
           hoja([
             [`Reporte de Planilla — ${anioFiltro}`], [],
             ['── Totales del año ──'],
@@ -397,7 +424,7 @@ export default function OwnerDashboardClient({
             ['TOTALES', extendedStats.planillaTotalBruto, extendedStats.planillaTotalDeducciones,
               extendedStats.planillaTotalNeto, extendedStats.planillaTotalPatronal, ''],
           ], 'Planilla');
-          XLSX.writeFile(wb, `planilla-${anioFiltro}.xlsx`);
+          triggerDownload(`planilla-${anioFiltro}.xlsx`);
           break;
         }
 
@@ -405,6 +432,7 @@ export default function OwnerDashboardClient({
         case 'proveedores': {
           const raw   = await apiFetch('/api/proveedores');
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay proveedores registrados'); break; }
           hoja([
             ['Reporte de Proveedores'], [],
             ['#','Nombre','NRC','NIT','Teléfono','Email','Dirección','Plazo Crédito (días)'],
@@ -422,7 +450,7 @@ export default function OwnerDashboardClient({
             [],
             ['Total proveedores', items.length],
           ], 'Proveedores');
-          XLSX.writeFile(wb, 'proveedores.xlsx');
+          triggerDownload('proveedores.xlsx');
           break;
         }
 
@@ -430,6 +458,7 @@ export default function OwnerDashboardClient({
         case 'inventario': {
           const raw   = await apiFetch('/api/productos');
           const items = toArray(raw);
+          if (items.length === 0) { message.warning('No hay productos registrados en el inventario'); break; }
           hoja([
             ['Reporte de Inventario — Estado actual'], [],
             ['#','Código','Producto','Categoría','Unidad','Stock','Stock Mín.','Costo (USD)','Precio Venta (USD)'],
@@ -448,12 +477,13 @@ export default function OwnerDashboardClient({
             [],
             ['Total productos', items.length],
           ], 'Inventario');
-          XLSX.writeFile(wb, 'inventario.xlsx');
+          triggerDownload('inventario.xlsx');
           break;
         }
       }
     } catch (err) {
-      console.error('Error generando reporte:', err);
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      message.error(`Error al generar el reporte: ${msg}`);
     } finally {
       setPending(null);
     }
