@@ -134,8 +134,9 @@ async function main() {
   // ── 3. Crear usuarios ────────────────────────────────────
   console.log('\n👤  Creando usuarios...');
 
-  const [hashAdmin, hashBarber, hashClient] = await Promise.all([
+  const [hashAdmin, hashSuperadmin, hashBarber, hashClient] = await Promise.all([
     bcrypt.hash('Admin@2026!', 12),
+    bcrypt.hash('Superadmin@2026!', 12),
     bcrypt.hash('Barber@2026!', 12),
     bcrypt.hash('Client@2026!', 12),
   ]);
@@ -152,6 +153,19 @@ async function main() {
     },
   });
   console.log(`    ✓ Admin:   ${adminUser.email} (ID ${adminUser.id})`);
+
+  const superadminUser = await prisma.barberUser.create({
+    data: {
+      tenantId: tenant.id,
+      email:    'superadmin@speeddan.com',
+      password: hashSuperadmin,
+      fullName: 'Super Administrador',
+      phone:    '+503 7000-0000',
+      role:     'SUPERADMIN',
+      active:   true,
+    },
+  });
+  console.log(`    ✓ Superadmin: ${superadminUser.email} (ID ${superadminUser.id})`);
 
   const barberUser = await prisma.barberUser.create({
     data: {
@@ -344,9 +358,10 @@ async function main() {
   console.log('  URL:     https://speeddan-barberia.vercel.app/login');
   console.log('  Código:  speeddan-demo');
   console.log('');
-  console.log('  Admin:   admin@speeddan.com  / Admin@2026!');
-  console.log('  Barbero: barber@speeddan.com / Barber@2026!');
-  console.log('  Cliente: client@speeddan.com / Client@2026!');
+  console.log('  Admin (OWNER):      admin@speeddan.com      / Admin@2026!');
+  console.log('  Superadmin:         superadmin@speeddan.com / Superadmin@2026!');
+  console.log('  Barbero:            barber@speeddan.com     / Barber@2026!');
+  console.log('  Cliente:            client@speeddan.com     / Client@2026!');
   console.log('═══════════════════════════════════════════\n');
 }
 

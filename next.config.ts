@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from '@sentry/nextjs';
 
 const SUPERADMIN_CORS_HEADERS = [
-  { key: 'Access-Control-Allow-Origin',  value: process.env.SUPERADMIN_ALLOW_ORIGIN ?? 'https://speeddan-control.vercel.app' },
+  { key: 'Access-Control-Allow-Origin',  value: process.env.SUPERADMIN_ALLOW_ORIGIN ?? 'https://speeddan-control-v3-nine.vercel.app' },
   { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
   { key: 'Access-Control-Allow-Headers', value: 'Authorization, Content-Type' },
 ];

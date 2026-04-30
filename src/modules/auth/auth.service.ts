@@ -21,8 +21,8 @@ export const authService = {
     const user = await authRepository.findUserByEmail(email.toLowerCase(), tenant.id);
     if (!user || !user.active)                throw new UnauthorizedError('Credenciales inválidas');
 
-    // 3. Bloquear roles sin acceso al ERP
-    if (user.role === 'CLIENT') {
+    // 3. Bloquear roles sin acceso al ERP (BARBER y CLIENT no tienen acceso al dashboard)
+    if (user.role === 'CLIENT' || user.role === 'BARBER') {
       throw new UnauthorizedError('Este portal es exclusivo para el equipo administrativo');
     }
 

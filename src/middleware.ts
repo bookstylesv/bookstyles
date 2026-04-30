@@ -37,7 +37,7 @@ const PUBLIC_PREFIXES = [
   '/api/auth/login',
   '/api/auth/refresh',
   '/api/tenant/',
-  '/api/book/',
+  '/api/book',
   '/api/superadmin/',
   '/_next/',
   '/favicon',
@@ -76,8 +76,8 @@ export async function middleware(req: NextRequest) {
       : NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // CLIENT no tiene acceso al ERP bajo ninguna circunstancia
-  if (user.role === 'CLIENT') {
+  // CLIENT y BARBER no tienen acceso al ERP bajo ninguna circunstancia
+  if (user.role === 'CLIENT' || user.role === 'BARBER') {
     return pathname.startsWith('/api/')
       ? NextResponse.json(
           { success: false, error: { message: 'Acceso denegado', code: 'FORBIDDEN' } },
