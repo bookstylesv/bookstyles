@@ -7,7 +7,8 @@ import bcrypt from 'bcryptjs';
 import { authRepository } from './auth.repository';
 import { tenantsRepository } from '@/modules/tenants/tenants.repository';
 import { signAccessToken, signRefreshToken, resolveBranchForLogin } from '@/lib/auth';
-import { UnauthorizedError, NotFoundError, TenantSuspendedError } from '@/lib/errors';
+import { getPlanLimits, moduleAccessFromPlanModules } from '@/lib/plan-guard';
+import { ForbiddenError, UnauthorizedError, NotFoundError, TenantSuspendedError } from '@/lib/errors';
 
 export const authService = {
   async login(email: string, password: string, tenantSlug: string, meta?: { ip?: string; ua?: string }) {
@@ -34,9 +35,26 @@ export const authService = {
     const { branchId, branchSlug } = await resolveBranchForLogin(user.id, tenant.id, user.role);
 
     // 6. Obtener módulos asignados (solo para rol USUARIO)
-    const moduleAccess = user.role === 'USUARIO'
-      ? (Array.isArray(user.moduleAccess) ? user.moduleAccess as string[] : null)
-      : null;
+    const moduleAccess = await (async () => {
+      if (user.role === 'SUPERADMIN') {
+        const limits = await getPlanLimits(tenant.id);
+        return moduleAccessFromPlanModules(limits.modules);
+      }
+
+      if (user.role === 'GERENTE' || user.role === 'USERS') {
+        return Array.isArray(user.moduleAccess) ? user.moduleAccess as string[] : [];
+      }
+
+      return null;
+    })();
+
+    if (
+      (user.role === 'GERENTE' || user.role === 'USERS') &&
+      Array.isArray(moduleAccess) &&
+      moduleAccess.length === 0
+    ) {
+      throw new ForbiddenError('Todavia no tienes modulos asignados. Comunicate con tu administrador para que configure tu acceso.');
+    }
 
     // 7. Generar tokens
     const payload = {

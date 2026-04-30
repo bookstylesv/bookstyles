@@ -1,49 +1,70 @@
-/**
- * module-guard.ts — Definición de módulos del ERP y control de acceso por rol.
+﻿/**
+ * module-guard.ts â€” DefiniciÃ³n de mÃ³dulos del ERP y control de acceso por rol.
  *
  * Roles del sistema:
- *   OWNER      → solo dashboard (métricas y reportes)
- *   SUPERADMIN → acceso total al ERP, incluyendo gestión de usuarios
- *   GERENTE    → todos los módulos operativos de su sucursal, excepto usuarios
- *   USUARIO    → solo los módulos explícitamente asignados en moduleAccess
- *   CLIENT     → sin acceso al ERP (solo portal público de reservas)
+ *   OWNER      â†’ solo dashboard (mÃ©tricas y reportes)
+ *   SUPERADMIN â†’ acceso total al ERP, incluyendo gestiÃ³n de usuarios
+ *   GERENTE    â†’ todos los mÃ³dulos operativos de su sucursal, excepto usuarios
+ *   USERS    â†’ solo los mÃ³dulos explÃ­citamente asignados en moduleAccess
+ *   CLIENT     â†’ sin acceso al ERP (solo portal pÃºblico de reservas)
  */
 
-// ── Claves de módulo ─────────────────────────────────────────────────────────
+// â”€â”€ Claves de mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const MODULE_KEYS = [
   'pos',          // POS + Turnos de Caja
-  'pos_dte',      // Documentos / Facturación DTE
+  'pos_dte',      // Documentos / FacturaciÃ³n DTE
   'appointments', // Citas + Caja de Citas
   'clients',      // Clientes
-  'loyalty',      // Puntos y Tarjetas de Fidelización
+  'loyalty',      // Puntos y Tarjetas de FidelizaciÃ³n
   'barbers',      // Barberos / Estilistas
   'services',     // Servicios / Tratamientos
   'products',     // Productos + Inventario + Compras + Proveedores
   'expenses',     // Gastos + Cuentas por Pagar
   'payroll',      // Planilla
   'branches',     // Sucursales
-  'settings',     // Configuración
+  'settings',     // ConfiguraciÃ³n
 ] as const;
 
 export type ModuleKey = typeof MODULE_KEYS[number];
 
+const ACCESS_ALIASES: Record<string, ModuleKey | 'usuarios'> = {
+  billing: 'pos_dte',
+  billing_dte: 'pos_dte',
+  dte: 'pos_dte',
+  gastos: 'expenses',
+  cxp: 'expenses',
+  compras: 'products',
+  proveedores: 'products',
+  inventario: 'products',
+  productos: 'products',
+  servicios: 'services',
+  citas: 'appointments',
+  agenda: 'appointments',
+  usuarios: 'usuarios',
+};
+
+function hasModuleAccess(moduleAccess: string[] | null, module: ModuleKey | 'usuarios') {
+  if (!Array.isArray(moduleAccess)) return false;
+  return moduleAccess.some(key => (ACCESS_ALIASES[key] ?? key) === module);
+}
+
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   pos:          'POS y Turnos de Caja',
-  pos_dte:      'Documentos / Facturación DTE',
+  pos_dte:      'Documentos / FacturaciÃ³n DTE',
   appointments: 'Citas y Caja de Citas',
   clients:      'Clientes',
-  loyalty:      'Fidelización (Puntos y Tarjetas)',
+  loyalty:      'FidelizaciÃ³n (Puntos y Tarjetas)',
   barbers:      'Barberos / Estilistas',
   services:     'Servicios / Tratamientos',
   products:     'Productos, Inventario y Compras',
   expenses:     'Gastos y Cuentas por Pagar',
   payroll:      'Planilla',
   branches:     'Sucursales',
-  settings:     'Configuración del sistema',
+  settings:     'ConfiguraciÃ³n del sistema',
 };
 
-// ── Mapeo ruta de página → módulo ────────────────────────────────────────────
+// â”€â”€ Mapeo ruta de pÃ¡gina â†’ mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const PAGE_MODULE_MAP: Record<string, ModuleKey | 'dashboard' | 'usuarios'> = {
   '/dashboard':       'dashboard',
@@ -68,7 +89,7 @@ export const PAGE_MODULE_MAP: Record<string, ModuleKey | 'dashboard' | 'usuarios
   '/settings':        'settings',
 };
 
-// ── Mapeo prefijo de API → módulo ─────────────────────────────────────────────
+// â”€â”€ Mapeo prefijo de API â†’ mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const API_MODULE_MAP: [string, ModuleKey | 'usuarios'][] = [
   ['/api/usuarios',     'usuarios'],
@@ -90,13 +111,13 @@ export const API_MODULE_MAP: [string, ModuleKey | 'usuarios'][] = [
   ['/api/settings',     'settings'],
 ];
 
-// ── Control de acceso ────────────────────────────────────────────────────────
+// â”€â”€ Control de acceso â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Determina si un rol puede acceder a un módulo dado.
+ * Determina si un rol puede acceder a un mÃ³dulo dado.
  * @param role         - Rol del usuario (string compatible con BarberUserRole)
- * @param module       - Clave del módulo a verificar
- * @param moduleAccess - Lista de módulos asignados (solo aplica a USUARIO)
+ * @param module       - Clave del mÃ³dulo a verificar
+ * @param moduleAccess - Lista de mÃ³dulos asignados (solo aplica a USERS)
  */
 export function canAccess(
   role: string,
@@ -108,23 +129,22 @@ export function canAccess(
 
   switch (role) {
     case 'SUPERADMIN':
-      return true;
+      if (module === 'usuarios') return true;
+      return hasModuleAccess(moduleAccess, module);
 
     case 'OWNER':
-      // Solo ve el dashboard — ningún módulo operativo ni usuarios
+      // Solo ve el dashboard â€” ningÃºn mÃ³dulo operativo ni usuarios
       return false;
 
     case 'GERENTE':
-      // Ve todo lo operativo excepto usuarios
-      return module !== 'usuarios';
-
-    case 'USUARIO':
-      // Sin acceso a gestión de usuarios nunca
+    case 'USERS':
+      // Sin acceso a gestiÃ³n de usuarios nunca
       if (module === 'usuarios') return false;
-      // Solo módulos explícitamente asignados
-      return Array.isArray(moduleAccess) && moduleAccess.includes(module);
+      // Solo mÃ³dulos explÃ­citamente asignados
+      return hasModuleAccess(moduleAccess, module);
 
     default:
       return false;
   }
 }
+

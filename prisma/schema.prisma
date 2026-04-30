@@ -34,7 +34,7 @@ enum BarberUserRole {
   OWNER      // Dueño del negocio — solo dashboard y reportes
   SUPERADMIN // Administrador total — acceso completo + gestión de usuarios
   GERENTE    // Gerente de sucursal — todos los módulos operativos de su sucursal
-  USUARIO    // Rol configurable — acceso solo a los módulos asignados
+  USERS      // Rol configurable — acceso solo a los módulos asignados
   BARBER     // Barbero — acceso a su agenda y citas
   CLIENT     // Cliente del negocio — solo portal de reservas públicas (sin acceso al ERP)
 }
@@ -266,7 +266,7 @@ model BarberUser {
   descuentoValor  Float?   // valor numérico (ej: 10 para 10% o $10.00)
   avatarUrl       String?
   role         BarberUserRole @default(CLIENT)
-  moduleAccess Json?          // Solo para USUARIO: array de módulos asignados ej. ["pos","clients"]
+  moduleAccess Json?          // Solo para USERS: array de módulos asignados ej. ["pos","clients"]
   active       Boolean        @default(true)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt

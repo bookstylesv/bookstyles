@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { BarberUserRole } from '@prisma/client';
 
-const ERP_ROLES: BarberUserRole[] = ['OWNER', 'SUPERADMIN', 'GERENTE', 'USUARIO'];
+const ERP_ROLES: BarberUserRole[] = ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'];
 
 export async function GET() {
   try {
@@ -51,13 +51,8 @@ export async function POST(req: Request) {
     if (!email?.trim())    throw new ValidationError('El email es obligatorio');
 
     // Solo se pueden asignar estos roles desde la UI
-    const ASSIGNABLE: BarberUserRole[] = ['GERENTE', 'USUARIO'];
+    const ASSIGNABLE: BarberUserRole[] = ['GERENTE', 'USERS'];
     if (!role || !ASSIGNABLE.includes(role)) throw new ValidationError('Rol no válido');
-
-    // USUARIO requiere al menos un módulo asignado
-    if (role === 'USUARIO' && (!Array.isArray(moduleAccess) || moduleAccess.length === 0)) {
-      throw new ValidationError('El rol Usuario requiere al menos un módulo asignado');
-    }
 
     // Generar contraseña temporal
     const chars       = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$';
@@ -73,7 +68,9 @@ export async function POST(req: Request) {
         password:     hashed,
         phone:        phone?.trim() || null,
         role,
-        moduleAccess: role === 'USUARIO' ? (moduleAccess ?? []) : Prisma.DbNull,
+        moduleAccess: role === 'GERENTE' || role === 'USERS'
+          ? (Array.isArray(moduleAccess) ? moduleAccess : [])
+          : Prisma.DbNull,
         active:       true,
       },
       select: { id: true, fullName: true, email: true, role: true, moduleAccess: true, active: true, createdAt: true },

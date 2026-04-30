@@ -1,8 +1,8 @@
-/**
- * auth.ts — JWT helpers usando 'jose' (Edge-compatible).
+﻿/**
+ * auth.ts â€” JWT helpers usando 'jose' (Edge-compatible).
  * No usa jsonwebtoken porque no funciona en Edge Runtime.
  * Maneja: sign, verify, cookies httpOnly con SameSite correcto.
- * Patrón aprendido de DTE Online para cross-domain Vercel.
+ * PatrÃ³n aprendido de DTE Online para cross-domain Vercel.
  */
 
 import { SignJWT, jwtVerify } from 'jose';
@@ -18,7 +18,7 @@ export type JwtPayload = {
   name:         string;          // fullName del usuario (para avatar con iniciales)
   branchId:     number | null;   // null = OWNER viendo todo consolidado
   branchSlug:   string | null;
-  moduleAccess: string[] | null; // Solo para USUARIO: módulos asignados
+  moduleAccess: string[] | null; // Solo para USERS: mÃ³dulos asignados
 };
 
 const ACCESS_TOKEN_NAME  = 'barber_access_token';
@@ -31,11 +31,11 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-// ── Sign ──────────────────────────────────────────────────
-// jose v6: setExpirationTime acepta solo timestamps numéricos (no strings '15m')
+// â”€â”€ Sign â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// jose v6: setExpirationTime acepta solo timestamps numÃ©ricos (no strings '15m')
 const nowSec = () => Math.floor(Date.now() / 1000);
 const ACCESS_TTL  = 15 * 60;           // 15 minutos
-const REFRESH_TTL = 7 * 24 * 60 * 60;  // 7 días
+const REFRESH_TTL = 7 * 24 * 60 * 60;  // 7 dÃ­as
 
 
 export async function signAccessToken(payload: JwtPayload): Promise<string> {
@@ -54,7 +54,7 @@ export async function signRefreshToken(userId: number): Promise<string> {
     .sign(getSecret());
 }
 
-// ── Verify ────────────────────────────────────────────────
+// â”€â”€ Verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function verifyAccessToken(token: string): Promise<JwtPayload | null> {
   try {
@@ -65,7 +65,7 @@ export async function verifyAccessToken(token: string): Promise<JwtPayload | nul
   }
 }
 
-// ── Cookies ───────────────────────────────────────────────
+// â”€â”€ Cookies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SameSite=none + Secure en prod (cross-domain Vercel)
 // SameSite=lax en dev (localhost mismo dominio)
 
@@ -105,10 +105,10 @@ export async function getCurrentUser(): Promise<JwtPayload | null> {
 }
 
 /**
- * Resuelve qué sucursal asignar al hacer login:
- * - OWNER      → null (vista consolidada de todas las sucursales)
- * - SUPERADMIN → null (acceso total, sin sucursal fija)
- * - GERENTE / USUARIO → casa matriz (el gerente puede cambiar después con switch-branch)
+ * Resuelve quÃ© sucursal asignar al hacer login:
+ * - OWNER      â†’ null (vista consolidada de todas las sucursales)
+ * - SUPERADMIN â†’ null (acceso total, sin sucursal fija)
+ * - GERENTE / USERS â†’ casa matriz (el gerente puede cambiar despuÃ©s con switch-branch)
  */
 export async function resolveBranchForLogin(
   _userId:  number,
@@ -119,7 +119,7 @@ export async function resolveBranchForLogin(
     return { branchId: null, branchSlug: null };
   }
 
-  // GERENTE / USUARIO → casa matriz del tenant
+  // GERENTE / USERS â†’ casa matriz del tenant
   const headquarters = await prisma.barberBranch.findFirst({
     where:  { tenantId, isHeadquarters: true },
     select: { id: true, slug: true },
@@ -130,3 +130,4 @@ export async function resolveBranchForLogin(
     branchSlug: headquarters?.slug ?? null,
   };
 }
+

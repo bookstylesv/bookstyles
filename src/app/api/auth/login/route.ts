@@ -9,6 +9,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { authService }  from '@/modules/auth/auth.service';
 import { setAuthCookies } from '@/lib/auth';
+import { AppError } from '@/lib/errors';
 import { ok, apiError } from '@/lib/response';
 import {
   checkLoginRateLimit,
@@ -48,7 +49,9 @@ export async function POST(req: NextRequest) {
       result = await authService.login(parsed.data.email, parsed.data.password, slug, { ip, ua });
     } catch (err) {
       // Registrar intento fallido (credenciales inválidas, tenant no existe, etc.)
-      await recordFailedAttempt(ip, slug);
+      if (!(err instanceof AppError && err.code === 'FORBIDDEN')) {
+        await recordFailedAttempt(ip, slug);
+      }
       throw err;
     }
 

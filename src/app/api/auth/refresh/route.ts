@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { signAccessToken, resolveBranchForLogin, type JwtPayload } from '@/lib/auth'
+import { getPlanLimits, moduleAccessFromPlanModules } from '@/lib/plan-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,9 +74,30 @@ export async function GET(req: NextRequest) {
       session.tenant.id,
       session.user.role,
     );
-    const moduleAccess = session.user.role === 'USUARIO'
-      ? (Array.isArray(session.user.moduleAccess) ? session.user.moduleAccess as string[] : null)
-      : null;
+    const moduleAccess = await (async () => {
+      if (session.user.role === 'SUPERADMIN') {
+        const limits = await getPlanLimits(session.tenant.id);
+        return moduleAccessFromPlanModules(limits.modules);
+      }
+
+      if (session.user.role === 'GERENTE' || session.user.role === 'USERS') {
+        return Array.isArray(session.user.moduleAccess) ? session.user.moduleAccess as string[] : [];
+      }
+
+      return null;
+    })();
+
+    if (
+      (session.user.role === 'GERENTE' || session.user.role === 'USERS') &&
+      Array.isArray(moduleAccess) &&
+      moduleAccess.length === 0
+    ) {
+      const res = NextResponse.redirect(loginUrl)
+      res.cookies.delete('barber_access_token')
+      res.cookies.delete('barber_refresh_token')
+      return res
+    }
+
     const payload: JwtPayload = {
       sub:          String(session.user.id),
       tenantId:     session.tenant.id,

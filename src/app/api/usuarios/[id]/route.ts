@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { BarberUserRole } from '@prisma/client';
 
-const ASSIGNABLE_ROLES: BarberUserRole[] = ['GERENTE', 'USUARIO'];
+const ASSIGNABLE_ROLES: BarberUserRole[] = ['GERENTE', 'USERS'];
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -43,11 +43,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     // Si cambia a USUARIO y no trae módulos, inicializar vacío
-    const resolvedModuleAccess = role === 'USUARIO'
+    const resolvedModuleAccess = role === 'GERENTE' || role === 'USERS'
       ? (Array.isArray(moduleAccess) ? moduleAccess : [])
-      : role === 'GERENTE'
-        ? Prisma.DbNull
-        : undefined;
+      : undefined;
 
     const updated = await prisma.barberUser.update({
       where: { id: userId },

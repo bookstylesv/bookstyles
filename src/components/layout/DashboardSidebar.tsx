@@ -62,11 +62,36 @@ type NavItem = {
   module?: string; // módulo requerido; si es undefined el item siempre es visible
 };
 
+const MODULE_ALIASES: Record<string, string> = {
+  billing: 'pos_dte',
+  billing_dte: 'pos_dte',
+  dte: 'pos_dte',
+  gastos: 'expenses',
+  cxp: 'expenses',
+  compras: 'products',
+  proveedores: 'products',
+  inventario: 'products',
+  productos: 'products',
+  servicios: 'services',
+  citas: 'appointments',
+  agenda: 'appointments',
+};
+
+function moduleEnabled(modules: Record<string, boolean>, module: string) {
+  if (Object.keys(modules).length === 0) return true;
+  return Object.entries(modules).some(([key, enabled]) => enabled === true && (MODULE_ALIASES[key] ?? key) === module);
+}
+
+function moduleAssigned(moduleAccess: string[] | null, module: string) {
+  if (!Array.isArray(moduleAccess)) return false;
+  return moduleAccess.some(key => (MODULE_ALIASES[key] ?? key) === module);
+}
+
 // Roles operativos con acceso a módulos (SUPERADMIN y GERENTE ven todo, USUARIO filtra por moduleAccess)
-const OP_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USUARIO'];
+const OP_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USERS'];
 
 const NAV_ITEMS_BARBER: NavItem[] = [
-  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USUARIO'] },
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'] },
   { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
   { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
   { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
@@ -89,7 +114,7 @@ const NAV_ITEMS_BARBER: NavItem[] = [
 ];
 
 const NAV_ITEMS_SALON: NavItem[] = [
-  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USUARIO'] },
+  { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'] },
   { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
   { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
   { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
@@ -395,12 +420,14 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
     // 3. Si no tiene módulo y llegó aquí, el rol no tiene acceso a módulos con module
     //    (OWNER ya retornó con su propio sidebar antes de llegar aquí)
     // 4. Módulo habilitado en el plan del tenant
-    const tenantEnabled = Object.keys(enabledModules).length === 0 || enabledModules[i.module] === true;
+    const tenantEnabled = moduleEnabled(enabledModules, i.module);
     if (!tenantEnabled) return false;
     // 5. SUPERADMIN y GERENTE: ven todos los módulos habilitados del tenant
-    if (role === 'SUPERADMIN' || role === 'GERENTE') return true;
+    if (role === 'SUPERADMIN' || role === 'GERENTE') {
+      return moduleAssigned(userModuleAccess, i.module);
+    }
     // 6. USUARIO: solo los módulos explícitamente asignados
-    return Array.isArray(userModuleAccess) && userModuleAccess.includes(i.module);
+    return moduleAssigned(userModuleAccess, i.module);
   });
   const initials       = getInitials(name || 'U');
   const LogoIcon       = isSalon ? Flower : Scissors;

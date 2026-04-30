@@ -50,7 +50,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
   }
 
   // USUARIO sin módulos asignados → aviso
-  if (user.role === 'USUARIO' && (!user.moduleAccess || user.moduleAccess.length === 0)) {
+  if ((user.role === 'GERENTE' || user.role === 'USERS') && (!user.moduleAccess || user.moduleAccess.length === 0)) {
     return (
       <div style={{ maxWidth: 600, width: '100%', margin: '60px auto' }}>
         <NoModulesNotice userName={user.name} />

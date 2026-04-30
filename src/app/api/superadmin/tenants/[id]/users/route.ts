@@ -1,5 +1,5 @@
 /**
- * GET  /api/superadmin/tenants/[id]/users — Lista el equipo (SUPERADMIN, GERENTE, USUARIO)
+ * GET  /api/superadmin/tenants/[id]/users — Lista el equipo (SUPERADMIN, GERENTE, USERS)
  * POST /api/superadmin/tenants/[id]/users — Crea un usuario del equipo
  *
  * La asociación GERENTE↔sucursal se guarda en BarberBranch.managerId (no en BarberUser).
@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import type { BarberUserRole } from '@prisma/client';
 
-const TEAM_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USUARIO'];
+const TEAM_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USERS'];
 
 export async function GET(
   req: NextRequest,
@@ -63,7 +63,7 @@ export async function POST(
   const { role, fullName, email, password, branchId } = body;
 
   if (!TEAM_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Rol no válido. Use SUPERADMIN, GERENTE o USUARIO' }, { status: 422 });
+    return NextResponse.json({ error: 'Rol no válido. Use SUPERADMIN, GERENTE o USERS' }, { status: 422 });
   }
   if (!fullName?.trim() || !email?.trim() || !password?.trim()) {
     return NextResponse.json({ error: 'fullName, email y password son requeridos' }, { status: 422 });
@@ -111,7 +111,7 @@ export async function POST(
       email:        email.trim().toLowerCase(),
       password:     hashed,
       role,
-      moduleAccess: role === 'USUARIO' ? [] : undefined,
+      moduleAccess: role === 'GERENTE' || role === 'USERS' ? [] : undefined,
       active:       true,
     },
     select: { id: true, fullName: true, email: true, role: true, active: true, moduleAccess: true, createdAt: true },

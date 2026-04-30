@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { MODULE_KEYS } from '@/lib/module-guard';
 
 export type PlanModules = Record<string, boolean>;
 
@@ -19,6 +20,39 @@ export type PlanLimits = {
 };
 
 const configCache = new Map<string, PlanLimits>();
+
+const MODULE_ALIASES: Record<string, string> = {
+  billing: 'pos_dte',
+  billing_dte: 'pos_dte',
+  dte: 'pos_dte',
+  gastos: 'expenses',
+  cxp: 'expenses',
+  compras: 'products',
+  proveedores: 'products',
+  inventario: 'products',
+  productos: 'products',
+  servicios: 'services',
+  citas: 'appointments',
+  agenda: 'appointments',
+  usuarios: 'usuarios',
+};
+
+function canonicalModuleKey(key: string) {
+  return MODULE_ALIASES[key] ?? key;
+}
+
+function normalizeModules(modules: PlanModules | null | undefined): PlanModules {
+  const normalized: PlanModules = {};
+  for (const [rawKey, enabled] of Object.entries(modules ?? {})) {
+    if (typeof enabled !== 'boolean') continue;
+    normalized[canonicalModuleKey(rawKey)] = enabled;
+  }
+  return normalized;
+}
+
+export function moduleAccessFromPlanModules(modules: PlanModules): string[] {
+  return MODULE_KEYS.filter(module => modules[module] === true);
+}
 
 export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
   const cacheKey = String(tenantId);
@@ -40,15 +74,20 @@ export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
   });
 
   if (!planConfig) {
-    return { maxBarbers: tenant.maxBarbers, maxBranches: 1, modules: (tenant.modules as PlanModules) ?? {} };
+    const fallbackModules = normalizeModules(tenant.modules as PlanModules);
+    return { maxBarbers: tenant.maxBarbers, maxBranches: 1, modules: fallbackModules };
   }
 
-  const planModules    = (planConfig.modules as PlanModules) ?? {};
-  const tenantOverride = (tenant.modules    as PlanModules) ?? {};
+  const planModules    = normalizeModules(planConfig.modules as PlanModules);
+  const tenantOverride = normalizeModules(tenant.modules    as PlanModules);
 
   const resolved: PlanModules = { ...planModules };
   for (const key of Object.keys(tenantOverride)) {
     if (typeof tenantOverride[key] === 'boolean') resolved[key] = tenantOverride[key];
+  }
+
+  if (tenant.plan === 'ENTERPRISE') {
+    for (const module of MODULE_KEYS) resolved[module] = true;
   }
 
   const limits: PlanLimits = {
