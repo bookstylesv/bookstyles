@@ -50,21 +50,36 @@ function validateColumns(rows: Record<string, string>[], required: string[]): st
 
 async function importClientes(tenantId: number, rows: Record<string, string>[]) {
   const errors: RowError[] = [];
-  const toCreate: { tenantId: number; email: string; password: string; fullName: string; phone?: string; descuentoTipo?: string; descuentoValor?: number; role: 'CLIENT' }[] = [];
+  const toCreate: {
+    tenantId: number; email: string; password: string; fullName: string; role: 'CLIENT';
+    phone?: string; tipoDocumento?: string; numDocumento?: string; nrc?: string;
+    nombreComercial?: string; complemento?: string; descuentoTipo?: string; descuentoValor?: number;
+  }[] = [];
+
+  // Códigos DTE: 13=DUI, 36=NIT, 37=Pasaporte, 03=Cédula ext., 02=Carnet res.
+  const VALID_DOC_CODES = ['13', '36', '37', '03', '02'];
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]; const fila = i + 2;
     if (!r.nombre) { errors.push({ fila, campo: 'nombre', error: 'Nombre requerido' }); continue; }
     if (!r.email)  { errors.push({ fila, campo: 'email',  error: 'Email requerido' }); continue; }
     if (!email(r.email)) { errors.push({ fila, campo: 'email', error: `"${r.email}" no es un email válido` }); continue; }
+
     const descTipo = r.descuento_tipo?.toUpperCase();
+    const docCode  = r.tipo_documento?.trim();
+
     toCreate.push({
       tenantId, role: 'CLIENT',
       fullName: r.nombre, email: r.email.toLowerCase(),
       password: '$2b$10$placeholder_import_password_hash',
-      phone: r.telefono || undefined,
-      descuentoTipo: descTipo === 'PORCENTAJE' || descTipo === 'MONTO' ? descTipo : undefined,
-      descuentoValor: r.descuento_valor ? num(r.descuento_valor) : undefined,
+      phone:           r.telefono       || undefined,
+      tipoDocumento:   VALID_DOC_CODES.includes(docCode ?? '') ? docCode : undefined,
+      numDocumento:    r.num_documento  || undefined,
+      nrc:             r.nrc            || undefined,
+      nombreComercial: r.nombre_comercial || undefined,
+      complemento:     r.complemento    || undefined,
+      descuentoTipo:   descTipo === 'PORCENTAJE' || descTipo === 'MONTO' ? descTipo : undefined,
+      descuentoValor:  r.descuento_valor ? num(r.descuento_valor) : undefined,
     });
   }
 
@@ -78,19 +93,30 @@ async function importEmpleados(tenantId: number, rows: Record<string, string>[])
   const errors: RowError[] = [];
   let imported = 0; let skipped = 0;
 
+  const bcrypt = await import('bcryptjs');
+
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]; const fila = i + 2;
-    if (!r.nombre)   { errors.push({ fila, campo: 'nombre',   error: 'Nombre requerido' }); skipped++; continue; }
-    if (!r.email)    { errors.push({ fila, campo: 'email',    error: 'Email requerido' }); skipped++; continue; }
-    if (!r.password) { errors.push({ fila, campo: 'password', error: 'Contraseña inicial requerida' }); skipped++; continue; }
+    if (!r.nombre) { errors.push({ fila, campo: 'nombre', error: 'Nombre requerido' }); skipped++; continue; }
+    if (!r.email)  { errors.push({ fila, campo: 'email',  error: 'Email requerido' }); skipped++; continue; }
     if (!email(r.email)) { errors.push({ fila, campo: 'email', error: `"${r.email}" no es un email válido` }); skipped++; continue; }
-    const bcrypt = await import('bcryptjs');
-    const hashed = await bcrypt.hash(r.password, 10);
+
+    // Contraseña auto-generada (el empleado la cambia en su primer acceso)
+    const tempPassword = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6).toUpperCase() + '!';
+    const hashed = await bcrypt.hash(tempPassword, 10);
+
+    // Especialidades: "Corte,Barba" → ["Corte", "Barba"]
+    const specialties = r.especialidades
+      ? r.especialidades.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+
     try {
       const user = await prisma.barberUser.create({
         data: { tenantId, role: 'USERS', fullName: r.nombre, email: r.email.toLowerCase(), password: hashed, phone: r.telefono || undefined },
       });
-      await prisma.barber.create({ data: { tenantId, userId: user.id, cargo: r.cargo || 'Barbero' } });
+      await prisma.barber.create({
+        data: { tenantId, userId: user.id, cargo: r.cargo || 'Barbero', bio: r.bio || undefined, specialties },
+      });
       imported++;
     } catch {
       errors.push({ fila, campo: 'email', error: `Email "${r.email}" ya existe en este tenant` });
