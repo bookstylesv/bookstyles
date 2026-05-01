@@ -5,19 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { validateSuperadminKey, unauthorizedResponse } from '@/lib/superadmin-auth';
 import { prisma } from '@/lib/prisma';
-
-function isAuthorized(req: NextRequest): boolean {
-  const key = req.headers.get('x-api-key');
-  return key === process.env.SUPERADMIN_API_KEY;
-}
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: Params) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
+  if (!validateSuperadminKey(req)) return unauthorizedResponse();
 
   const { id } = await params;
   const tenantId = Number(id);
