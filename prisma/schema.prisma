@@ -141,6 +141,9 @@ model BarberTenant {
   stockSucursal  BarberStockSucursal[]
   transferencias BarberTransferencia[]
 
+  // Importaciones masivas
+  importLogs BarberImportLog[]
+
   @@map("barber_tenants")
 }
 
@@ -1160,4 +1163,26 @@ model BarberLoginAttempt {
   @@index([ip, slug])
   @@index([failedAt])
   @@map("barber_login_attempts")
+}
+
+// ══════════════════════════════════════════════════════
+// IMPORT LOG — registro de importaciones masivas
+// Permite rate-limiting (10/día) y auditoría de operaciones
+// ══════════════════════════════════════════════════════
+
+model BarberImportLog {
+  id         Int          @id @default(autoincrement())
+  tenantId   Int
+  tenant     BarberTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resource   String       // clientes | productos | empleados | servicios | proveedores | cat-producto | cat-gasto | cat-servicio
+  action     String       // import | reset
+  rows       Int          @default(0)
+  imported   Int          @default(0)
+  skipped    Int          @default(0)
+  errors     Json         @default("[]")
+  createdAt  DateTime     @default(now())
+
+  @@index([tenantId, resource])
+  @@index([tenantId, createdAt])
+  @@map("barber_import_logs")
 }
