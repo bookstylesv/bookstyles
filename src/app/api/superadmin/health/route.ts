@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const serverTime = dbMeta[0]?.now?.toISOString() ?? null;
 
     // Tenants por estado
-    const tenantCounts = await prisma.tenant.groupBy({
+    const tenantCounts = await prisma.barberTenant.groupBy({
       by: ['status'],
       _count: { _all: true },
     });
