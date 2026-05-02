@@ -1,8 +1,8 @@
 ﻿'use client';
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// USERSS Y ROLES â€” Solo accesible para SUPERADMIN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════
+// USUARIOS Y ROLES — Solo accesible para SUPERADMIN
+// ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ import type { ModuleKey } from '@/lib/module-guard';
 
 const { Title, Text } = Typography;
 
-// â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tipos ────────────────────────────────────────────────────────────────────
 
 type ErpRole = 'OWNER' | 'SUPERADMIN' | 'GERENTE' | 'USERS';
 
@@ -50,7 +50,7 @@ type CreateForm = {
   moduleAccess: string[];
 };
 
-// â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Constantes ───────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<ErpRole, string> = {
   OWNER:      'Propietario',
@@ -67,10 +67,10 @@ const ROLE_COLORS: Record<ErpRole, string> = {
 };
 
 const ROLE_DESCRIPTIONS: Record<ErpRole, string> = {
-  OWNER:      'Solo dashboard y reportes â€” vista ejecutiva',
-  SUPERADMIN: 'Acceso segÃºn plan contratado + gestiÃ³n de usuarios',
-  GERENTE:    'Solo los mÃ³dulos asignados por el Super Admin',
-  USERS:    'Solo los mÃ³dulos asignados mediante checkboxes',
+  OWNER:      'Solo dashboard y reportes — vista ejecutiva',
+  SUPERADMIN: 'Acceso según plan contratado + gestión de usuarios',
+  GERENTE:    'Solo los módulos asignados por el Super Admin',
+  USERS:    'Solo los módulos asignados mediante checkboxes',
 };
 
 // Roles que el SUPERADMIN puede asignar al crear usuarios
@@ -83,7 +83,7 @@ const AVATAR_COLORS = ['#0d9488', '#7c3aed', '#0284c7', '#b45309', '#be123c', '#
 function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length]; }
 function getInitials(name: string) { return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(); }
 
-// â”€â”€ Componente de mÃ³dulos asignables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Componente de módulos asignables ─────────────────────────────────────────
 
 function ModuleSelector({ value, onChange }: {
   value:    string[];
@@ -98,7 +98,7 @@ function ModuleSelector({ value, onChange }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ fontSize: 12, fontWeight: 600 }}>MÃ³dulos con acceso</Text>
+        <Text style={{ fontSize: 12, fontWeight: 600 }}>Módulos con acceso</Text>
         <Button size="small" type="link" onClick={toggleAll} style={{ padding: 0, fontSize: 12 }}>
           {allSelected ? 'Quitar todos' : 'Seleccionar todos'}
         </Button>
@@ -119,7 +119,7 @@ function ModuleSelector({ value, onChange }: {
   );
 }
 
-// â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function UsuariosPage() {
   const { theme: barberTheme } = useBarberTheme();
@@ -137,7 +137,7 @@ export default function UsuariosPage() {
     fullName: '', email: '', phone: '', role: 'GERENTE', moduleAccess: [],
   });
 
-  // â”€â”€ Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchUsuarios = useCallback(async () => {
     setLoading(true);
     try {
@@ -154,7 +154,7 @@ export default function UsuariosPage() {
 
   useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
 
-  // â”€â”€ Crear â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Crear ────────────────────────────────────────────────────────────────────
   async function handleCreate() {
     if (!form.fullName.trim()) { toast.error('El nombre es obligatorio'); return; }
     if (!form.email.trim())    { toast.error('El email es obligatorio'); return; }
@@ -185,7 +185,7 @@ export default function UsuariosPage() {
     }
   }
 
-  // â”€â”€ Cambiar rol â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Cambiar rol ──────────────────────────────────────────────────────────────
   async function handleRoleChange(id: number, role: ErpRole) {
     try {
       const res = await fetch(`/api/usuarios/${id}`, {
@@ -201,7 +201,7 @@ export default function UsuariosPage() {
     }
   }
 
-  // â”€â”€ Toggle activo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Toggle activo ─────────────────────────────────────────────────────────────
   async function handleToggleActive(id: number, active: boolean) {
     try {
       const res = await fetch(`/api/usuarios/${id}`, {
@@ -217,18 +217,18 @@ export default function UsuariosPage() {
     }
   }
 
-  // â”€â”€ Filtrado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Filtrado ──────────────────────────────────────────────────────────────────
   const filtered = usuarios.filter(u =>
     u.fullName.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  // â”€â”€ KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── KPIs ──────────────────────────────────────────────────────────────────────
   const activos    = usuarios.filter(u => u.active).length;
   const superAdmins = usuarios.filter(u => u.role === 'SUPERADMIN').length;
   const gerentes   = usuarios.filter(u => u.role === 'GERENTE').length;
 
-  // â”€â”€ Columnas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Columnas ──────────────────────────────────────────────────────────────────
   const columns: ColumnsType<StaffUser> = [
     {
       title: 'Usuario',
@@ -247,10 +247,10 @@ export default function UsuariosPage() {
       ),
     },
     {
-      title: 'TelÃ©fono',
+      title: 'Teléfono',
       dataIndex: 'phone',
       key: 'phone',
-      render: v => v || <Text type="secondary">â€”</Text>,
+      render: v => v || <Text type="secondary">—</Text>,
       responsive: ['md'],
     },
     {
@@ -272,17 +272,17 @@ export default function UsuariosPage() {
       ),
     },
     {
-      title: 'MÃ³dulos',
+      title: 'Módulos',
       key: 'modules',
       responsive: ['lg'],
       render: (_, u) => {
         if (u.role === 'OWNER')      return <Text type="secondary" style={{ fontSize: 12 }}>Solo dashboard</Text>;
-        if (u.role === 'SUPERADMIN') return <Tag color="green">SegÃºn plan</Tag>;
+        if (u.role === 'SUPERADMIN') return <Tag color="green">Según plan</Tag>;
         if (!u.moduleAccess || u.moduleAccess.length === 0)
-          return <Text type="warning" style={{ fontSize: 12 }}>Sin mÃ³dulos</Text>;
+          return <Text type="warning" style={{ fontSize: 12 }}>Sin módulos</Text>;
         return (
           <Text style={{ fontSize: 12 }}>
-            {u.moduleAccess.length} mÃ³dulo{u.moduleAccess.length !== 1 ? 's' : ''}
+            {u.moduleAccess.length} módulo{u.moduleAccess.length !== 1 ? 's' : ''}
           </Text>
         );
       },
@@ -320,7 +320,7 @@ export default function UsuariosPage() {
             <Title level={3} style={{ margin: 0 }}>Usuarios y Roles</Title>
           </Space>
           <Text type="secondary" style={{ display: 'block', marginTop: 2 }}>
-            GestiÃ³n de acceso al sistema â€” solo visible para Super Admin
+            Gestión de acceso al sistema — solo visible para Super Admin
           </Text>
         </Col>
         <Col>
@@ -349,7 +349,7 @@ export default function UsuariosPage() {
       {/* Tabla */}
       <Card size="small" style={{ borderRadius: 10 }}
         title={
-          <Input prefix={<SearchOutlined />} placeholder="Buscar por nombre o emailâ€¦"
+          <Input prefix={<SearchOutlined />} placeholder="Buscar por nombre o email…"
             value={search} onChange={e => setSearch(e.target.value)} style={{ width: 300 }} allowClear />
         }
       >
@@ -377,7 +377,7 @@ export default function UsuariosPage() {
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </FormField>
 
-            <FormField label="TelÃ©fono">
+            <FormField label="Teléfono">
               <SdInput placeholder="+503 7000-0000" value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
             </FormField>
@@ -394,7 +394,7 @@ export default function UsuariosPage() {
               )}
             </FormField>
 
-            {/* MÃ³dulos â€” solo visible para rol USERS */}
+            {/* Módulos — solo visible para rol USERS */}
             {(form.role === 'GERENTE' || form.role === 'USERS') && (
               <>
                 <Divider style={{ margin: '4px 0' }} />
@@ -406,27 +406,27 @@ export default function UsuariosPage() {
             )}
 
             <div style={{ background: token.colorFillSecondary, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: token.colorTextSecondary }}>
-              Se generarÃ¡ una contraseÃ±a temporal que se mostrarÃ¡ al crear el usuario.
+              Se generará una contraseña temporal que se mostrará al crear el usuario.
             </div>
           </div>
 
           <DialogFooter style={{ marginTop: 16 }}>
             <SdButton variant="outline" onClick={() => setShowCreate(false)}>Cancelar</SdButton>
             <SdButton onClick={handleCreate} disabled={saving}>
-              {saving ? 'Creandoâ€¦' : 'Crear usuario'}
+              {saving ? 'Creando…' : 'Crear usuario'}
             </SdButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal contraseÃ±a temporal */}
+      {/* Modal contraseña temporal */}
       <Modal open={!!tempPassword} onCancel={() => setTempPassword(null)}
         footer={<Button type="primary" onClick={() => setTempPassword(null)}>Entendido</Button>}
-        title={<Space><Key size={18} weight="duotone" color={primary} />ContraseÃ±a temporal generada</Space>}
+        title={<Space><Key size={18} weight="duotone" color={primary} />Contraseña temporal generada</Space>}
       >
         {tempPassword && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <Text>El usuario <strong>{tempPassword.name}</strong> fue creado con la contraseÃ±a temporal:</Text>
+            <Text>El usuario <strong>{tempPassword.name}</strong> fue creado con la contraseña temporal:</Text>
             <div style={{
               fontFamily: 'monospace', fontSize: 22, fontWeight: 700,
               letterSpacing: 3, margin: '16px 0',
@@ -436,7 +436,7 @@ export default function UsuariosPage() {
               {tempPassword.pwd}
             </div>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              CompÃ¡rtela con el usuario. DeberÃ¡ cambiarla en su primer ingreso.
+              Compártela con el usuario. Deberá cambiarla en su primer ingreso.
             </Text>
           </div>
         )}
