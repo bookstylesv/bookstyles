@@ -5,7 +5,7 @@
  *   1. tenant.planSlug → slug de un plan custom creado desde el panel
  *   2. tenant.plan (enum) → fallback: "BASIC" → slug "basic"
  *   3. Si no hay BarberPlanConfig, usa maxBarbers del tenant y módulos vacíos.
- *   4. BarberTenant.modules actúa como override opcional por tenant.
+ *   4. BarberTenant.modules solo se usa como fallback si no existe BarberPlanConfig.
  */
 
 import { prisma } from '@/lib/prisma';
@@ -18,8 +18,6 @@ export type PlanLimits = {
   maxBranches: number;
   modules:     PlanModules;
 };
-
-const configCache = new Map<string, PlanLimits>();
 
 const MODULE_ALIASES: Record<string, string[]> = {
   pos: ['pos', 'pos_turnos'],
@@ -54,9 +52,6 @@ export function moduleAccessFromPlanModules(modules: PlanModules): string[] {
 }
 
 export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
-  const cacheKey = String(tenantId);
-  if (configCache.has(cacheKey)) return configCache.get(cacheKey)!;
-
   const tenant = await prisma.barberTenant.findUnique({
     where:  { id: tenantId },
     select: { plan: true, planSlug: true, status: true, modules: true, maxBarbers: true },
@@ -81,29 +76,22 @@ export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
     return { maxBarbers: tenant.maxBarbers, maxBranches: 1, modules: fallbackModules };
   }
 
-  const planModules    = normalizeModules(planConfig.modules as PlanModules);
-  const tenantOverride = normalizeModules(tenant.modules    as PlanModules);
+  const planModules = normalizeModules(planConfig.modules as PlanModules);
 
   const resolved: PlanModules = {};
   for (const module of MODULE_KEYS) {
-    const planEnabled = planModules[module] === true;
-    const override = tenantOverride[module];
-    // El override del tenant solo puede apagar modulos del plan, no encender extras.
-    resolved[module] = planEnabled && (typeof override === 'boolean' ? override : true);
+    resolved[module] = planModules[module] === true;
   }
 
   if (tenant.status !== 'TRIAL' && tenant.plan === 'ENTERPRISE') {
     for (const module of MODULE_KEYS) resolved[module] = true;
   }
 
-  const limits: PlanLimits = {
+  return {
     maxBarbers:  planConfig.maxBarbers,
     maxBranches: planConfig.maxBranches,
     modules:     resolved,
   };
-
-  configCache.set(cacheKey, limits);
-  return limits;
 }
 
 export async function isModuleEnabled(tenantId: number, module: string): Promise<boolean> {

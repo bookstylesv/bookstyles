@@ -147,8 +147,7 @@ export function canAccess(
 
   switch (role) {
     case 'SUPERADMIN':
-      if (module === 'usuarios') return true;
-      return hasModuleAccess(moduleAccess, module);
+      return true;
 
     case 'OWNER':
       // Solo ve el dashboard â€” ningÃºn mÃ³dulo operativo ni usuarios

@@ -423,11 +423,9 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
     // 4. Módulo habilitado en el plan del tenant
     const tenantEnabled = moduleEnabled(enabledModules, i.module);
     if (!tenantEnabled) return false;
-    // 5. SUPERADMIN y GERENTE: ven todos los módulos habilitados del tenant
-    if (role === 'SUPERADMIN' || role === 'GERENTE') {
-      return moduleAssigned(userModuleAccess, i.module);
-    }
-    // 6. USUARIO: solo los módulos explícitamente asignados
+    // 5. SUPERADMIN ve todos los módulos habilitados por el plan actual del tenant.
+    if (role === 'SUPERADMIN') return true;
+    // 6. GERENTE y USUARIO: solo los módulos explícitamente asignados.
     return moduleAssigned(userModuleAccess, i.module);
   });
   const initials       = getInitials(name || 'U');
