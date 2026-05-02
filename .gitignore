@@ -37,6 +37,7 @@ yarn-error.log*
 .secrets/
 *.secret
 *.token
+*.md
 # .env.example IS committed (no secrets, serves as template)
 !.env.example
 
