@@ -8,8 +8,19 @@ import { UnauthorizedError, ValidationError, ForbiddenError } from '@/lib/errors
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { BarberUserRole } from '@prisma/client';
+import { getPlanLimits, moduleAccessFromPlanModules } from '@/lib/plan-guard';
 
 const ERP_ROLES: BarberUserRole[] = ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'];
+
+async function getAllowedModuleAccess(tenantId: number) {
+  const limits = await getPlanLimits(tenantId);
+  return moduleAccessFromPlanModules(limits.modules);
+}
+
+function filterAllowedModules(moduleAccess: string[] | null | undefined, allowedModules: string[]) {
+  if (!Array.isArray(moduleAccess)) return [];
+  return moduleAccess.filter(module => allowedModules.includes(module));
+}
 
 export async function GET() {
   try {
@@ -19,16 +30,19 @@ export async function GET() {
     // pero añadimos la verificación explícita como defensa en profundidad.
     if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
-    const usuarios = await prisma.barberUser.findMany({
+    const [usuarios, availableModules] = await Promise.all([
+      prisma.barberUser.findMany({
       where:   { tenantId: user.tenantId, role: { in: ERP_ROLES } },
       select: {
         id: true, fullName: true, email: true, phone: true,
         role: true, moduleAccess: true, active: true, createdAt: true, avatarUrl: true,
       },
       orderBy: [{ role: 'asc' }, { fullName: 'asc' }],
-    });
+      }),
+      getAllowedModuleAccess(user.tenantId),
+    ]);
 
-    return ok(usuarios);
+    return ok({ users: usuarios, availableModules });
   } catch (err) { return apiError(err); }
 }
 
@@ -60,6 +74,9 @@ export async function POST(req: Request) {
     const bcrypt      = await import('bcryptjs');
     const hashed      = await bcrypt.hash(tempPassword, 10);
 
+    const allowedModules = await getAllowedModuleAccess(currentUser.tenantId);
+    const resolvedModuleAccess = filterAllowedModules(moduleAccess, allowedModules);
+
     const usuario = await prisma.barberUser.create({
       data: {
         tenantId:     currentUser.tenantId,
@@ -69,7 +86,7 @@ export async function POST(req: Request) {
         phone:        phone?.trim() || null,
         role,
         moduleAccess: role === 'GERENTE' || role === 'USERS'
-          ? (Array.isArray(moduleAccess) ? moduleAccess : [])
+          ? resolvedModuleAccess
           : Prisma.DbNull,
         active:       true,
       },

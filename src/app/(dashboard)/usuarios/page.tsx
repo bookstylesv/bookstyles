@@ -50,6 +50,13 @@ type CreateForm = {
   moduleAccess: string[];
 };
 
+type UsuariosPayload =
+  | StaffUser[]
+  | {
+      users: StaffUser[];
+      availableModules?: string[];
+    };
+
 // ── Constantes ───────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<ErpRole, string> = {
@@ -85,15 +92,16 @@ function getInitials(name: string) { return name.split(' ').map(n => n[0]).join(
 
 // ── Componente de módulos asignables ─────────────────────────────────────────
 
-function ModuleSelector({ value, onChange }: {
+function ModuleSelector({ value, availableModules, onChange }: {
   value:    string[];
+  availableModules: ModuleKey[];
   onChange: (v: string[]) => void;
 }) {
   const toggle = (key: ModuleKey) => {
     onChange(value.includes(key) ? value.filter(k => k !== key) : [...value, key]);
   };
-  const allSelected = MODULE_KEYS.every(k => value.includes(k));
-  const toggleAll   = () => onChange(allSelected ? [] : [...MODULE_KEYS]);
+  const allSelected = availableModules.length > 0 && availableModules.every(k => value.includes(k));
+  const toggleAll   = () => onChange(allSelected ? [] : [...availableModules]);
 
   return (
     <div>
@@ -104,7 +112,7 @@ function ModuleSelector({ value, onChange }: {
         </Button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
-        {MODULE_KEYS.map(key => (
+        {availableModules.map(key => (
           <Checkbox
             key={key}
             checked={value.includes(key)}
@@ -132,6 +140,7 @@ export default function UsuariosPage() {
   const [showCreate,   setShowCreate]   = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [tempPassword, setTempPassword] = useState<{ name: string; pwd: string } | null>(null);
+  const [availableModules, setAvailableModules] = useState<ModuleKey[]>([...MODULE_KEYS]);
 
   const [form, setForm] = useState<CreateForm>({
     fullName: '', email: '', phone: '', role: 'GERENTE', moduleAccess: [],
@@ -144,7 +153,18 @@ export default function UsuariosPage() {
       const res  = await fetch('/api/usuarios');
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setUsuarios(data.data ?? data);
+      const payload = (data.data ?? data) as UsuariosPayload;
+      if (Array.isArray(payload)) {
+        setUsuarios(payload);
+        setAvailableModules([...MODULE_KEYS]);
+      } else {
+        setUsuarios(payload.users ?? []);
+        setAvailableModules(
+          (payload.availableModules ?? []).filter((module): module is ModuleKey =>
+            (MODULE_KEYS as readonly string[]).includes(module),
+          ),
+        );
+      }
     } catch {
       toast.error('Error al cargar usuarios');
     } finally {
@@ -168,7 +188,9 @@ export default function UsuariosPage() {
           email:        form.email,
           phone:        form.phone,
           role:         form.role,
-          moduleAccess: form.role === 'GERENTE' || form.role === 'USERS' ? form.moduleAccess : null,
+          moduleAccess: form.role === 'GERENTE' || form.role === 'USERS'
+            ? form.moduleAccess.filter(module => availableModules.includes(module as ModuleKey))
+            : null,
         }),
       });
       const data = await res.json();
@@ -400,6 +422,7 @@ export default function UsuariosPage() {
                 <Divider style={{ margin: '4px 0' }} />
                 <ModuleSelector
                   value={form.moduleAccess}
+                  availableModules={availableModules}
                   onChange={v => setForm(f => ({ ...f, moduleAccess: v }))}
                 />
               </>

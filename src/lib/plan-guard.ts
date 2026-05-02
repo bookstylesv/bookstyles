@@ -60,13 +60,17 @@ export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
 
   const tenant = await prisma.barberTenant.findUnique({
     where:  { id: tenantId },
-    select: { plan: true, planSlug: true, modules: true, maxBarbers: true },
+    select: { plan: true, planSlug: true, status: true, modules: true, maxBarbers: true },
   });
 
   if (!tenant) return { maxBarbers: 3, maxBranches: 1, modules: {} };
 
-  // Resolver el slug: custom plan tiene prioridad sobre el enum
-  const slug = tenant.planSlug ?? tenant.plan.toLowerCase();
+  // Mientras el tenant esta en prueba, los limites efectivos son los del plan TRIAL.
+  // El campo tenant.plan puede quedar como BASIC/PRO para indicar el plan elegido al convertir,
+  // pero no debe abrir modulos mientras status siga en TRIAL.
+  const slug = tenant.status === 'TRIAL'
+    ? 'trial'
+    : tenant.planSlug ?? tenant.plan.toLowerCase();
 
   const planConfig = await prisma.barberPlanConfig.findUnique({
     where:  { slug },
@@ -81,12 +85,15 @@ export async function getPlanLimits(tenantId: number): Promise<PlanLimits> {
   const planModules    = normalizeModules(planConfig.modules as PlanModules);
   const tenantOverride = normalizeModules(tenant.modules    as PlanModules);
 
-  const resolved: PlanModules = { ...planModules };
-  for (const key of Object.keys(tenantOverride)) {
-    if (typeof tenantOverride[key] === 'boolean') resolved[key] = tenantOverride[key];
+  const resolved: PlanModules = {};
+  for (const module of MODULE_KEYS) {
+    const planEnabled = planModules[module] === true;
+    const override = tenantOverride[module];
+    // El override del tenant solo puede apagar modulos del plan, no encender extras.
+    resolved[module] = planEnabled && (typeof override === 'boolean' ? override : true);
   }
 
-  if (tenant.plan === 'ENTERPRISE') {
+  if (tenant.status !== 'TRIAL' && tenant.plan === 'ENTERPRISE') {
     for (const module of MODULE_KEYS) resolved[module] = true;
   }
 

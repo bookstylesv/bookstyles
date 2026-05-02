@@ -9,8 +9,19 @@ import { UnauthorizedError, NotFoundError, ValidationError, ForbiddenError } fro
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { BarberUserRole } from '@prisma/client';
+import { getPlanLimits, moduleAccessFromPlanModules } from '@/lib/plan-guard';
 
 const ASSIGNABLE_ROLES: BarberUserRole[] = ['GERENTE', 'USERS'];
+
+async function getAllowedModuleAccess(tenantId: number) {
+  const limits = await getPlanLimits(tenantId);
+  return moduleAccessFromPlanModules(limits.modules);
+}
+
+function filterAllowedModules(moduleAccess: string[] | null | undefined, allowedModules: string[]) {
+  if (!Array.isArray(moduleAccess)) return [];
+  return moduleAccess.filter(module => allowedModules.includes(module));
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -42,9 +53,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       throw new ValidationError('Solo se pueden asignar los roles Gerente o Usuario');
     }
 
+    const allowedModules = await getAllowedModuleAccess(currentUser.tenantId);
+
     // Si cambia a USUARIO y no trae módulos, inicializar vacío
     const resolvedModuleAccess = role === 'GERENTE' || role === 'USERS'
-      ? (Array.isArray(moduleAccess) ? moduleAccess : [])
+      ? filterAllowedModules(moduleAccess, allowedModules)
       : undefined;
 
     const updated = await prisma.barberUser.update({
@@ -55,7 +68,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // Si cambió rol: aplicar módulos resueltos; si solo se envió moduleAccess: actualizar directo
         ...(role !== undefined
           ? { moduleAccess: resolvedModuleAccess }
-          : moduleAccess !== undefined && { moduleAccess: Array.isArray(moduleAccess) ? moduleAccess : Prisma.DbNull }
+          : moduleAccess !== undefined && { moduleAccess: Array.isArray(moduleAccess) ? filterAllowedModules(moduleAccess, allowedModules) : Prisma.DbNull }
         ),
       },
       select: { id: true, fullName: true, email: true, role: true, moduleAccess: true, active: true },

@@ -35,14 +35,17 @@ export const authService = {
     const { branchId, branchSlug } = await resolveBranchForLogin(user.id, tenant.id, user.role);
 
     // 6. Obtener módulos asignados (solo para rol USUARIO)
+    const limits = await getPlanLimits(tenant.id);
+    const planModuleAccess = moduleAccessFromPlanModules(limits.modules);
+
     const moduleAccess = await (async () => {
       if (user.role === 'SUPERADMIN') {
-        const limits = await getPlanLimits(tenant.id);
-        return moduleAccessFromPlanModules(limits.modules);
+        return planModuleAccess;
       }
 
       if (user.role === 'GERENTE' || user.role === 'USERS') {
-        return Array.isArray(user.moduleAccess) ? user.moduleAccess as string[] : [];
+        const assigned = Array.isArray(user.moduleAccess) ? user.moduleAccess as string[] : [];
+        return assigned.filter(module => planModuleAccess.includes(module));
       }
 
       return null;

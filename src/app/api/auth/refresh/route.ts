@@ -74,14 +74,17 @@ export async function GET(req: NextRequest) {
       session.tenant.id,
       session.user.role,
     );
+    const limits = await getPlanLimits(session.tenant.id);
+    const planModuleAccess = moduleAccessFromPlanModules(limits.modules);
+
     const moduleAccess = await (async () => {
       if (session.user.role === 'SUPERADMIN') {
-        const limits = await getPlanLimits(session.tenant.id);
-        return moduleAccessFromPlanModules(limits.modules);
+        return planModuleAccess;
       }
 
       if (session.user.role === 'GERENTE' || session.user.role === 'USERS') {
-        return Array.isArray(session.user.moduleAccess) ? session.user.moduleAccess as string[] : [];
+        const assigned = Array.isArray(session.user.moduleAccess) ? session.user.moduleAccess as string[] : [];
+        return assigned.filter(module => planModuleAccess.includes(module));
       }
 
       return null;
