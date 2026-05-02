@@ -12,6 +12,92 @@ import type { BarberUserRole } from '@prisma/client';
 
 const TEAM_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USERS'];
 
+async function ensureUserRoleEnumValues() {
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'SUPERADMIN'
+      ) THEN
+        ALTER TYPE "BarberUserRole" ADD VALUE 'SUPERADMIN';
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'GERENTE'
+      ) THEN
+        ALTER TYPE "BarberUserRole" ADD VALUE 'GERENTE';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'USUARIO'
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'USERS'
+      ) THEN
+        ALTER TYPE "BarberUserRole" RENAME VALUE 'USUARIO' TO 'USERS';
+      ELSIF NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'USERS'
+      ) THEN
+        ALTER TYPE "BarberUserRole" ADD VALUE 'USERS';
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'BARBER'
+      ) THEN
+        ALTER TYPE "BarberUserRole" ADD VALUE 'BARBER';
+      END IF;
+    END $$;
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'USUARIO'
+      )
+      AND EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'BarberUserRole'
+          AND e.enumlabel = 'USERS'
+      ) THEN
+        UPDATE "barber_users"
+        SET "role" = 'USERS'::"BarberUserRole"
+        WHERE "role"::text = 'USUARIO';
+      END IF;
+    END $$;
+  `);
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -26,6 +112,8 @@ export async function GET(
   }
 
   try {
+    await ensureUserRoleEnumValues();
+
     const [users, branches] = await Promise.all([
       prisma.barberUser.findMany({
         where:   { tenantId, role: { in: TEAM_ROLES } },
@@ -69,6 +157,8 @@ export async function POST(
   }
 
   try {
+    await ensureUserRoleEnumValues();
+
     const body = await req.json() as {
       role:      BarberUserRole;
       fullName:  string;
