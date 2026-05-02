@@ -21,31 +21,30 @@ export type PlanLimits = {
 
 const configCache = new Map<string, PlanLimits>();
 
-const MODULE_ALIASES: Record<string, string> = {
-  billing: 'pos_dte',
-  billing_dte: 'pos_dte',
-  dte: 'pos_dte',
-  gastos: 'expenses',
-  cxp: 'expenses',
-  compras: 'products',
-  proveedores: 'products',
-  inventario: 'products',
-  productos: 'products',
-  servicios: 'services',
-  citas: 'appointments',
-  agenda: 'appointments',
-  usuarios: 'usuarios',
+const MODULE_ALIASES: Record<string, string[]> = {
+  pos: ['pos', 'pos_turnos'],
+  billing_dte: ['pos_dte'],
+  dte: ['pos_dte'],
+  products: ['compras', 'proveedores', 'productos', 'inventario'],
+  expenses: ['gastos', 'cxp'],
+  servicios: ['services'],
+  citas: ['appointments'],
+  agenda: ['appointments'],
+  appointments: ['appointments', 'billing'],
+  usuarios: ['usuarios'],
 };
 
-function canonicalModuleKey(key: string) {
-  return MODULE_ALIASES[key] ?? key;
+function canonicalModuleKeys(key: string) {
+  return MODULE_ALIASES[key] ?? [key];
 }
 
 function normalizeModules(modules: PlanModules | null | undefined): PlanModules {
   const normalized: PlanModules = {};
   for (const [rawKey, enabled] of Object.entries(modules ?? {})) {
     if (typeof enabled !== 'boolean') continue;
-    normalized[canonicalModuleKey(rawKey)] = enabled;
+    for (const key of canonicalModuleKeys(rawKey)) {
+      normalized[key] = enabled;
+    }
   }
   return normalized;
 }

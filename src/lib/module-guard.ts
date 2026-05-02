@@ -12,56 +12,72 @@
 // â”€â”€ Claves de mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const MODULE_KEYS = [
-  'pos',          // POS + Turnos de Caja
-  'pos_dte',      // Documentos / FacturaciÃ³n DTE
-  'appointments', // Citas + Caja de Citas
+  'pos',          // POS
+  'pos_turnos',   // Turnos de Caja
+  'pos_dte',      // Documentos / Facturación DTE
+  'appointments', // Citas / Agenda
+  'billing',      // Caja de Citas / Agenda
   'clients',      // Clientes
-  'loyalty',      // Puntos y Tarjetas de FidelizaciÃ³n
+  'loyalty',      // Puntos y Tarjetas de Fidelización
   'barbers',      // Barberos / Estilistas
   'services',     // Servicios / Tratamientos
-  'products',     // Productos + Inventario + Compras + Proveedores
-  'expenses',     // Gastos + Cuentas por Pagar
+  'compras',      // Compras
+  'proveedores',  // Proveedores
+  'productos',    // Productos
+  'inventario',   // Inventario
+  'gastos',       // Gastos
+  'cxp',          // Cuentas por Pagar
   'payroll',      // Planilla
   'branches',     // Sucursales
-  'settings',     // ConfiguraciÃ³n
+  'settings',     // Configuración
 ] as const;
 
 export type ModuleKey = typeof MODULE_KEYS[number];
 
 const ACCESS_ALIASES: Record<string, ModuleKey | 'usuarios'> = {
-  billing: 'pos_dte',
   billing_dte: 'pos_dte',
   dte: 'pos_dte',
-  gastos: 'expenses',
-  cxp: 'expenses',
-  compras: 'products',
-  proveedores: 'products',
-  inventario: 'products',
-  productos: 'products',
   servicios: 'services',
   citas: 'appointments',
   agenda: 'appointments',
   usuarios: 'usuarios',
 };
 
+const LEGACY_ACCESS_GROUPS: Record<string, ModuleKey[]> = {
+  pos: ['pos', 'pos_turnos'],
+  appointments: ['appointments', 'billing'],
+  products: ['compras', 'proveedores', 'productos', 'inventario'],
+  expenses: ['gastos', 'cxp'],
+};
+
 function hasModuleAccess(moduleAccess: string[] | null, module: ModuleKey | 'usuarios') {
   if (!Array.isArray(moduleAccess)) return false;
-  return moduleAccess.some(key => (ACCESS_ALIASES[key] ?? key) === module);
+  return moduleAccess.some(key => {
+    const canonical = ACCESS_ALIASES[key] ?? key;
+    if (canonical === module) return true;
+    return module !== 'usuarios' && (LEGACY_ACCESS_GROUPS[canonical]?.includes(module) ?? false);
+  });
 }
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
-  pos:          'POS y Turnos de Caja',
-  pos_dte:      'Documentos / FacturaciÃ³n DTE',
-  appointments: 'Citas y Caja de Citas',
+  pos:          'POS',
+  pos_turnos:   'Turnos de Caja',
+  pos_dte:      'Documentos / Facturación DTE',
+  appointments: 'Citas / Agenda',
+  billing:      'Caja de Citas / Agenda',
   clients:      'Clientes',
-  loyalty:      'FidelizaciÃ³n (Puntos y Tarjetas)',
+  loyalty:      'Fidelización (Puntos y Tarjetas)',
   barbers:      'Barberos / Estilistas',
   services:     'Servicios / Tratamientos',
-  products:     'Productos, Inventario y Compras',
-  expenses:     'Gastos y Cuentas por Pagar',
+  compras:      'Compras',
+  proveedores:  'Proveedores',
+  productos:    'Productos',
+  inventario:   'Inventario',
+  gastos:       'Gastos',
+  cxp:          'Cuentas por Pagar',
   payroll:      'Planilla',
   branches:     'Sucursales',
-  settings:     'ConfiguraciÃ³n del sistema',
+  settings:     'Configuración del sistema',
 };
 
 // â”€â”€ Mapeo ruta de pÃ¡gina â†’ mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -69,21 +85,21 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
 export const PAGE_MODULE_MAP: Record<string, ModuleKey | 'dashboard' | 'usuarios'> = {
   '/dashboard':       'dashboard',
   '/pos':             'pos',
-  '/pos-turnos':      'pos',
+  '/pos-turnos':      'pos_turnos',
   '/pos-documentos':  'pos_dte',
   '/appointments':    'appointments',
-  '/billing':         'appointments',
+  '/billing':         'billing',
   '/loyalty':         'loyalty',
   '/barbers':         'barbers',
   '/usuarios':        'usuarios',
   '/services':        'services',
   '/clients':         'clients',
-  '/compras':         'products',
-  '/proveedores':     'products',
-  '/productos':       'products',
-  '/inventario':      'products',
-  '/gastos':          'expenses',
-  '/cxp':             'expenses',
+  '/compras':         'compras',
+  '/proveedores':     'proveedores',
+  '/productos':       'productos',
+  '/inventario':      'inventario',
+  '/gastos':          'gastos',
+  '/cxp':             'cxp',
   '/planilla':        'payroll',
   '/branches':        'branches',
   '/settings':        'settings',
@@ -93,19 +109,21 @@ export const PAGE_MODULE_MAP: Record<string, ModuleKey | 'dashboard' | 'usuarios
 
 export const API_MODULE_MAP: [string, ModuleKey | 'usuarios'][] = [
   ['/api/usuarios',     'usuarios'],
+  ['/api/pos/turno',    'pos_turnos'],
+  ['/api/pos/turnos',   'pos_turnos'],
   ['/api/pos',          'pos'],
-  ['/api/billing',      'appointments'],
+  ['/api/billing',      'billing'],
   ['/api/appointments', 'appointments'],
   ['/api/loyalty',      'loyalty'],
   ['/api/barbers',      'barbers'],
   ['/api/services',     'services'],
   ['/api/clients',      'clients'],
-  ['/api/compras',      'products'],
-  ['/api/proveedores',  'products'],
-  ['/api/productos',    'products'],
-  ['/api/inventario',   'products'],
-  ['/api/gastos',       'expenses'],
-  ['/api/cxp',          'expenses'],
+  ['/api/compras',      'compras'],
+  ['/api/proveedores',  'proveedores'],
+  ['/api/productos',    'productos'],
+  ['/api/inventario',   'inventario'],
+  ['/api/gastos',       'gastos'],
+  ['/api/cxp',          'cxp'],
   ['/api/planilla',     'payroll'],
   ['/api/branches',     'branches'],
   ['/api/settings',     'settings'],

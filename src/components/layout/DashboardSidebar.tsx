@@ -62,29 +62,30 @@ type NavItem = {
   module?: string; // módulo requerido; si es undefined el item siempre es visible
 };
 
-const MODULE_ALIASES: Record<string, string> = {
-  billing: 'pos_dte',
-  billing_dte: 'pos_dte',
-  dte: 'pos_dte',
-  gastos: 'expenses',
-  cxp: 'expenses',
-  compras: 'products',
-  proveedores: 'products',
-  inventario: 'products',
-  productos: 'products',
-  servicios: 'services',
-  citas: 'appointments',
-  agenda: 'appointments',
+const MODULE_ALIASES: Record<string, string[]> = {
+  pos: ['pos', 'pos_turnos'],
+  billing_dte: ['pos_dte'],
+  dte: ['pos_dte'],
+  products: ['compras', 'proveedores', 'productos', 'inventario'],
+  expenses: ['gastos', 'cxp'],
+  servicios: ['services'],
+  citas: ['appointments'],
+  agenda: ['appointments'],
+  appointments: ['appointments', 'billing'],
 };
+
+function moduleKeys(key: string) {
+  return MODULE_ALIASES[key] ?? [key];
+}
 
 function moduleEnabled(modules: Record<string, boolean>, module: string) {
   if (Object.keys(modules).length === 0) return true;
-  return Object.entries(modules).some(([key, enabled]) => enabled === true && (MODULE_ALIASES[key] ?? key) === module);
+  return Object.entries(modules).some(([key, enabled]) => enabled === true && moduleKeys(key).includes(module));
 }
 
 function moduleAssigned(moduleAccess: string[] | null, module: string) {
   if (!Array.isArray(moduleAccess)) return false;
-  return moduleAccess.some(key => (MODULE_ALIASES[key] ?? key) === module);
+  return moduleAccess.some(key => moduleKeys(key).includes(module));
 }
 
 // Roles operativos con acceso a módulos (SUPERADMIN y GERENTE ven todo, USUARIO filtra por moduleAccess)
@@ -93,21 +94,21 @@ const OP_ROLES: BarberUserRole[] = ['SUPERADMIN', 'GERENTE', 'USERS'];
 const NAV_ITEMS_BARBER: NavItem[] = [
   { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'] },
   { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos_turnos' },
   { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
   { href: '/appointments',   label: 'Citas',            icon: CalendarDots,   roles: OP_ROLES, module: 'appointments' },
-  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: OP_ROLES, module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Citas)',     icon: CreditCard,     roles: OP_ROLES, module: 'billing' },
   { href: '/loyalty',        label: 'Puntos y Tarjetas',icon: Star,           roles: OP_ROLES, module: 'loyalty' },
   { href: '/barbers',        label: 'Barberos',         icon: Users,          roles: OP_ROLES, module: 'barbers' },
   { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['SUPERADMIN'] },
   { href: '/services',       label: 'Servicios',        icon: Scissors,       roles: OP_ROLES, module: 'services' },
   { href: '/clients',        label: 'Clientes',         icon: UserCircle,     roles: OP_ROLES, module: 'clients' },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'products' },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'products' },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'products' },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'products' },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'expenses' },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'expenses' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'compras' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'proveedores' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'productos' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'inventario' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'gastos' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'cxp' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
   { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
@@ -116,21 +117,21 @@ const NAV_ITEMS_BARBER: NavItem[] = [
 const NAV_ITEMS_SALON: NavItem[] = [
   { href: '/dashboard',      label: 'Inicio',           icon: HouseSimple,    roles: ['OWNER', 'SUPERADMIN', 'GERENTE', 'USERS'] },
   { href: '/pos',            label: 'POS',              icon: CashRegister,   roles: OP_ROLES, module: 'pos' },
-  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos' },
+  { href: '/pos-turnos',     label: 'Turnos de Caja',   icon: ClockClockwise, roles: OP_ROLES, module: 'pos_turnos' },
   { href: '/pos-documentos', label: 'Documentos',       icon: FileText,       roles: OP_ROLES, module: 'pos_dte' },
   { href: '/appointments',   label: 'Agenda',           icon: CalendarHeart,  roles: OP_ROLES, module: 'appointments' },
-  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: OP_ROLES, module: 'appointments' },
+  { href: '/billing',        label: 'Caja (Agenda)',    icon: CreditCard,     roles: OP_ROLES, module: 'billing' },
   { href: '/loyalty',        label: 'Fidelización',     icon: Heart,          roles: OP_ROLES, module: 'loyalty' },
   { href: '/barbers',        label: 'Estilistas',       icon: UsersThree,     roles: OP_ROLES, module: 'barbers' },
   { href: '/usuarios',       label: 'Usuarios y Roles', icon: UserGear,       roles: ['SUPERADMIN'] },
   { href: '/services',       label: 'Tratamientos',     icon: Sparkle,        roles: OP_ROLES, module: 'services' },
   { href: '/clients',        label: 'Clientas',         icon: UserCircle,     roles: OP_ROLES, module: 'clients' },
-  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'products' },
-  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'products' },
-  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'products' },
-  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'products' },
-  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'expenses' },
-  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'expenses' },
+  { href: '/compras',        label: 'Compras',          icon: ShoppingCart,   roles: OP_ROLES, module: 'compras' },
+  { href: '/proveedores',    label: 'Proveedores',      icon: Truck,          roles: OP_ROLES, module: 'proveedores' },
+  { href: '/productos',      label: 'Productos',        icon: Package,        roles: OP_ROLES, module: 'productos' },
+  { href: '/inventario',     label: 'Inventario',       icon: Stack,          roles: OP_ROLES, module: 'inventario' },
+  { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'gastos' },
+  { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'cxp' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
   { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
