@@ -55,6 +55,7 @@ json_dte/*.json
 # Claude Code / IA — nunca subir al repositorio público
 .agent/
 .claude/
+AGENTS.md
 CLAUDE.md
 skills-lock.json
 
