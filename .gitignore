@@ -60,5 +60,9 @@ scripts/create-salon.ts
 
 # Carpetas temporales
 tmp-app/
+tmp/
+
+# Archivos accidentales/exportados por herramientas locales
+C*Users*.json
 
 .vercel
