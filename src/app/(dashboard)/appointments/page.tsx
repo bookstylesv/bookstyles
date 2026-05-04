@@ -78,21 +78,16 @@ export default function AppointmentsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [apptRes, barberRes, svcRes] = await Promise.all([
+      const [apptRes, barberRes, svcRes, clientRes] = await Promise.all([
         fetch('/api/appointments').then(r => r.json()),
         fetch('/api/barbers').then(r => r.json()),
         fetch('/api/services').then(r => r.json()),
+        fetch('/api/clients?limit=500').then(r => r.json()),
       ]);
       if (apptRes.success)   setAppointments(apptRes.data);
       if (barberRes.success) setBarbers(barberRes.data);
       if (svcRes.success)    setServices(svcRes.data.filter((s: Service & { active: boolean }) => s.active));
-      const clientMap = new Map<number, Client>();
-      (apptRes.data ?? []).forEach((a: Appointment) => {
-        if (!clientMap.has(a.client.id)) {
-          clientMap.set(a.client.id, { id: a.client.id, fullName: a.client.fullName });
-        }
-      });
-      setClients(Array.from(clientMap.values()));
+      if (clientRes.success) setClients(clientRes.data);
     } finally { setLoading(false); }
   }, []);
 
