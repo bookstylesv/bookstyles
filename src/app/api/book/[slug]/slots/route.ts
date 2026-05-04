@@ -34,6 +34,11 @@ export async function GET(
 
   if (!dateStr) return NextResponse.json({ error: 'date requerido' }, { status: 400 });
 
+  // Validar formato YYYY-MM-DD antes de parsear para evitar NaN → 500
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return NextResponse.json({ error: 'Formato de fecha inválido. Use YYYY-MM-DD' }, { status: 400 });
+  }
+
   // Find tenant (incluir businessHours)
   const tenant = await prisma.barberTenant.findUnique({ where: { slug } });
   if (!tenant) return NextResponse.json({ error: 'Barbería no encontrada' }, { status: 404 });

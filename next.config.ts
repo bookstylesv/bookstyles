@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from '@sentry/nextjs';
 
 const SUPERADMIN_CORS_HEADERS = [
-  { key: 'Access-Control-Allow-Origin',  value: process.env.SUPERADMIN_ALLOW_ORIGIN ?? 'https://speeddan-control-v3-nine.vercel.app' },
+  { key: 'Access-Control-Allow-Origin',  value: process.env.SUPERADMIN_ALLOW_ORIGIN ?? 'https://panel-bookstylesv.vercel.app' },
   { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
   { key: 'Access-Control-Allow-Headers', value: 'Authorization, Content-Type' },
 ];
@@ -28,6 +28,16 @@ const nextConfig: NextConfig = {
   ],
   async headers() {
     return [
+      {
+        // Headers de seguridad globales para todas las rutas
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options',    value: 'nosniff' },
+          { key: 'X-DNS-Prefetch-Control',    value: 'on' },
+          { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
       {
         source:  '/api/superadmin/:path*',
         headers: SUPERADMIN_CORS_HEADERS,
