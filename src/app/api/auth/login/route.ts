@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { authService }  from '@/modules/auth/auth.service';
 import { setAuthCookies } from '@/lib/auth';
-import { AppError } from '@/lib/errors';
+import { AppError, ValidationError } from '@/lib/errors';
 import { ok, apiError } from '@/lib/response';
 import {
   checkLoginRateLimit,
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const parsed = loginSchema.safeParse(body);
 
     if (!parsed.success) {
-      return apiError({ statusCode: 422, code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } as any);
+      throw new ValidationError(parsed.error.issues[0].message);
     }
 
     const ip   = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     // ── Rate limit: bloquear IP+slug con demasiados intentos fallidos ──
     const allowed = await checkLoginRateLimit(ip, slug);
     if (!allowed) {
-      return apiError({ statusCode: 429, code: 'RATE_LIMIT', message: 'Demasiados intentos fallidos. Espera 15 minutos.' } as any);
+      throw new AppError('Demasiados intentos fallidos. Espera 15 minutos.', 429, 'RATE_LIMIT');
     }
 
     let result;
