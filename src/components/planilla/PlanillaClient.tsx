@@ -305,11 +305,22 @@ export default function PlanillaClient({
     else toast.error('Error al guardar');
   };
   const handleSeedConfig = async () => {
-    const r = await fetch('/api/planilla/config', { method: 'POST' });
-    if (r.ok) {
-      toast.success('Parámetros inicializados con valores por defecto');
+    try {
+      const r = await fetch('/api/planilla/config', { method: 'POST' });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        toast.error(err.error ?? 'Error al inicializar parámetros');
+        return;
+      }
       const u = await fetch('/api/planilla/config');
-      if (u.ok) setConfig(await u.json());
+      if (u.ok) {
+        setConfig(await u.json());
+        toast.success('Parámetros inicializados con valores por defecto');
+      } else {
+        toast.error('Parámetros guardados pero no se pudo recargar la pantalla — recarga la página');
+      }
+    } catch {
+      toast.error('Error de conexión al inicializar parámetros');
     }
   };
 

@@ -26,7 +26,7 @@ export async function seedConfigPlanilla(tenantId: number) {
     prisma.barberConfigPlanilla.upsert({
       where:  { tenantId_clave: { tenantId, clave: d.clave } },
       create: { tenantId, clave: d.clave, valor: d.valor, descripcion: d.descripcion },
-      update: {},
+      update: { valor: d.valor, descripcion: d.descripcion, updatedAt: new Date() },
     })
   );
   return prisma.$transaction(ops);

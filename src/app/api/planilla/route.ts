@@ -23,20 +23,24 @@ function serializePlanilla(p: any) {
     totalPatronalAFP: p.totalPatronalAFP.toNumber(),
     totalINSAFORP:    p.totalINSAFORP.toNumber(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    detalles: p.detalles?.map((d: any) => ({
-      ...d,
-      unidades:         d.unidades?.toNumber() ?? 0,
-      salarioBruto:     d.salarioBruto.toNumber(),
-      isss:             d.isss.toNumber(),
-      afp:              d.afp.toNumber(),
-      renta:            d.renta.toNumber(),
-      otrasDeducciones: d.otrasDeducciones.toNumber(),
-      totalDeducciones: d.totalDeducciones.toNumber(),
-      salarioNeto:      d.salarioNeto.toNumber(),
-      isssPatronal:     d.isssPatronal.toNumber(),
-      afpPatronal:      d.afpPatronal.toNumber(),
-      insaforp:         d.insaforp.toNumber(),
-    })),
+    detalles: p.detalles?.map((d: any) => {
+      // En el listado los detalles solo tienen { id }; en el detalle completo tienen todos los campos.
+      if (d.salarioBruto == null) return d;
+      return {
+        ...d,
+        unidades:         d.unidades?.toNumber() ?? 0,
+        salarioBruto:     d.salarioBruto.toNumber(),
+        isss:             d.isss.toNumber(),
+        afp:              d.afp.toNumber(),
+        renta:            d.renta.toNumber(),
+        otrasDeducciones: d.otrasDeducciones.toNumber(),
+        totalDeducciones: d.totalDeducciones.toNumber(),
+        salarioNeto:      d.salarioNeto.toNumber(),
+        isssPatronal:     d.isssPatronal.toNumber(),
+        afpPatronal:      d.afpPatronal.toNumber(),
+        insaforp:         d.insaforp.toNumber(),
+      };
+    }),
   };
 }
 
