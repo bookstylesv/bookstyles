@@ -53,6 +53,7 @@ import {
   Target,
 } from '@phosphor-icons/react';
 import ThemeSelector from '@/components/shared/ThemeSelector';
+import AppointmentBell from '@/components/notifications/AppointmentBell';
 import { useBarberTheme } from '@/context/ThemeContext';
 
 type NavItem = {
@@ -332,6 +333,9 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
             );
           })}
         </nav>
+
+        {/* Campana de notificaciones */}
+        <AppointmentBell collapsed={effectiveCollapsed} />
 
         {/* Botón Tema */}
         <button
@@ -678,6 +682,9 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
           );
         })}
       </nav>
+
+      {/* ── Campana de notificaciones ────────────────────────────────────── */}
+      <AppointmentBell collapsed={effectiveCollapsed} />
 
       {/* ── Botón Tema ───────────────────────────────────────────────────── */}
       <button

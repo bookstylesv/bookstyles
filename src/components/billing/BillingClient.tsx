@@ -258,6 +258,7 @@ export default function BillingClient({ initialPayments, initialUnpaid, initialS
       }));
       setOpen(false);
       toast.success(`Pago de ${formatMoney(parseFloat(amount))} registrado`);
+      window.dispatchEvent(new CustomEvent('appointment-mutated'));
     } catch {
       setError('Error de red'); toast.error('Error de red');
     } finally { setLoading(false); }

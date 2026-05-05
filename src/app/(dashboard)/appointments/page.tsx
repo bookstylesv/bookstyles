@@ -125,6 +125,7 @@ export default function AppointmentsPage() {
       setAppointments(prev => [...prev, json.data]);
       setCreateOpen(false);
       toast.success('Cita agendada correctamente');
+      window.dispatchEvent(new CustomEvent('appointment-mutated'));
     } catch {
       setFormError('Error de red'); toast.error('Error de red');
     } finally { setFormLoading(false); }
@@ -142,6 +143,7 @@ export default function AppointmentsPage() {
       setAppointments(prev => prev.map(a => a.id === appt.id ? json.data : a));
       setDetailAppt(null);
       toast.success('Cita cancelada', { id });
+      window.dispatchEvent(new CustomEvent('appointment-mutated'));
     } else {
       toast.error(json.error?.message ?? 'No se pudo cancelar', { id });
     }
