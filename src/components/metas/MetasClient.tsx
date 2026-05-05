@@ -81,10 +81,12 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
     Object.fromEntries(DEDUCTIONS.map(d => [d.key, d.defaultChecked])),
   );
   // Meta editing
+  const [editYear,      setEditYear]      = useState<number>(currentYear);
   const [editMonth,     setEditMonth]     = useState<number>(currentMonth);
   const [editBranch,    setEditBranch]    = useState<number | null>(userBranchId);
   const [editObjetivo,  setEditObjetivo]  = useState<number | null>(null);
   const [saving,        setSaving]        = useState(false);
+  const [loadingMeta,   setLoadingMeta]   = useState(false);
 
   const canEdit = role === 'SUPERADMIN' || role === 'GERENTE';
 
@@ -110,12 +112,32 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
 
   useEffect(() => { fetchResumen(); }, [fetchResumen]);
 
-  // Init editObjetivo from existing meta when month/branch changes
+  // Precarga el objetivo existente cuando cambia año/mes/sucursal del formulario
   useEffect(() => {
-    if (!resumen || !editBranch) return;
-    const existing = resumen.metas.find(m => m.branchId === editBranch && m.month === editMonth);
-    setEditObjetivo(existing ? existing.objetivo : null);
-  }, [resumen, editBranch, editMonth]);
+    if (!editBranch) return;
+
+    // Si el año del form coincide con el año del display, usar resumen ya cargado
+    if (editYear === year && resumen) {
+      const existing = resumen.metas.find(m => m.branchId === editBranch && m.month === editMonth);
+      setEditObjetivo(existing ? existing.objetivo : null);
+      return;
+    }
+
+    // Si el año es diferente, consultar la API
+    setLoadingMeta(true);
+    fetch(`/api/metas?year=${editYear}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          const existing = (json.data as Meta[]).find(
+            m => m.branchId === editBranch && m.month === editMonth,
+          );
+          setEditObjetivo(existing ? existing.objetivo : null);
+        }
+      })
+      .catch(() => setEditObjetivo(null))
+      .finally(() => setLoadingMeta(false));
+  }, [editBranch, editMonth, editYear, year, resumen]);
 
   // ── Save meta ──────────────────────────────────────────────────────────────
   async function saveMeta() {
@@ -128,11 +150,11 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
       const res = await fetch('/api/metas', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ branchId: editBranch, year, month: editMonth, objetivo: editObjetivo }),
+        body:    JSON.stringify({ branchId: editBranch, year: editYear, month: editMonth, objetivo: editObjetivo }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error?.message ?? 'Error');
-      toast.success(`Meta de ${MESES[editMonth]} guardada`);
+      toast.success(`Meta de ${MESES[editMonth]} ${editYear} guardada`);
       fetchResumen();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al guardar');
@@ -378,9 +400,9 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
               style={{ borderRadius: 10 }}
             >
               <Row gutter={[12, 12]} align="middle">
-                {/* Branch selector: SUPERADMIN puede escoger cualquiera; GERENTE fijo */}
+                {/* Branch selector */}
                 {role === 'SUPERADMIN' && branches.length > 0 && (
-                  <Col xs={24} sm={8}>
+                  <Col xs={24} sm={6}>
                     <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>Sucursal</div>
                     <Select
                       value={editBranch}
@@ -392,14 +414,28 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
                   </Col>
                 )}
                 {role === 'GERENTE' && (
-                  <Col xs={24} sm={8}>
+                  <Col xs={24} sm={6}>
                     <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>Sucursal</div>
                     <div style={{ padding: '6px 11px', border: '1px solid #d9d9d9', borderRadius: 6, fontSize: 13 }}>
                       {branches.find(b => b.id === userBranchId)?.name ?? 'Mi sucursal'}
                     </div>
                   </Col>
                 )}
-                <Col xs={24} sm={role === 'SUPERADMIN' ? 6 : 8}>
+
+                {/* Año */}
+                <Col xs={24} sm={4}>
+                  <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>Año</div>
+                  <Select
+                    value={editYear}
+                    onChange={v => setEditYear(v)}
+                    style={{ width: '100%' }}
+                    size="middle"
+                    options={yearOptions}
+                  />
+                </Col>
+
+                {/* Mes */}
+                <Col xs={24} sm={5}>
                   <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>Mes</div>
                   <Select
                     value={editMonth}
@@ -409,8 +445,12 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
                     options={MESES.slice(1).map((m, i) => ({ value: i + 1, label: m }))}
                   />
                 </Col>
-                <Col xs={24} sm={role === 'SUPERADMIN' ? 6 : 8}>
-                  <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>Objetivo ($)</div>
+
+                {/* Objetivo */}
+                <Col xs={24} sm={5}>
+                  <div style={{ fontSize: 12, marginBottom: 4, color: 'rgba(0,0,0,0.45)' }}>
+                    Objetivo ($) {loadingMeta && <span style={{ fontSize: 10, color: '#0d9488' }}>cargando...</span>}
+                  </div>
                   <InputNumber
                     value={editObjetivo}
                     onChange={v => setEditObjetivo(v)}
@@ -422,7 +462,9 @@ export default function MetasClient({ role, branchId: userBranchId }: Props) {
                     size="middle"
                   />
                 </Col>
-                <Col xs={24} sm={role === 'SUPERADMIN' ? 4 : 8} style={{ display: 'flex', alignItems: 'flex-end' }}>
+
+                {/* Guardar */}
+                <Col xs={24} sm={4} style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <Button
                     type="primary"
                     icon={<SaveOutlined />}
