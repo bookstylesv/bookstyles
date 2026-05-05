@@ -85,6 +85,9 @@ function ThemeCard({
           }}>
             {theme.name}
           </span>
+          <span style={{ fontSize: 9, opacity: 0.6 }} title={theme.isDark ? 'Oscuro' : 'Claro'}>
+            {theme.isDark ? '🌙' : '☀️'}
+          </span>
           {active && (
             <CheckOutlined style={{ fontSize: 10, color: primaryColor }} />
           )}
