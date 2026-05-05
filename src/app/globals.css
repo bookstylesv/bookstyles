@@ -780,6 +780,12 @@ body {
 }
 
 /* ─── Sidebar — hover & interactive states ───────────────── */
+/* Scrollbar sutil para zona de navegación del sidebar */
+.sidebar-nav::-webkit-scrollbar       { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: hsl(var(--sidebar-border)); border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: hsl(var(--sidebar-muted) / 0.6); }
+
 .sidebar-nav-link {
   transition: background 0.15s, color 0.15s;
 }

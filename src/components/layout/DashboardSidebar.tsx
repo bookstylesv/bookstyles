@@ -274,7 +274,7 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         )}
 
         {/* Navegación */}
-        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' }}>
+        <nav className="sidebar-nav" style={{ flex: 1, minHeight: 0, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' }}>
           {ownerNavItems.map(item => {
             const active = item.tab === 'metas' ? pathname === '/metas' : item.tab === activeTab;
             const Icon = item.icon;
@@ -427,7 +427,7 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
         width: isMobile && mobileOpen ? 240 : W, minHeight: '100vh',
         background: 'hsl(var(--sidebar-bg))', borderRight: '1px solid hsl(var(--sidebar-border))',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
-        transition: mounted ? 'width 0.22s ease' : 'none', overflow: 'hidden',
+        transition: mounted ? 'width 0.22s ease' : 'none', overflowX: 'hidden', overflowY: 'visible',
         ...(isMobile && mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 } : {}),
       }}>
 
@@ -476,7 +476,7 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
         )}
 
         {/* ── Navegación (scrollable) ── */}
-        <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: effectiveCollapsed ? '8px 0' : '8px 0' }}>
+        <nav className="sidebar-nav" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
 
           {/* Inicio — siempre visible, fuera de grupo */}
           <Link
