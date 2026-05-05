@@ -239,11 +239,12 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, backdropFilter: 'blur(2px)' }} />
       )}
       <aside style={{
-        width: isMobile && mobileOpen ? 240 : W, minHeight: '100vh',
+        width: isMobile && mobileOpen ? 240 : W,
+        height: '100vh', position: 'sticky', top: 0,
         background: 'hsl(var(--sidebar-bg))', borderRight: '1px solid hsl(var(--sidebar-border))',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
-        transition: mounted ? 'width 0.22s ease' : 'none', overflow: 'hidden', position: 'relative',
-        ...(isMobile && mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 } : {}),
+        transition: mounted ? 'width 0.22s ease' : 'none', overflowX: 'hidden',
+        ...(isMobile && mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100, height: '100vh' } : {}),
       }}>
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, transparent 0%, ${primary} 50%, transparent 100%)` }} />
 
@@ -424,10 +425,11 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
         <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 99, backdropFilter: 'blur(1px)' }} />
       )}
       <aside style={{
-        width: isMobile && mobileOpen ? 240 : W, minHeight: '100vh',
+        width: isMobile && mobileOpen ? 240 : W,
+        height: '100vh', position: 'sticky', top: 0,
         background: 'hsl(var(--sidebar-bg))', borderRight: '1px solid hsl(var(--sidebar-border))',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
-        transition: mounted ? 'width 0.22s ease' : 'none', overflowX: 'hidden', overflowY: 'visible',
+        transition: mounted ? 'width 0.22s ease' : 'none', overflowX: 'hidden',
         ...(isMobile && mobileOpen ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100 } : {}),
       }}>
 
