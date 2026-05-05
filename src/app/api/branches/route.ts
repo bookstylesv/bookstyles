@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede crear sucursales');
+    if (user.role !== 'OWNER' && user.role !== 'SUPERADMIN') throw new ForbiddenError('Solo el propietario puede crear sucursales');
 
     const body = await req.json();
     const branch = await branchesService.createBranch(user.tenantId, body);

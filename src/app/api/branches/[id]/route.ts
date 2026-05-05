@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede editar sucursales');
+    if (user.role !== 'OWNER' && user.role !== 'SUPERADMIN') throw new ForbiddenError('Solo el propietario puede editar sucursales');
 
     const { id } = await params;
     const body = await req.json();
@@ -44,7 +44,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede eliminar sucursales');
+    if (user.role !== 'OWNER' && user.role !== 'SUPERADMIN') throw new ForbiddenError('Solo el propietario puede eliminar sucursales');
 
     const { id } = await params;
     await branchesService.deleteBranch(Number(id), user.tenantId);

@@ -150,7 +150,8 @@ export function canAccess(
       return true;
 
     case 'OWNER':
-      // Solo ve el dashboard â€” ningÃºn mÃ³dulo operativo ni usuarios
+      // Solo ve el dashboard — excepto branches y settings que son responsabilidad del dueño
+      if (module === 'branches' || module === 'settings') return true;
       return false;
 
     case 'GERENTE':
