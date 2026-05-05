@@ -39,7 +39,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
           brandName={brandName}
         />
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0, padding: 'clamp(12px, 3vw, 24px) clamp(12px, 3vw, 32px)' }}>
-          <DashboardTopbar />
+          <DashboardTopbar
+            brandName={brandName}
+            userName={user.name}
+            userRole={user.role}
+            branches={branches}
+            currentBranchId={user.branchId ?? null}
+          />
           {children}
         </main>
       </div>
