@@ -217,6 +217,7 @@ model BarberBranch {
   stockSucursal        BarberStockSucursal[]
   transferenciasOrigen BarberTransferencia[] @relation("TransferenciaOrigen")
   transferenciasDest   BarberTransferencia[] @relation("TransferenciaDestino")
+  usuarios             BarberUser[]          @relation("UserBranch")
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -268,8 +269,11 @@ model BarberUser {
   descuentoTipo   String?  // "PORCENTAJE" | "MONTO"
   descuentoValor  Float?   // valor numérico (ej: 10 para 10% o $10.00)
   avatarUrl       String?
+  // ── Sucursal asignada (GERENTE / USERS) ──
+  branchId     Int?           // FK → BarberBranch — null = ve todo (OWNER/SUPERADMIN)
+  branch       BarberBranch?  @relation("UserBranch", fields: [branchId], references: [id])
   role         BarberUserRole @default(CLIENT)
-  moduleAccess Json?          // Solo para USERS: array de módulos asignados ej. ["pos","clients"]
+  moduleAccess Json?          // Solo para GERENTE/USERS: array de módulos asignados ej. ["pos","clients"]
   active       Boolean        @default(true)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt

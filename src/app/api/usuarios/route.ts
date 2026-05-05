@@ -32,12 +32,14 @@ export async function GET() {
 
     const [usuarios, availableModules] = await Promise.all([
       prisma.barberUser.findMany({
-      where:   { tenantId: user.tenantId, role: { in: ERP_ROLES } },
-      select: {
-        id: true, fullName: true, email: true, phone: true,
-        role: true, moduleAccess: true, active: true, createdAt: true, avatarUrl: true,
-      },
-      orderBy: [{ role: 'asc' }, { fullName: 'asc' }],
+        where:   { tenantId: user.tenantId, role: { in: ERP_ROLES } },
+        select: {
+          id: true, fullName: true, email: true, phone: true,
+          role: true, moduleAccess: true, active: true, createdAt: true, avatarUrl: true,
+          branchId: true,
+          branch: { select: { id: true, name: true, slug: true } },
+        },
+        orderBy: [{ role: 'asc' }, { fullName: 'asc' }],
       }),
       getAllowedModuleAccess(user.tenantId),
     ]);
@@ -53,12 +55,13 @@ export async function POST(req: Request) {
     if (currentUser.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     const body = await req.json();
-    const { fullName, email, role, phone, moduleAccess } = body as {
+    const { fullName, email, role, phone, moduleAccess, branchId } = body as {
       fullName:     string;
       email:        string;
       role:         BarberUserRole;
       phone?:       string;
       moduleAccess: string[] | null;
+      branchId?:    number | null;
     };
 
     if (!fullName?.trim()) throw new ValidationError('El nombre es obligatorio');
@@ -77,6 +80,14 @@ export async function POST(req: Request) {
     const allowedModules = await getAllowedModuleAccess(currentUser.tenantId);
     const resolvedModuleAccess = filterAllowedModules(moduleAccess, allowedModules);
 
+    // Validar que branchId pertenece al tenant si se proporciona
+    if (branchId) {
+      const branch = await prisma.barberBranch.findFirst({
+        where: { id: branchId, tenantId: currentUser.tenantId },
+      });
+      if (!branch) throw new ValidationError('La sucursal seleccionada no existe');
+    }
+
     const usuario = await prisma.barberUser.create({
       data: {
         tenantId:     currentUser.tenantId,
@@ -85,12 +96,17 @@ export async function POST(req: Request) {
         password:     hashed,
         phone:        phone?.trim() || null,
         role,
+        branchId:     (role === 'GERENTE' || role === 'USERS') ? (branchId ?? null) : null,
         moduleAccess: role === 'GERENTE' || role === 'USERS'
           ? resolvedModuleAccess
           : Prisma.DbNull,
         active:       true,
       },
-      select: { id: true, fullName: true, email: true, role: true, moduleAccess: true, active: true, createdAt: true },
+      select: {
+        id: true, fullName: true, email: true, role: true,
+        moduleAccess: true, active: true, createdAt: true,
+        branchId: true, branch: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return created({ ...usuario, tempPassword });

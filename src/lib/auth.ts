@@ -105,21 +105,32 @@ export async function getCurrentUser(): Promise<JwtPayload | null> {
 }
 
 /**
- * Resuelve quÃ© sucursal asignar al hacer login:
- * - OWNER      â†’ null (vista consolidada de todas las sucursales)
- * - SUPERADMIN â†’ null (acceso total, sin sucursal fija)
- * - GERENTE / USERS â†’ casa matriz (el gerente puede cambiar despuÃ©s con switch-branch)
+ * Resuelve qué sucursal asignar al hacer login:
+ * - OWNER      → null (vista consolidada de todas las sucursales)
+ * - SUPERADMIN → null (acceso total, sin sucursal fija)
+ * - GERENTE / USERS → su sucursal asignada (branchId en BarberUser),
+ *   con fallback a la casa matriz si aún no tiene sucursal asignada.
  */
 export async function resolveBranchForLogin(
-  _userId:  number,
+  userId:   number,
   tenantId: number,
   role:     BarberUserRole,
 ): Promise<{ branchId: number | null; branchSlug: string | null }> {
-  if (role === 'OWNER' || role === 'SUPERADMIN') {
+  if (role === "OWNER" || role === "SUPERADMIN") {
     return { branchId: null, branchSlug: null };
   }
 
-  // GERENTE / USERS â†’ casa matriz del tenant
+  // Intentar usar la sucursal directamente asignada al usuario
+  const user = await prisma.barberUser.findUnique({
+    where:  { id: userId },
+    select: { branchId: true, branch: { select: { slug: true } } },
+  });
+
+  if (user?.branchId) {
+    return { branchId: user.branchId, branchSlug: user.branch?.slug ?? null };
+  }
+
+  // Fallback: casa matriz del tenant
   const headquarters = await prisma.barberBranch.findFirst({
     where:  { tenantId, isHeadquarters: true },
     select: { id: true, slug: true },

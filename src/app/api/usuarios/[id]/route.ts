@@ -34,10 +34,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (isNaN(userId)) throw new ValidationError('ID inválido');
 
     const body = await req.json();
-    const { role, active, moduleAccess } = body as {
+    const { role, active, moduleAccess, fullName, email, phone, branchId } = body as {
       role?:         BarberUserRole;
       active?:       boolean;
       moduleAccess?: string[] | null;
+      fullName?:     string;
+      email?:        string;
+      phone?:        string | null;
+      branchId?:     number | null;
     };
 
     const target = await prisma.barberUser.findFirst({
@@ -60,18 +64,44 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ? filterAllowedModules(moduleAccess, allowedModules)
       : undefined;
 
+    // Validar que branchId pertenece al tenant si se proporciona
+    if (branchId) {
+      const branch = await prisma.barberBranch.findFirst({
+        where: { id: branchId, tenantId: currentUser.tenantId },
+      });
+      if (!branch) throw new ValidationError('La sucursal seleccionada no existe');
+    }
+
+    // Detectar rol efectivo (el nuevo si cambió, o el actual)
+    const effectiveRole = role ?? target.role;
+
     const updated = await prisma.barberUser.update({
       where: { id: userId },
       data: {
-        ...(role !== undefined   && { role }),
-        ...(active !== undefined && { active }),
-        // Si cambió rol: aplicar módulos resueltos; si solo se envió moduleAccess: actualizar directo
+        ...(fullName !== undefined && fullName.trim() && { fullName: fullName.trim() }),
+        ...(email    !== undefined && email.trim()    && { email: email.trim().toLowerCase() }),
+        ...(phone    !== undefined                    && { phone: phone?.trim() || null }),
+        ...(role     !== undefined                    && { role }),
+        ...(active   !== undefined                    && { active }),
+        // Sucursal: solo aplica para GERENTE/USERS
+        ...(branchId !== undefined && {
+          branchId: (effectiveRole === 'GERENTE' || effectiveRole === 'USERS') ? branchId : null,
+        }),
+        // Módulos: si cambió rol → usar resueltos; si solo moduleAccess → actualizar directo
         ...(role !== undefined
           ? { moduleAccess: resolvedModuleAccess }
-          : moduleAccess !== undefined && { moduleAccess: Array.isArray(moduleAccess) ? filterAllowedModules(moduleAccess, allowedModules) : Prisma.DbNull }
+          : moduleAccess !== undefined && {
+              moduleAccess: Array.isArray(moduleAccess)
+                ? filterAllowedModules(moduleAccess, allowedModules)
+                : Prisma.DbNull,
+            }
         ),
       },
-      select: { id: true, fullName: true, email: true, role: true, moduleAccess: true, active: true },
+      select: {
+        id: true, fullName: true, email: true, role: true,
+        moduleAccess: true, active: true,
+        branchId: true, branch: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return ok(updated);
