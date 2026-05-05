@@ -144,6 +144,9 @@ model BarberTenant {
   // Importaciones masivas
   importLogs BarberImportLog[]
 
+  // Módulo Metas
+  metas BarberMeta[] @relation("TenantMetas")
+
   @@map("barber_tenants")
 }
 
@@ -218,6 +221,7 @@ model BarberBranch {
   transferenciasOrigen BarberTransferencia[] @relation("TransferenciaOrigen")
   transferenciasDest   BarberTransferencia[] @relation("TransferenciaDestino")
   usuarios             BarberUser[]          @relation("UserBranch")
+  metas                BarberMeta[]          @relation("BranchMetas")
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -1189,4 +1193,26 @@ model BarberImportLog {
   @@index([tenantId, resource])
   @@index([tenantId, createdAt])
   @@map("barber_import_logs")
+}
+
+// ══════════════════════════════════════════════════════
+// MÓDULO METAS — Objetivos mensuales por sucursal
+// ══════════════════════════════════════════════════════
+
+model BarberMeta {
+  id       Int          @id @default(autoincrement())
+  tenantId Int
+  tenant   BarberTenant @relation("TenantMetas", fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId Int
+  branch   BarberBranch @relation("BranchMetas", fields: [branchId], references: [id], onDelete: Cascade)
+  year     Int
+  month    Int          // 1-12
+  objetivo Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, year, month])
+  @@index([tenantId, year])
+  @@map("barber_metas")
 }

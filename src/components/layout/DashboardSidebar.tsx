@@ -50,6 +50,7 @@ import {
   Crown,
   ChartLine,
   Trophy,
+  Target,
 } from '@phosphor-icons/react';
 import ThemeSelector from '@/components/shared/ThemeSelector';
 import { useBarberTheme } from '@/context/ThemeContext';
@@ -110,6 +111,7 @@ const NAV_ITEMS_BARBER: NavItem[] = [
   { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'gastos' },
   { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'cxp' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
+  { href: '/metas',          label: 'Metas',            icon: Target,         roles: ['SUPERADMIN', 'GERENTE', 'USERS'], module: 'metas' },
   { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
 ];
@@ -133,6 +135,7 @@ const NAV_ITEMS_SALON: NavItem[] = [
   { href: '/gastos',         label: 'Gastos',           icon: Receipt,        roles: OP_ROLES, module: 'gastos' },
   { href: '/cxp',            label: 'Cuentas x Pagar',  icon: ClockCountdown, roles: OP_ROLES, module: 'cxp' },
   { href: '/planilla',       label: 'Planilla',         icon: Money,          roles: OP_ROLES, module: 'payroll' },
+  { href: '/metas',          label: 'Metas',            icon: Target,         roles: ['SUPERADMIN', 'GERENTE', 'USERS'], module: 'metas' },
   { href: '/branches',       label: 'Sucursales',       icon: Buildings,      roles: OP_ROLES, module: 'branches' },
   { href: '/settings',       label: 'Configuración',    icon: Gear,           roles: OP_ROLES, module: 'settings' },
 ];
@@ -205,6 +208,7 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
     { href: '/dashboard?tab=compras',   tab: 'compras',   label: 'Compras & CxP',   icon: ShoppingCart },
     { href: '/dashboard?tab=planilla',  tab: 'planilla',  label: 'Planilla',        icon: Money        },
     { href: '/dashboard?tab=reportes',  tab: 'reportes',  label: 'Reportes',        icon: FileText     },
+    { href: '/metas',                   tab: 'metas',     label: 'Metas',           icon: Target       },
   ];
 
   return (
@@ -294,7 +298,9 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         {/* Navegación */}
         <nav style={{ flex: 1, padding: '10px 8px' }}>
           {ownerNavItems.map(item => {
-            const active = item.tab === activeTab;
+            const active = item.tab === 'metas'
+              ? pathname === '/metas'
+              : item.tab === activeTab;
             const Icon = item.icon;
             return (
               <Link

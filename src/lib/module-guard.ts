@@ -28,6 +28,7 @@ export const MODULE_KEYS = [
   'gastos',       // Gastos
   'cxp',          // Cuentas por Pagar
   'payroll',      // Planilla
+  'metas',        // Metas mensuales
   'branches',     // Sucursales
   'settings',     // Configuración
 ] as const;
@@ -76,6 +77,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   gastos:       'Gastos',
   cxp:          'Cuentas por Pagar',
   payroll:      'Planilla',
+  metas:        'Metas Mensuales',
   branches:     'Sucursales',
   settings:     'Configuración del sistema',
 };
@@ -101,6 +103,7 @@ export const PAGE_MODULE_MAP: Record<string, ModuleKey | 'dashboard' | 'usuarios
   '/gastos':          'gastos',
   '/cxp':             'cxp',
   '/planilla':        'payroll',
+  '/metas':           'metas',
   '/branches':        'branches',
   '/settings':        'settings',
 };
@@ -125,6 +128,7 @@ export const API_MODULE_MAP: [string, ModuleKey | 'usuarios'][] = [
   ['/api/gastos',       'gastos'],
   ['/api/cxp',          'cxp'],
   ['/api/planilla',     'payroll'],
+  ['/api/metas',        'metas'],
   ['/api/branches',     'branches'],
   ['/api/settings',     'settings'],
 ];
@@ -150,15 +154,22 @@ export function canAccess(
       return true;
 
     case 'OWNER':
-      // Solo ve el dashboard — excepto branches y settings que son responsabilidad del dueño
-      if (module === 'branches' || module === 'settings') return true;
+      // Solo ve el dashboard — excepto branches, settings y metas (responsabilidad del dueño)
+      if (module === 'branches' || module === 'settings' || module === 'metas') return true;
       return false;
 
     case 'GERENTE':
-    case 'USERS':
-      // Sin acceso a gestiÃ³n de usuarios nunca
+      // Sin acceso a gestión de usuarios nunca
       if (module === 'usuarios') return false;
-      // Solo mÃ³dulos explÃ­citamente asignados
+      // GERENTE siempre puede ver y gestionar metas de su sucursal
+      if (module === 'metas') return true;
+      // Solo módulos explícitamente asignados
+      return hasModuleAccess(moduleAccess, module);
+
+    case 'USERS':
+      // Sin acceso a gestión de usuarios nunca
+      if (module === 'usuarios') return false;
+      // Solo módulos explícitamente asignados
       return hasModuleAccess(moduleAccess, module);
 
     default:
