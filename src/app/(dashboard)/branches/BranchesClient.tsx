@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
   Table, Card, Button, Space, Row, Col, Statistic,
@@ -61,7 +61,7 @@ export default function BranchesClient({
   const [editing, setEditing] = useState<Branch | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>();
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>();
 
   const activeBranches = branches.filter(b => b.status === 'ACTIVE').length;
   const canCreate = activeBranches < maxBranches;
@@ -72,8 +72,9 @@ export default function BranchesClient({
     setLoading(true);
     try {
       const res = await fetch('/api/branches');
-      if (!res.ok) throw new Error('Error al cargar');
-      setBranches(await res.json());
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message ?? 'Error al cargar');
+      setBranches(json.data);
     } catch {
       toast.error('Error al recargar sucursales');
     } finally {
@@ -122,7 +123,7 @@ export default function BranchesClient({
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? 'Error al guardar');
+        throw new Error(err.error?.message ?? 'Error al guardar');
       }
 
       toast.success(editing ? 'Sucursal actualizada' : 'Sucursal creada');
@@ -142,7 +143,7 @@ export default function BranchesClient({
       const res = await fetch(`/api/branches/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? 'No se pudo eliminar');
+        throw new Error(err.error?.message ?? 'No se pudo eliminar');
       }
       toast.success('Sucursal eliminada');
       await refresh();
@@ -362,39 +363,57 @@ export default function BranchesClient({
             help={errors.name?.message}
             required
           >
-            <Input
-              {...register('name', { required: 'El nombre es requerido' })}
-              placeholder="Ej: Sucursal Centro"
-              disabled={editing?.isHeadquarters}
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: 'El nombre es requerido' }}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Ej: Sucursal Centro"
+                  disabled={editing?.isHeadquarters}
+                />
+              )}
             />
           </Form.Item>
 
           <Form.Item label="Ciudad">
-            <Input
-              {...register('city')}
-              placeholder="Ej: San Salvador"
+            <Controller
+              name="city"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Ej: San Salvador" />
+              )}
             />
           </Form.Item>
 
           <Form.Item label="Dirección">
-            <Input
-              {...register('address')}
-              placeholder="Ej: Av. Los Héroes #123"
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Ej: Av. Los Héroes #123" />
+              )}
             />
           </Form.Item>
 
           <Form.Item label="Teléfono">
-            <Input
-              {...register('phone')}
-              placeholder="Ej: 7000-0000"
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Ej: 7000-0000" />
+              )}
             />
           </Form.Item>
 
           <Form.Item label="Correo electrónico">
-            <Input
-              {...register('email')}
-              placeholder="Ej: sucursal@correo.com"
-              type="email"
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Ej: sucursal@correo.com" type="email" />
+              )}
             />
           </Form.Item>
         </Form>
