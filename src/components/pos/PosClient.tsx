@@ -6,9 +6,12 @@ import {
   Modal, Alert, Divider, Badge, Tooltip, Space, Input, Avatar, AutoComplete
 } from 'antd'
 import {
-  PlusOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined,
+  PlusOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined, CheckOutlined,
   ReloadOutlined, PrinterOutlined, FileDoneOutlined,
-  AppstoreOutlined, UnorderedListOutlined, ShoppingCartOutlined,
+  AppstoreOutlined, UnorderedListOutlined, ShoppingCartOutlined, UserOutlined,
+  LockOutlined, DollarOutlined, WarningOutlined, GiftOutlined,
+  ScissorOutlined, InboxOutlined, TagOutlined, StarOutlined,
+  CreditCardOutlined, BankOutlined, QrcodeOutlined,
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { abrirFacturaCompleta, abrirTicket, type DTEJsonViewer } from '@/lib/dte-viewer'
@@ -79,10 +82,10 @@ interface ClienteConDescuento {
 }
 
 const METODOS = [
-  { key: 'CASH', label: '💵 Efectivo', color: 'green' },
-  { key: 'CARD', label: '💳 Tarjeta', color: 'blue' },
-  { key: 'TRANSFER', label: '🏦 Transfer.', color: 'purple' },
-  { key: 'QR', label: '📱 QR', color: 'orange' },
+  { key: 'CASH', label: 'Efectivo', icon: <DollarOutlined />, color: 'green' },
+  { key: 'CARD', label: 'Tarjeta', icon: <CreditCardOutlined />, color: 'blue' },
+  { key: 'TRANSFER', label: 'Transfer.', icon: <BankOutlined />, color: 'purple' },
+  { key: 'QR', label: 'QR', icon: <QrcodeOutlined />, color: 'orange' },
 ]
 
 const BILLETES = [1, 5, 10, 20, 50, 100]
@@ -476,7 +479,7 @@ export default function PosClient({
           })
           const acumJson = await acumRes.json()
           if (acumJson.data?.completada) {
-            toast.success('🎉 ¡Tarjeta completa! El cliente ganó su premio en la próxima visita.')
+            toast.success('¡Tarjeta completa! El cliente ganó su premio en la próxima visita.')
           }
         }
         setCodigoTarjeta('')
@@ -521,7 +524,7 @@ export default function PosClient({
     setCodigoTarjeta(t.codigo)
     setTarjetaInfo(t)
     if (t.estado === 'PENDIENTE_CANJE') {
-      toast.success('🎉 ¡Tarjeta completa! El cliente ganó su premio.')
+      toast.success('¡Tarjeta completa! El cliente ganó su premio.')
     }
   }, [todasTarjetas])
 
@@ -548,7 +551,7 @@ export default function PosClient({
     return (
       <div style={{ maxWidth: 500, margin: '80px auto', textAlign: 'center' }}>
         <Card>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}><LockOutlined style={{ color: 'hsl(var(--text-muted))' }} /></div>
           <h2 style={{ color: primary }}>No hay turno abierto</h2>
           <p style={{ color: C.textMuted, marginBottom: 24 }}>Para empezar a vender necesitas abrir un turno de caja</p>
           <Button type="primary" size="large" href="/pos-turnos">
@@ -579,8 +582,8 @@ export default function PosClient({
           </Col>
           <Col>
             <Space>
-              <Tag color="green">💰 Fondo: {fmt(turno.montoInicial)}</Tag>
-              <Tag color="blue">🧾 {turno.totalVentas} ventas</Tag>
+              <Tag color="green"><Space size={4}><DollarOutlined />Fondo: {fmt(turno.montoInicial)}</Space></Tag>
+              <Tag color="blue"><Space size={4}><FileTextOutlined />{turno.totalVentas} ventas</Space></Tag>
               <Tooltip title="Actualizar">
                 <Button size="small" icon={<ReloadOutlined />} onClick={cargarTurno} />
               </Tooltip>
@@ -592,7 +595,7 @@ export default function PosClient({
       <Row gutter={[12, 12]}>
         {/* ── Columna izquierda: Barbero + Catálogo ── */}
         <Col xs={24} lg={15}>
-          <Card title={<span>🛒 Nueva Venta</span>} size="small" style={{ marginBottom: 12 }}>
+          <Card title={<Space size={6}><ShoppingCartOutlined /><span>Nueva Venta</span></Space>} size="small" style={{ marginBottom: 12 }}>
 
             {/* ── Selector de barbero activo ── */}
             <div style={{ marginBottom: 12 }}>
@@ -633,15 +636,15 @@ export default function PosClient({
                     style={{ width: 280 }}
                     allowClear
                     value={barberoActivo?.id}
-                    onChange={(v, opt: any) => setBarberoActivo(v ? { id: v, nombre: opt?.label?.replace('✂️ ', '') || '' } : null)}
+                    onChange={(v, opt: any) => setBarberoActivo(v ? { id: v, nombre: opt?.label || '' } : null)}
                     filterOption={(input, opt) => (opt?.label as string || '').toLowerCase().includes(input.toLowerCase())}
-                    options={barberosProp.map(b => ({ value: b.id, label: '✂️ ' + b.nombre }))}
+                    options={barberosProp.map(b => ({ value: b.id, label: b.nombre }))}
                   />
                 )}
               </div>
               {barberoActivo && (
                 <div style={{ marginTop: 6, fontSize: 12, color: primary }}>
-                  ✂️ <b>{barberoActivo.nombre}</b> seleccionado — elige un servicio abajo para agregar la línea
+                  <Space size={4}><ScissorOutlined /><span><b>{barberoActivo.nombre}</b> seleccionado — elige un servicio abajo para agregar la línea</span></Space>
                 </div>
               )}
             </div>
@@ -698,9 +701,9 @@ export default function PosClient({
                 const esProductosTab = categoriaActiva === '__productos__'
                 const cats = ['todos', ...Array.from(new Set(serviciosProp.map(s => s.category || 'otro'))).sort(), '__productos__']
                 const labels: Record<string, string> = {
-                  todos: '🔍 Todos', cabello: '💇 Cabello', barba: '🧔 Barba',
-                  combo: '⭐ Combos', tratamiento: '💆 Tratamientos', otro: '📦 Otros',
-                  __productos__: '📦 Productos',
+                  todos: 'Todos', cabello: 'Cabello', barba: 'Barba',
+                  combo: 'Combos', tratamiento: 'Tratamientos', otro: 'Otros',
+                  __productos__: 'Productos',
                 }
                 // Con búsqueda activa: mostrar todo (servicios + productos) sin importar tab
                 const serviciosFiltrados = q
@@ -945,17 +948,17 @@ export default function PosClient({
                           {/* Descripción */}
                           <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {l.descripcion || (l.esProducto ? '📦 Producto' : '✂️ Servicio')}
+                              {l.descripcion || (l.esProducto ? <Space size={4}><InboxOutlined />Producto</Space> : <Space size={4}><ScissorOutlined />Servicio</Space>)}
                             </span>
                             {lineaGratis === l.key && (
-                              <Tag color="success" style={{ fontSize: 10, marginInlineEnd: 0 }}>GRATIS 🎁</Tag>
+                              <Tag color="success" style={{ fontSize: 10, marginInlineEnd: 0 }}><Space size={4}><GiftOutlined />GRATIS</Space></Tag>
                             )}
                           </div>
 
                           {/* Barbero select */}
                           <Select
                             size="small"
-                            placeholder={l.esProducto ? 'Sin barbero (opcional)' : '✂️ Asignar barbero'}
+                            placeholder={l.esProducto ? 'Sin barbero (opcional)' : 'Asignar barbero'}
                             style={{ width: '100%', marginTop: 4 }}
                             allowClear={l.esProducto}
                             value={l.barberoId ?? undefined}
@@ -1033,7 +1036,7 @@ export default function PosClient({
                               border: lineaGratis === l.key ? `2px solid #52c41a` : `1.5px solid ${C.border}`,
                               background: lineaGratis === l.key ? '#f6ffed' : C.bgSurface,
                               color: lineaGratis === l.key ? '#52c41a' : C.textMuted, fontWeight: 600,
-                            }}>🎁</button>
+                            }}><GiftOutlined /></button>
                           </Tooltip>
                         )}
 
@@ -1111,7 +1114,7 @@ export default function PosClient({
                             fontSize: 'clamp(10px, 2.5vw, 13px)', textAlign: 'center', transition: 'all 0.15s',
                             lineHeight: 1.2,
                           }}>
-                            {m.label}
+                            <Space size={3}>{m.icon}{m.label}</Space>
                           </button>
                         ))}
                       </div>
@@ -1170,14 +1173,14 @@ export default function PosClient({
                             }}>
                               {clienteEntregaMenos ? (
                                 <>
-                                  <span style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 14 }}>⚠️ Falta</span>
+                                  <span style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 14 }}><Space size={4}><WarningOutlined />Falta</Space></span>
                                   <span style={{ color: '#ff4d4f', fontSize: 24, fontWeight: 800 }}>
                                     {fmt(montoEfectivo - (p.recibido || 0))}
                                   </span>
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ color: primary, fontWeight: 600, fontSize: 14 }}>💰 Vuelto</span>
+                                  <span style={{ color: primary, fontWeight: 600, fontSize: 14 }}><Space size={4}><DollarOutlined />Vuelto</Space></span>
                                   <span style={{ color: primary, fontSize: 28, fontWeight: 800 }}>{fmt(vuelto)}</span>
                                 </>
                               )}
@@ -1209,7 +1212,7 @@ export default function PosClient({
                             <span style={{ color: C.textSecondary }}>Cubierto</span>
                             <span style={{ fontWeight: 700, color: pagoCompleto ? primary : '#faad14' }}>
                               {fmt(totalPagado)} / {fmt(subtotal)}
-                              {pagoCompleto && ' ✅'}
+                              {pagoCompleto && <CheckOutlined style={{ color: primary, marginLeft: 4 }} />}
                             </span>
                           </div>
                           <div style={{ background: C.bgMuted, borderRadius: 6, height: 8, overflow: 'hidden' }}>
@@ -1282,7 +1285,10 @@ export default function PosClient({
                                     border: `1.5px solid ${pgFalta ? '#ff4d4f' : primary}`,
                                   }}>
                                     <span style={{ color: pgFalta ? '#ff4d4f' : primary, fontWeight: 700 }}>
-                                      {pgFalta ? `⚠️ Falta ${fmt(pg.monto - (pg.recibido || 0))}` : `💰 Vuelto ${fmt(pgVuelto)}`}
+                                      {pgFalta
+                                        ? <Space size={4}><WarningOutlined />Falta {fmt(pg.monto - (pg.recibido || 0))}</Space>
+                                        : <Space size={4}><DollarOutlined />Vuelto {fmt(pgVuelto)}</Space>
+                                      }
                                     </span>
                                   </div>
                                 )}
@@ -1314,7 +1320,7 @@ export default function PosClient({
             {/* Cliente / Empresa con descuento (opcional) */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
-                👤 Cliente / Empresa con descuento (opcional)
+                <Space size={6}><UserOutlined /><span>Cliente / Empresa con descuento (opcional)</span></Space>
               </div>
               {descuentoActivo ? (
                 <div style={{
@@ -1323,13 +1329,13 @@ export default function PosClient({
                   borderRadius: 6, padding: '4px 8px', fontSize: 12,
                 }}>
                   <span style={{ color: primary, fontWeight: 600 }}>
-                    ✅ {descuentoActivo.nombre} —{' '}
+                    <Space size={4}><CheckOutlined /><span>{descuentoActivo.nombre} —{' '}
                     {descuentoActivo.tipo === 'PORCENTAJE'
                       ? `${descuentoActivo.valor}% aplicado`
-                      : `$${descuentoActivo.valor.toFixed(2)} aplicado`}
+                      : `$${descuentoActivo.valor.toFixed(2)} aplicado`}</span></Space>
                   </span>
-                  <Button size="small" type="text" danger style={{ padding: '0 4px', height: 20, fontSize: 11 }}
-                    onClick={limpiarDescuentoCliente}>✕</Button>
+                  <Button size="small" type="text" danger icon={<DeleteOutlined />} style={{ padding: '0 4px', height: 20, fontSize: 11 }}
+                    onClick={limpiarDescuentoCliente} />
                 </div>
               ) : (
                 <AutoComplete
@@ -1372,7 +1378,7 @@ export default function PosClient({
               <Button size="small" type={conFactura ? 'primary' : 'dashed'}
                 icon={<FileTextOutlined />}
                 onClick={() => setConFactura(v => !v)}>
-                {conFactura ? '🧾 Con factura' : '☐ Cliente quiere factura'}
+                {conFactura ? 'Con factura' : 'Cliente quiere factura'}
               </Button>
 
               {conFactura && (
@@ -1414,7 +1420,7 @@ export default function PosClient({
             {/* Tarjeta de fidelización */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
-                🎴 Código de tarjeta (opcional)
+                <Space size={4}><TagOutlined />Código de tarjeta (opcional)</Space>
               </div>
               <AutoComplete
                 style={{ width: '100%' }}
@@ -1441,8 +1447,8 @@ export default function PosClient({
                           <span style={{ color: '#888', marginLeft: 6, fontSize: 12 }}>{t.nombre}</span>
                         </span>
                         <span style={{ fontSize: 11 }}>
-                          {t.tipo === 'SELLOS' ? '🔖' : '⭐'} {t.saldoActual}/{t.meta}
-                          {t.estado === 'PENDIENTE_CANJE' && <span style={{ color: '#d46b08', marginLeft: 4 }}>🎁</span>}
+                          <Space size={4}>{t.tipo === 'SELLOS' ? <TagOutlined /> : <StarOutlined />}{t.saldoActual}/{t.meta}</Space>
+                          {t.estado === 'PENDIENTE_CANJE' && <GiftOutlined style={{ color: '#d46b08', marginLeft: 4 }} />}
                         </span>
                       </div>
                     ),
@@ -1462,12 +1468,12 @@ export default function PosClient({
                     {tarjetaInfo.codigo} — {tarjetaInfo.nombre}
                   </div>
                   <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
-                    {tarjetaInfo.tipo === 'SELLOS' ? '🔖 Sellos' : '⭐ Puntos'}:
+                    <Space size={4}>{tarjetaInfo.tipo === 'SELLOS' ? <TagOutlined /> : <StarOutlined />}{tarjetaInfo.tipo === 'SELLOS' ? 'Sellos' : 'Puntos'}:</Space>
                     {' '}{tarjetaInfo.saldoActual}/{tarjetaInfo.meta}
                   </div>
                   {tarjetaInfo.estado === 'PENDIENTE_CANJE' && (
                     <div style={{ marginTop: 6, fontSize: 11, color: '#d46b08', fontWeight: 600 }}>
-                      🎉 ¡Tarjeta completa! Selecciona qué línea es gratis:
+                      <Space size={4}><GiftOutlined />¡Tarjeta completa! Selecciona qué línea es gratis:</Space>
                     </div>
                   )}
                 </Card>
@@ -1483,7 +1489,7 @@ export default function PosClient({
               onClick={cobrar}
               style={{ height: 52, fontSize: 16, fontWeight: 800, marginTop: 4 }}
             >
-              ✅ COBRAR {subtotal > 0 ? fmt(subtotal) : ''}
+              COBRAR {subtotal > 0 ? fmt(subtotal) : ''}
             </Button>
             </Card>
           </div>
@@ -1497,7 +1503,7 @@ export default function PosClient({
       >
         {modalExito && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: 44 }}>✅</div>
+            <div style={{ fontSize: 44 }}><CheckCircleOutlined style={{ color: primary }} /></div>
             <h2 style={{ color: primary, margin: '10px 0 4px' }}>¡Cobro registrado!</h2>
             <div style={{ fontSize: 28, fontWeight: 800, color: C.textPrimary }}>{fmt(modalExito.total)}</div>
             <div style={{ color: C.textMuted, margin: '6px 0 2px', fontSize: 13 }}>Venta #{modalExito.numero}</div>
@@ -1543,7 +1549,7 @@ export default function PosClient({
         onCancel={() => setModalFraccion(null)}
         title={
           <Space>
-            <span>✂️</span>
+            <ScissorOutlined />
             <span>¿Cómo vender este producto?</span>
           </Space>
         }
@@ -1618,7 +1624,7 @@ export default function PosClient({
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>📦</span>
+                  <InboxOutlined style={{ fontSize: 22 }} />
                   <span style={{ fontWeight: 600, fontSize: 13 }}>Unidad completa</span>
                   <span style={{ fontSize: 11, color: 'hsl(var(--text-muted))' }}>
                     1 {unidCompra} = {factor} {unidVenta}
@@ -1638,7 +1644,7 @@ export default function PosClient({
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>✂️</span>
+                  <ScissorOutlined style={{ fontSize: 22 }} />
                   <span style={{ fontWeight: 600, fontSize: 13 }}>Por fracción</span>
                   <span style={{ fontSize: 11, color: 'hsl(var(--text-muted))' }}>
                     {fmt(precioPorFraccion)} / {unidVenta}

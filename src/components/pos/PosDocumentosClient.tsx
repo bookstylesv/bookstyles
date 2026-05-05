@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   Card, Table, Tag, Button, Tabs, Modal, Input, Row, Col, Statistic,
   Descriptions, Tooltip, Space, Select, theme,
 } from 'antd'
-import { FileTextOutlined, StopOutlined, PrinterOutlined, FileDoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import {
+  FileTextOutlined, StopOutlined, PrinterOutlined, FileDoneOutlined, ExclamationCircleOutlined,
+  DollarCircleOutlined, CalculatorOutlined, CheckCircleOutlined, FileSearchOutlined,
+  DollarOutlined, CreditCardOutlined, BankOutlined, QrcodeOutlined,
+} from '@ant-design/icons'
 import { toast } from 'sonner'
 import { abrirFacturaCompleta, abrirTicket, type DTEJsonViewer } from '@/lib/dte-viewer'
 import { useBarberTheme } from '@/context/ThemeContext'
@@ -44,11 +48,11 @@ const TIPO_LABEL: Record<string, string> = {
   '05': 'Nota de Crédito',
 }
 
-const METODO_LABEL: Record<string, string> = {
-  CASH: '💵 Efectivo',
-  CARD: '💳 Tarjeta',
-  TRANSFER: '🏦 Transferencia',
-  QR: '📱 QR',
+const METODO_LABEL: Record<string, React.ReactNode> = {
+  CASH:     <Space size={4}><DollarOutlined />Efectivo</Space>,
+  CARD:     <Space size={4}><CreditCardOutlined />Tarjeta</Space>,
+  TRANSFER: <Space size={4}><BankOutlined />Transferencia</Space>,
+  QR:       <Space size={4}><QrcodeOutlined />QR</Space>,
 }
 
 const fmt = (n: number) => `$${Number(n).toFixed(2)}`
@@ -293,10 +297,10 @@ export default function PosDocumentosClient({
       {/* KPIs */}
       <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
         {[
-          { title: 'Total facturado', value: totalActivas, prefix: '$', precision: 2 },
-          { title: 'IVA generado', value: totalIva, prefix: '$', precision: 2 },
-          { title: 'Docs. activos', value: ventas.filter(v => v.estado === 'ACTIVA').length },
-          { title: 'Anulados', value: countAnuladas },
+          { title: <Space size={6}><DollarCircleOutlined /><span>Total facturado</span></Space>, value: totalActivas, prefix: '$', precision: 2 },
+          { title: <Space size={6}><CalculatorOutlined /><span>IVA generado</span></Space>, value: totalIva, prefix: '$', precision: 2 },
+          { title: <Space size={6}><CheckCircleOutlined /><span>Docs. activos</span></Space>, value: ventas.filter(v => v.estado === 'ACTIVA').length },
+          { title: <Space size={6}><StopOutlined /><span>Anulados</span></Space>, value: countAnuladas },
           { title: 'Notas de Crédito', value: nc.length },
         ].map((k, i) => (
           <Col xs={12} sm={12} md={8} lg={Math.floor(24 / 5)} key={i}>
@@ -312,9 +316,9 @@ export default function PosDocumentosClient({
         items={[
           {
             key: 'ventas',
-            label: `Facturas / CCF (${ventas.length})`,
+            label: <Space size={6}><FileSearchOutlined /><span>{`Facturas / CCF (${ventas.length})`}</span></Space>,
             children: (
-              <Card size="small" bodyStyle={{ padding: 'clamp(8px, 2vw, 16px)' }}>
+              <Card size="small" title={<Space size={6}><FileDoneOutlined /><span>Documentos emitidos</span></Space>} bodyStyle={{ padding: 'clamp(8px, 2vw, 16px)' }}>
                 <Row gutter={[8, 8]} style={{ marginBottom: 12 }}>
                   <Col xs={24} md={10}>
                     <Input.Search placeholder="Buscar # venta, cliente, código..." value={search}

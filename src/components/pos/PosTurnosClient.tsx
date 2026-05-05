@@ -5,7 +5,11 @@ import {
   Card, Row, Col, Button, InputNumber, Table, Tag, Statistic,
   Modal, Descriptions, Alert, Space, Divider, Input, theme,
 } from 'antd'
-import { PlusOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
+import {
+  LockOutlined, UnlockOutlined, DollarCircleOutlined,
+  ShoppingCartOutlined, CreditCardOutlined,
+  CalculatorOutlined, BankOutlined, QrcodeOutlined, FileTextOutlined,
+} from '@ant-design/icons'
 import { toast } from 'sonner'
 import { useBarberTheme } from '@/context/ThemeContext'
 
@@ -197,7 +201,9 @@ export default function PosTurnosClient({
               message={
                 <Row justify="space-between" align="middle">
                   <Col>
-                    <b style={{ color: primary }}>🟢 Turno activo</b>
+                    <b style={{ color: primary }}>
+                      <Space size={6}><UnlockOutlined style={{ color: primary }} /><span>Turno activo</span></Space>
+                    </b>
                     <span style={{ color: C.textSecondary, marginLeft: 12, fontSize: 12 }}>
                       {turno.usuarioApertura} · Desde {new Date(turno.fechaApertura).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
@@ -216,7 +222,7 @@ export default function PosTurnosClient({
               showIcon
               message={
                 <Row justify="space-between" align="middle">
-                  <Col><b>🔒 No hay turno activo</b> — No se pueden registrar ventas</Col>
+                  <Col><b><Space size={4}><LockOutlined />No hay turno activo</Space></b> — No se pueden registrar ventas</Col>
                   <Col>
                     <Button type="primary" icon={<UnlockOutlined />}
                       style={{ background: primary, borderColor: primary }}
@@ -235,10 +241,10 @@ export default function PosTurnosClient({
       {turno && (
         <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
           {[
-            { title: 'Fondo inicial', value: turno.montoInicial, prefix: '$' },
-            { title: 'Ventas hoy', value: turno.totalVentasCount },
-            { title: 'Efectivo', value: turno.totalEfectivo, prefix: '$' },
-            { title: 'Tarjeta', value: turno.totalTarjeta, prefix: '$' },
+            { title: <Space size={6}><DollarCircleOutlined /><span>Fondo inicial</span></Space>, value: turno.montoInicial, prefix: '$' },
+            { title: <Space size={6}><ShoppingCartOutlined /><span>Ventas hoy</span></Space>, value: turno.totalVentasCount },
+            { title: <Space size={6}><CalculatorOutlined /><span>Efectivo</span></Space>, value: turno.totalEfectivo, prefix: '$' },
+            { title: <Space size={6}><CreditCardOutlined /><span>Tarjeta</span></Space>, value: turno.totalTarjeta, prefix: '$' },
           ].map((k, i) => (
             <Col xs={12} sm={12} md={6} key={i}>
               <Card size="small">
@@ -251,7 +257,7 @@ export default function PosTurnosClient({
       )}
 
       {/* Historial */}
-      <Card title="📋 Historial de Turnos" size="small">
+      <Card title={<Space size={6}><FileTextOutlined /><span>Historial de Turnos</span></Space>} size="small">
         <div style={{ overflowX: 'auto' }}>
           <Table
             dataSource={historial}
@@ -267,7 +273,7 @@ export default function PosTurnosClient({
       {/* Modal abrir turno */}
       <Modal
         open={modalAbrir}
-        title="Abrir Turno de Caja"
+        title={<Space size={8}><UnlockOutlined /><span>Abrir turno de caja</span></Space>}
         onCancel={() => setModalAbrir(false)}
         onOk={abrirTurno}
         confirmLoading={loadingAbrir}
@@ -305,26 +311,26 @@ export default function PosTurnosClient({
             <Card size="small" style={{ marginBottom: 16, background: C.bgPrimaryLow }}>
               <Row gutter={[8, 8]}>
                 <Col xs={12} md={8}>
-                  <Statistic title="Fondo inicial" value={turno.montoInicial} prefix="$" precision={2} />
+                  <Statistic title={<Space size={6}><DollarCircleOutlined /><span>Fondo inicial</span></Space>} value={turno.montoInicial} prefix="$" precision={2} />
                 </Col>
                 <Col xs={12} md={8}>
-                  <Statistic title="+ Ventas efectivo" value={turno.totalEfectivo} prefix="$" precision={2} />
+                  <Statistic title={<Space size={6}><CalculatorOutlined /><span>Ventas efectivo</span></Space>} value={turno.totalEfectivo} prefix="$" precision={2} />
                 </Col>
                 <Col xs={24} md={8}>
-                  <Statistic title="= Esperado en caja" value={(turno.montoInicial || 0) + (turno.totalEfectivo || 0)}
+                  <Statistic title={<Space size={6}><DollarCircleOutlined /><span>Esperado en caja</span></Space>} value={(turno.montoInicial || 0) + (turno.totalEfectivo || 0)}
                     prefix="$" precision={2} valueStyle={{ color: primary, fontWeight: 700 }} />
                 </Col>
               </Row>
               <Divider style={{ margin: '8px 0' }} />
               <Row gutter={[8, 8]}>
                 <Col xs={8}>
-                  <Statistic title="💳 Tarjeta" value={turno.totalTarjeta} prefix="$" precision={2} />
+                  <Statistic title={<Space size={6}><CreditCardOutlined /><span>Tarjeta</span></Space>} value={turno.totalTarjeta} prefix="$" precision={2} />
                 </Col>
                 <Col xs={8}>
-                  <Statistic title="🏦 Transfer." value={turno.totalTransferencia} prefix="$" precision={2} />
+                  <Statistic title={<Space size={6}><BankOutlined /><span>Transfer.</span></Space>} value={turno.totalTransferencia} prefix="$" precision={2} />
                 </Col>
                 <Col xs={8}>
-                  <Statistic title="📱 QR" value={turno.totalQR} prefix="$" precision={2} />
+                  <Statistic title={<Space size={6}><QrcodeOutlined /><span>QR</span></Space>} value={turno.totalQR} prefix="$" precision={2} />
                 </Col>
               </Row>
             </Card>
@@ -436,7 +442,7 @@ export default function PosTurnosClient({
                         {diferencia >= 0 ? '+' : ''}{diferencia.toFixed(2)}
                         {diferencia > 0 && ' (SOBRANTE)'}
                         {diferencia < 0 && ' (FALTANTE)'}
-                        {diferencia === 0 && ' ✅'}
+                        {diferencia === 0 && <> <UnlockOutlined /></>}
                       </div>
                     </Col>
                   </Row>
