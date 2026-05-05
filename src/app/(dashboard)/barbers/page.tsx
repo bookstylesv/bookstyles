@@ -17,7 +17,7 @@ export default async function BarbersPage() {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'hsl(var(--text-primary))', margin: '0 0 4px' }}>
-          Barberos
+          Equipo
         </h1>
         <p style={{ color: 'hsl(var(--text-secondary))', margin: 0, fontSize: 14 }}>
           Perfiles y horarios del equipo

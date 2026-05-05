@@ -207,7 +207,7 @@ export default function BranchesClient({
       ),
     },
     {
-      title: 'Barberos',
+      title: 'Equipo',
       key: 'barbers',
       align: 'center',
       render: (_: unknown, row: Branch) => (

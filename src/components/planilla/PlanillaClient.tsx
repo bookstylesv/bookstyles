@@ -328,7 +328,7 @@ export default function PlanillaClient({
   const colsPlanilla = [
     { title: 'Período', dataIndex: 'periodo', render: (v: string) => <Text strong>{v}</Text> },
     { title: 'Estado', dataIndex: 'estado', render: (v: string) => <Tag color={ESTADO_COLOR[v] || 'default'}>{v}</Tag> },
-    { title: 'Barberos', dataIndex: 'detalles', align: 'center' as const, render: (d: unknown[]) => d.length },
+    { title: 'Equipo', dataIndex: 'detalles', align: 'center' as const, render: (d: unknown[]) => d.length },
     { title: 'Bruto', dataIndex: 'totalBruto', render: (v: number) => fmt(v) },
     { title: 'Deducciones', dataIndex: 'totalDeducciones', render: (v: number) => <Text type="danger">{fmt(v)}</Text> },
     { title: 'Neto', dataIndex: 'totalNeto', render: (v: number) => <Text strong style={{ color: '#0d9488' }}>{fmt(v)}</Text> },
@@ -718,7 +718,7 @@ export default function PlanillaClient({
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card>
-            <Statistic title="Barberos Configurados" value={configurados} suffix={`/ ${barberos.length}`}
+            <Statistic title="Equipo Configurado" value={configurados} suffix={`/ ${barberos.length}`}
               prefix={<TeamOutlined />} valueStyle={{ color: '#0d9488' }} />
           </Card>
         </Col>
@@ -800,7 +800,7 @@ export default function PlanillaClient({
                       </Col>
                       <Col xs={24} sm={8}>
                         <Card size="small">
-                          <Statistic title="Barberos" value={aguinaldo.items.length} />
+                          <Statistic title="Equipo" value={aguinaldo.items.length} />
                         </Card>
                       </Col>
                       <Col xs={24} sm={8}>
@@ -847,7 +847,7 @@ export default function PlanillaClient({
                       </Col>
                       <Col xs={24} sm={8}>
                         <Card size="small">
-                          <Statistic title="Barberos" value={vacaciones.items.length} />
+                          <Statistic title="Equipo" value={vacaciones.items.length} />
                         </Card>
                       </Col>
                       <Col xs={24} sm={8}>
@@ -911,7 +911,7 @@ export default function PlanillaClient({
                       </Col>
                       <Col xs={12} sm={6}>
                         <Card size="small">
-                          <Statistic title="Total Barberos" value={quincena25.aplican + quincena25.noAplican} />
+                          <Statistic title="Total Equipo" value={quincena25.aplican + quincena25.noAplican} />
                         </Card>
                       </Col>
                     </Row>
@@ -989,7 +989,7 @@ export default function PlanillaClient({
           <Alert type="success" showIcon style={{ marginBottom: 12 }}
             message={`Comisiones cargadas automáticamente desde POS — ${comisionesPOS.length} barbero(s) con comisiones`} />
         )}
-        <Divider>Barberos y Unidades Trabajadas</Divider>
+        <Divider>Equipo y Unidades Trabajadas</Divider>
         {barberos.length === 0 ? (
           <Alert type="warning" message="No hay barberos activos" />
         ) : (

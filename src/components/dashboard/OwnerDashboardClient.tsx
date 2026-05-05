@@ -765,7 +765,7 @@ export default function OwnerDashboardClient({
                   </ResponsiveContainer>
                 ) : (
                   <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text type="secondary">Sin datos de barberos en este período</Text>
+                    <Text type="secondary">Sin datos del equipo en este período</Text>
                   </div>
                 )}
               </Card>
@@ -820,7 +820,7 @@ export default function OwnerDashboardClient({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TrophyOutlined style={{ color: primary }} />
-                  <Text strong style={{ fontSize: 14 }}>Ranking barberos — {stats.mesMostrado}</Text>
+                  <Text strong style={{ fontSize: 14 }}>Ranking equipo — {stats.mesMostrado}</Text>
                 </div>
                 <Tag style={{ background: `${primary}12`, border: `1px solid ${primary}30`, color: primary, borderRadius: 10, fontSize: 11 }}>Por ingresos</Tag>
               </div>

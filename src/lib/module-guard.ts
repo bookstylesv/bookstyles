@@ -19,7 +19,7 @@ export const MODULE_KEYS = [
   'billing',      // Caja de Citas / Agenda
   'clients',      // Clientes
   'loyalty',      // Puntos y Tarjetas de Fidelización
-  'barbers',      // Barberos / Estilistas
+  'barbers',      // Equipo
   'services',     // Servicios / Tratamientos
   'compras',      // Compras
   'proveedores',  // Proveedores
@@ -68,7 +68,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   billing:      'Caja de Citas / Agenda',
   clients:      'Clientes',
   loyalty:      'Fidelización (Puntos y Tarjetas)',
-  barbers:      'Barberos / Estilistas',
+  barbers:      'Equipo',
   services:     'Servicios / Tratamientos',
   compras:      'Compras',
   proveedores:  'Proveedores',

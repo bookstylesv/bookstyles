@@ -49,7 +49,7 @@ const QUICK_LINKS = [
   { href: '/appointments', label: 'Ver citas de hoy',    icon: <CalendarOutlined />,    accent: '#0d9488' },
   { href: '/pos',          label: 'Ir al POS',           icon: <ShoppingCartOutlined />, accent: '#10b981' },
   { href: '/services',     label: 'Gestionar servicios', icon: <ScissorOutlined />,     accent: '#7c3aed' },
-  { href: '/barbers',      label: 'Ver barberos',        icon: <UserOutlined />,        accent: '#0284c7' },
+  { href: '/barbers',      label: 'Ver equipo',        icon: <UserOutlined />,        accent: '#0284c7' },
   { href: '/billing',      label: 'Registrar pago',      icon: <CreditCardOutlined />,  accent: '#b45309' },
 ];
 
@@ -484,7 +484,7 @@ export default function DashboardClient({
           <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Title level={5} style={{ margin: 0 }}>Ranking barberos — mes</Title>
+                <Title level={5} style={{ margin: 0 }}>Ranking equipo — mes</Title>
                 <Tag color="purple" style={{ fontSize: 11 }}>Completadas</Tag>
               </div>
             }
@@ -529,7 +529,7 @@ export default function DashboardClient({
             ) : (
               <div style={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: C.textDisabled }}>
                 <ScissorOutlined style={{ fontSize: 36, marginBottom: 10 }} />
-                <Text type="secondary">Sin datos de barberos este mes</Text>
+                <Text type="secondary">Sin datos del equipo este mes</Text>
               </div>
             )}
           </Card>

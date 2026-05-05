@@ -192,7 +192,7 @@ export default function PosDocumentosClient({
       render: (v: string | null) => v || 'Consumidor Final',
     },
     {
-      title: 'Barberos / Servicios',
+      title: 'Equipo / Servicios',
       dataIndex: 'detalles',
       render: (d: Venta['detalles']) => (
         <Space direction="vertical" size={0}>
