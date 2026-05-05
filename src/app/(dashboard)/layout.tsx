@@ -8,6 +8,7 @@ import { getPlanLimits }       from '@/lib/plan-guard';
 import { findActiveBranches }  from '@/modules/branches/branches.repository';
 import { redirect }            from 'next/navigation';
 import DashboardSidebar        from '@/components/layout/DashboardSidebar';
+import DashboardTopbar         from '@/components/layout/DashboardTopbar';
 import AntdProvider            from '@/components/shared/AntdProvider';
 import { prisma }              from '@/lib/prisma';
 
@@ -38,6 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           brandName={brandName}
         />
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0, padding: 'clamp(12px, 3vw, 24px) clamp(12px, 3vw, 32px)' }}>
+          <DashboardTopbar />
           {children}
         </main>
       </div>
