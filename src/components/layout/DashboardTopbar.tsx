@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Buildings, ClockCountdown } from '@phosphor-icons/react';
-import { Popover, List, Tag, Typography, Empty, Badge } from 'antd';
+import { Popover, List, Tag, Typography, Empty } from 'antd';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
@@ -80,7 +80,7 @@ export default function DashboardTopbar({
   branches,
   currentBranchId,
 }: Props) {
-  const [dateTime,     setDateTime]     = useState('');
+  const [dateTime,     setDateTime]     = useState(() => getNow());
   const [count,        setCount]        = useState(0);
   const [appointments, setAppointments] = useState<NotifAppointment[]>([]);
   const [bellOpen,     setBellOpen]     = useState(false);
@@ -88,7 +88,6 @@ export default function DashboardTopbar({
 
   // Reloj en tiempo real
   useEffect(() => {
-    setDateTime(getNow());
     const id = setInterval(() => setDateTime(getNow()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -114,10 +113,15 @@ export default function DashboardTopbar({
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
+    const initialFetchId = window.setTimeout(() => {
+      void fetchNotifications();
+    }, 0);
     const handler = () => fetchNotifications();
     window.addEventListener('appointment-mutated', handler);
-    return () => window.removeEventListener('appointment-mutated', handler);
+    return () => {
+      window.clearTimeout(initialFetchId);
+      window.removeEventListener('appointment-mutated', handler);
+    };
   }, [fetchNotifications]);
 
   // Sucursal activa
@@ -263,7 +267,7 @@ export default function DashboardTopbar({
               display:        'flex',
               alignItems:     'center',
               justifyContent: 'center',
-              width:           36,
+              width:           44,
               height:          36,
               background:     count > 0 ? 'hsl(var(--brand-primary) / 0.1)' : 'transparent',
               border:         count > 0 ? '1px solid hsl(var(--brand-primary) / 0.3)' : '1px solid hsl(var(--border))',
@@ -278,16 +282,17 @@ export default function DashboardTopbar({
             {count > 0 && (
               <span style={{
                 position:     'absolute',
-                top:          -7,
-                right:        -7,
+                top:          -6,
+                right:        3,
                 background:   '#ef4444',
                 color:        '#fff',
-                fontSize:     9,
+                fontSize:     10,
                 fontWeight:   700,
-                lineHeight:   1,
-                padding:      '3px 5px',
+                lineHeight:   '15px',
+                padding:      '0 5px',
                 borderRadius: 20,
                 minWidth:     18,
+                height:       16,
                 textAlign:    'center',
                 boxShadow:    '0 0 0 2px hsl(var(--bg-surface))',
               }}>
