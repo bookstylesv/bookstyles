@@ -23,6 +23,7 @@ import {
   CaretUp, CheckCircle, UserGear, Crown, ChartLine, Trophy,
   Target, Storefront,
 } from '@phosphor-icons/react';
+import { BgColorsOutlined } from '@ant-design/icons';
 import ThemeSelector from '@/components/shared/ThemeSelector';
 import { useBarberTheme } from '@/context/ThemeContext';
 
@@ -291,7 +292,7 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
         {/* Botón Tema */}
         <button type="button" onClick={() => setThemeSelectorOpen(true)} title="Cambiar tema visual" className="sidebar-toggle-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '9px 0', background: 'transparent', border: 'none', borderTop: '1px solid hsl(var(--sidebar-border))', color: 'hsl(var(--sidebar-muted))', cursor: 'pointer', gap: 6, fontSize: 11, transition: 'color 0.15s' }}>
           <PaintBrush size={15} weight="bold" />
-          {!effectiveCollapsed && !isMobile && <span>Tema: {barberTheme.emoji} {barberTheme.name}</span>}
+          {!effectiveCollapsed && !isMobile && <span>Tema: <BgColorsOutlined /> {barberTheme.name}</span>}
         </button>
 
         {/* Toggle */}
@@ -327,7 +328,7 @@ function OwnerSidebar({ name, brandName, slug }: { name: string; brandName?: str
 export default function DashboardSidebar({ role, slug, name, enabledModules, userModuleAccess, branches = [], currentBranchId, brandName }: Props) {
   const pathname  = usePathname();
   const { theme } = useBarberTheme();
-  const isSalon   = theme.category === 'femenino';
+  const isSalon   = theme.category === 'salon';
   const primary   = theme.colorPrimary;
   const navFont   = isSalon ? "'Playfair Display', Georgia, serif" : 'var(--font-inter, Inter, system-ui, sans-serif)';
   const LogoIcon  = isSalon ? Flower : Scissors;
@@ -625,7 +626,7 @@ export default function DashboardSidebar({ role, slug, name, enabledModules, use
         {/* ── Botón Tema (fijo) ── */}
         <button type="button" onClick={() => setThemeSelectorOpen(true)} title="Cambiar tema visual" className="sidebar-toggle-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '9px 0', background: 'transparent', border: 'none', borderTop: '1px solid hsl(var(--sidebar-border))', color: 'hsl(var(--sidebar-muted))', cursor: 'pointer', gap: 6, fontSize: 11, transition: 'color 0.15s, background 0.15s', flexShrink: 0 }}>
           <PaintBrush size={15} weight="bold" />
-          {!effectiveCollapsed && !isMobile && <span>Tema: {theme.emoji} {theme.name}</span>}
+          {!effectiveCollapsed && !isMobile && <span>Tema: <BgColorsOutlined /> {theme.name}</span>}
         </button>
 
         {/* ── Toggle (fijo) ── */}

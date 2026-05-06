@@ -2,15 +2,21 @@
 
 /**
  * ThemeSelector — Modal de selección de temas para BarberPro.
- * Organizado en 3 secciones: Neutros, Masculinos, Femeninos.
+ * Organizado en 2 secciones: Barberías, Salones.
  * Muestra preview de colores + nombre + descripción.
  */
 
-import { useState } from 'react';
 import { Modal, Tabs, Tooltip } from 'antd';
-import { CheckOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  ScissorOutlined,
+  StarOutlined,
+  BgColorsOutlined,
+  MoonOutlined,
+  SunOutlined,
+} from '@ant-design/icons';
 import { useBarberTheme } from '@/context/ThemeContext';
-import { THEMES_BY_CATEGORY, type BarberTheme } from '@/config/barber-themes';
+import { BARBER_THEMES, THEMES_BY_CATEGORY, type BarberTheme } from '@/config/barber-themes';
 
 // ─── ThemeCard ────────────────────────────────────────────────────────────────
 
@@ -67,27 +73,37 @@ function ThemeCard({
 
         {/* Label */}
         <div style={{
-          padding:   '6px 8px',
+          padding:    '6px 8px',
           background: active ? `${primaryColor}15` : 'hsl(var(--bg-subtle, 0 0% 97%))',
-          display:   'flex',
+          display:    'flex',
           alignItems: 'center',
-          gap:       4,
+          gap:        4,
         }}>
-          <span style={{ fontSize: 14 }}>{theme.emoji}</span>
+          {/* Color swatch */}
           <span style={{
-            fontSize:   11,
-            fontWeight: active ? 700 : 500,
-            color:      active ? primaryColor : 'hsl(var(--text-primary, 222 11% 41%))',
-            whiteSpace: 'nowrap',
-            overflow:   'hidden',
+            display:      'inline-block',
+            width:        10,
+            height:       10,
+            borderRadius: '50%',
+            background:   primaryColor,
+            flexShrink:   0,
+          }} />
+          <span style={{
+            fontSize:     11,
+            fontWeight:   active ? 700 : 500,
+            color:        active ? primaryColor : 'hsl(var(--text-primary, 222 11% 41%))',
+            whiteSpace:   'nowrap',
+            overflow:     'hidden',
             textOverflow: 'ellipsis',
-            flex: 1,
+            flex:         1,
           }}>
             {theme.name}
           </span>
-          <span style={{ fontSize: 9, opacity: 0.6 }} title={theme.isDark ? 'Oscuro' : 'Claro'}>
-            {theme.isDark ? '🌙' : '☀️'}
-          </span>
+          {/* Oscuro / Claro */}
+          {theme.isDark
+            ? <MoonOutlined style={{ fontSize: 9, opacity: 0.55 }} title="Oscuro" />
+            : <SunOutlined  style={{ fontSize: 9, opacity: 0.55 }} title="Claro"  />
+          }
           {active && (
             <CheckOutlined style={{ fontSize: 10, color: primaryColor }} />
           )}
@@ -143,33 +159,22 @@ export default function ThemeSelector({ open, onClose }: ThemeSelectorProps) {
 
   const tabItems = [
     {
-      key:      'neutro',
-      label:    '🌊 Neutros',
+      key:   'barberia',
+      label: <span><ScissorOutlined style={{ marginRight: 5 }} />Barberías</span>,
       children: (
         <ThemeGrid
-          themes={THEMES_BY_CATEGORY.neutro}
+          themes={THEMES_BY_CATEGORY.barberia}
           activeId={themeId}
           onSelect={handleSelect}
         />
       ),
     },
     {
-      key:      'masculino',
-      label:    '✂️ Masculinos',
+      key:   'salon',
+      label: <span><StarOutlined style={{ marginRight: 5 }} />Salones</span>,
       children: (
         <ThemeGrid
-          themes={THEMES_BY_CATEGORY.masculino}
-          activeId={themeId}
-          onSelect={handleSelect}
-        />
-      ),
-    },
-    {
-      key:      'femenino',
-      label:    '🌸 Femeninos',
-      children: (
-        <ThemeGrid
-          themes={THEMES_BY_CATEGORY.femenino}
+          themes={THEMES_BY_CATEGORY.salon}
           activeId={themeId}
           onSelect={handleSelect}
         />
@@ -177,18 +182,16 @@ export default function ThemeSelector({ open, onClose }: ThemeSelectorProps) {
     },
   ];
 
-  // Determina la pestaña activa según el tema actual
   const activeCategory = (() => {
-    const found = [...THEMES_BY_CATEGORY.neutro, ...THEMES_BY_CATEGORY.masculino, ...THEMES_BY_CATEGORY.femenino]
-      .find(t => t.id === themeId);
-    return found?.category ?? 'neutro';
+    const found = BARBER_THEMES.find(t => t.id === themeId);
+    return found?.category ?? 'barberia';
   })();
 
   return (
     <Modal
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>🎨</span>
+          <BgColorsOutlined style={{ fontSize: 18 }} />
           <span style={{ fontWeight: 700 }}>Seleccionar tema visual</span>
         </div>
       }
@@ -205,7 +208,7 @@ export default function ThemeSelector({ open, onClose }: ThemeSelectorProps) {
         fontSize: 12.5,
         color:    'hsl(var(--text-muted, 246 6% 67%))',
       }}>
-        El tema se aplica de inmediato y se guarda automáticamente para esta barbería.
+        El tema se aplica de inmediato y se guarda automáticamente.
       </p>
 
       <Tabs
