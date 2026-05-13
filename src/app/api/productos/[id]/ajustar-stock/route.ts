@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede ajustar el stock');
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede ajustar el stock');
 
     const { id } = await params;
     const body = await req.json();

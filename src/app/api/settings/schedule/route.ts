@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     const body = await req.json() as unknown;
     if (!Array.isArray(body)) throw new ValidationError('Se esperaba un array de horarios');

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     // branchId = null solo para OWNER (vista consolidada)
     if (body.branchId === null) {
-      if (user.role !== 'OWNER') {
+      if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) {
         return NextResponse.json({ error: 'Solo el propietario puede ver todas las sucursales' }, { status: 403 });
       }
 

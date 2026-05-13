@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     const body = await req.json();
     const data = await createMunicipio(body);

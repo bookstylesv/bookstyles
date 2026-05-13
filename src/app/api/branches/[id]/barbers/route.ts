@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede asignar barberos');
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede asignar barberos');
 
     const { id } = await params;
     const { barberId, isPrimary = false } = await req.json() as { barberId: number; isPrimary?: boolean };
@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede quitar barberos');
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede quitar barberos');
 
     const { id } = await params;
     const { searchParams } = new URL(req.url);

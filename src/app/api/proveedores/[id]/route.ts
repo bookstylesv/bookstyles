@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
 
     const { id } = await params;
     const proveedor = await getProveedorById(user.tenantId, Number(id));
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
 
     const { id }    = await params;
     const body      = await req.json();
@@ -49,7 +49,7 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
 
     const { id }    = await params;
     const proveedor = await deactivateProveedorService(user.tenantId, Number(id));

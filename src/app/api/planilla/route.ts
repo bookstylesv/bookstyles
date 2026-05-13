@@ -53,7 +53,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'OWNER') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const { periodo, barberos: barberoInputs } = await req.json();
   // barberoInputs: Array<{ barberoId: number; unidades: number }>

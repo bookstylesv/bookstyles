@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'OWNER') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const items = await req.json();
   await upsertConfigPlanilla(user.tenantId, items);
   return NextResponse.json({ ok: true });
@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest) {
 
 export async function POST() {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'OWNER') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   await seedConfigPlanilla(user.tenantId);
   return NextResponse.json({ ok: true });
 }

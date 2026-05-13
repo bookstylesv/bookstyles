@@ -17,7 +17,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'OWNER') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const { barberoId, tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta, fechaIngreso } = await req.json();
 

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    if (user.role !== 'OWNER') return NextResponse.json({ error: 'Solo el propietario puede emitir NC' }, { status: 403 })
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'Solo el propietario puede emitir NC' }, { status: 403 })
 
     const { ventaId, motivo } = await req.json()
     if (!ventaId || !motivo) return NextResponse.json({ error: 'ventaId y motivo son requeridos' }, { status: 400 })

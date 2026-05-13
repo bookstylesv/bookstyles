@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError('Solo el propietario puede transferir stock');
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede transferir stock');
 
     const body = await req.json();
     const result = await transferirStock(user.tenantId, body);

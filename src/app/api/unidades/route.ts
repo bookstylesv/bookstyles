@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) throw new UnauthorizedError()
-  if (user.role !== 'OWNER') throw new ForbiddenError()
+  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
   const unidades = await listUnidades(user.tenantId)
   return ok(unidades)
 }
@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) throw new UnauthorizedError()
-  if (user.role !== 'OWNER') throw new ForbiddenError()
+  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
 
   const body = await req.json()
   const { nombre, simbolo } = body

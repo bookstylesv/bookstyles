@@ -9,7 +9,7 @@ import { getComisionesBarberosPeriodo } from '@/modules/planilla/planilla.reposi
  */
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'OWNER') {
+  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 

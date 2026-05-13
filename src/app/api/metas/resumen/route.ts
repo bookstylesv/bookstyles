@@ -53,7 +53,7 @@ export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER' && user.role !== 'SUPERADMIN' && user.role !== 'GERENTE') {
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role) && user.role !== 'GERENTE') {
       throw new ForbiddenError();
     }
 

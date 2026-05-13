@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new UnauthorizedError();
-    if (user.role !== 'OWNER') throw new ForbiddenError();
+    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     // Limpiar catálogo anterior (los códigos cambiaron en V1.2)
     await prisma.barberMunicipio.deleteMany({});

@@ -6,7 +6,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    if (user.role !== 'OWNER') return NextResponse.json({ error: 'Solo el propietario puede anular' }, { status: 403 })
+    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'Solo el propietario puede anular' }, { status: 403 })
 
     const { id } = await params
     const { motivo } = await req.json()
