@@ -1107,7 +1107,7 @@ export default function PlanillaClient({
               ))}
             </Row>
             <Divider>Detalle por Barbero</Divider>
-            <Table scroll={{ x: 'max-content' }}
+            <Table
               dataSource={drawerDetalle.detalles as DetallePlanilla[]}
               columns={[
                 ...colsDetalle,
@@ -1128,7 +1128,7 @@ export default function PlanillaClient({
                 },
               ]}
               rowKey="id" size="small"
-              scroll={{ x: true }} pagination={false} loading={drawerLoading}
+              scroll={{ x: 'max-content' }} pagination={false} loading={drawerLoading}
             />
           </>
         )}
