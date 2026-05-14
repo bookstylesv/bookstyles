@@ -68,12 +68,16 @@ export async function middleware(req: NextRequest) {
   const user = await verifyToken(token);
 
   if (!user) {
-    return pathname.startsWith('/api/')
-      ? NextResponse.json(
-          { success: false, error: { message: 'Sesión expirada', code: 'UNAUTHORIZED' } },
-          { status: 401 },
-        )
-      : NextResponse.redirect(new URL('/login', req.url));
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Sesión expirada', code: 'UNAUTHORIZED' } },
+        { status: 401 },
+      );
+    }
+    // Token expirado en página → intentar refresh antes de ir al login
+    const refreshUrl = new URL('/api/auth/refresh', req.url);
+    refreshUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(refreshUrl);
   }
 
   // CLIENT y BARBER no tienen acceso al ERP bajo ninguna circunstancia

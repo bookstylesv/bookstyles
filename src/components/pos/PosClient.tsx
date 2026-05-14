@@ -459,9 +459,10 @@ export default function PosClient({
       const res = await fetch('/api/pos/venta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
 
-      if (!res.ok) throw new Error(data.error || 'Error al cobrar')
+      if (!res.ok) throw new Error(data.error?.message || data.error || 'Error al cobrar')
 
-      setModalExito({ numero: data.venta.numero, total: data.venta.total, codigoGen: data.venta.codigoGeneracion, dte: data.dte || null })
+      const { venta: ventaCreada, dte: dteCreado } = data.data
+      setModalExito({ numero: ventaCreada.numero, total: ventaCreada.total, codigoGen: ventaCreada.codigoGeneracion, dte: dteCreado || null })
 
       // Loyalty: acumular o canjear
       if (codigoTarjeta.trim() && tarjetaInfo) {
@@ -469,13 +470,13 @@ export default function PosClient({
           await fetch(`/api/loyalty/tarjetas/${codigoTarjeta.toUpperCase()}/canjear`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nota: `Canje en venta #${data.venta.numero}` }),
+            body: JSON.stringify({ nota: `Canje en venta #${ventaCreada.numero}` }),
           })
         } else {
           const acumRes = await fetch(`/api/loyalty/tarjetas/${codigoTarjeta.toUpperCase()}/acumular`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ventaId: data.venta.id, totalVenta: subtotal }),
+            body: JSON.stringify({ ventaId: ventaCreada.id, totalVenta: subtotal }),
           })
           const acumJson = await acumRes.json()
           if (acumJson.data?.completada) {
