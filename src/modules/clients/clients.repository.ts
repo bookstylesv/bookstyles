@@ -15,6 +15,7 @@ export type ClientCreateInput = {
   numDocumento?:    string;
   nrc?:             string;
   nombreComercial?: string;
+  descActividad?:   string;
   departamentoCod?: string;
   municipioCod?:    string;
   complemento?:     string;
@@ -37,6 +38,7 @@ const CLIENT_SELECT = {
   numDocumento:    true,
   nrc:             true,
   nombreComercial: true,
+  descActividad:   true,
   departamentoCod: true,
   municipioCod:    true,
   complemento:     true,
@@ -119,6 +121,7 @@ export async function createClient(tenantId: number, data: ClientCreateInput) {
       numDocumento:    data.numDocumento,
       nrc:             data.nrc,
       nombreComercial: data.nombreComercial,
+      descActividad:   data.descActividad,
       departamentoCod: data.departamentoCod,
       municipioCod:    data.municipioCod,
       complemento:     data.complemento,
@@ -140,6 +143,7 @@ export async function updateClient(id: number, tenantId: number, data: ClientUpd
       ...(data.numDocumento    !== undefined && { numDocumento:    data.numDocumento || null }),
       ...(data.nrc             !== undefined && { nrc:             data.nrc || null }),
       ...(data.nombreComercial !== undefined && { nombreComercial: data.nombreComercial || null }),
+      ...(data.descActividad   !== undefined && { descActividad:   data.descActividad   || null }),
       ...(data.departamentoCod !== undefined && { departamentoCod: data.departamentoCod || null }),
       ...(data.municipioCod    !== undefined && { municipioCod:    data.municipioCod || null }),
       ...(data.complemento     !== undefined && { complemento:     data.complemento || null }),

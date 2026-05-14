@@ -266,6 +266,7 @@ model BarberUser {
   numDocumento    String?  // número sin guiones
   nrc             String?  // NRC para contribuyentes (NIT)
   nombreComercial String?  // razón comercial (empresas)
+  descActividad   String?  // giro / actividad económica (CAT MH)
   departamentoCod String?  // CAT-012
   municipioCod    String?  // CAT-013
   complemento     String?  // dirección adicional

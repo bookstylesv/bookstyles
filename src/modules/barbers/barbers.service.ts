@@ -45,11 +45,10 @@ export async function createBarber(tenantId: number, body: unknown) {
   if (!data.email?.trim())    throw new ValidationError('El email es obligatorio');
 
   try {
-    const { barber, tempPassword } = await repo.createBarber(tenantId, data);
+    const { barber } = await repo.createBarber(tenantId, data);
     return {
       ...barber,
       scheduleText: formatSchedule(barber.schedules),
-      tempPassword, // null si el admin proveyó contraseña; string si fue autogenerada
     };
   } catch (err: unknown) {
     if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2002') {

@@ -93,7 +93,7 @@ export async function createBarber(tenantId: number, data: BarberCreateInput) {
       },
     });
 
-    return { barber, tempPassword };
+    return { barber };
   });
 }
 

@@ -22,7 +22,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button as SdButton } from '@/components/ui/button';
 import { Input as SdInput }  from '@/components/ui/input';
 import { FormField }         from '@/components/shared/FormField';
-import { Key }               from '@phosphor-icons/react';
 import { useBarberTheme }    from '@/context/ThemeContext';
 import dayjs                 from 'dayjs';
 
@@ -96,7 +95,6 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
   const [creating,      setCreating]      = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError,   setCreateError]   = useState('');
-  const [tempPassword,  setTempPassword]  = useState<string | null>(null);
   const [form, setForm] = useState<CreateForm>({ fullName: '', email: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
 
   // ── Drawer perfil completo ──────────────────────────────
@@ -247,7 +245,7 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
     if (!form.fullName.trim() || !form.email.trim()) {
       setCreateError('Nombre y email son obligatorios.'); return;
     }
-    setCreateLoading(true); setCreateError(''); setTempPassword(null);
+    setCreateLoading(true); setCreateError('');
     try {
       const specialties = form.specialtiesInput.split(',').map(s => s.trim()).filter(Boolean);
       const res = await fetch('/api/barbers', {
@@ -260,16 +258,10 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
       });
       const json = await res.json();
       if (!res.ok) { setCreateError(json.error?.message ?? 'Error'); toast.error(json.error?.message ?? 'Error'); return; }
-      const { tempPassword: tp, ...barberData } = json.data;
-      setBarbers(prev => [...prev, barberData]);
+      setBarbers(prev => [...prev, json.data]);
       setCreating(false);
       setForm({ fullName: '', email: '', phone: '', bio: '', cargo: '', specialtiesInput: '' });
-      if (tp) {
-        setTempPassword(tp);
-        toast.success(`Empleado "${form.fullName.trim()}" creado — contraseña temporal generada`);
-      } else {
-        toast.success(`Empleado "${form.fullName.trim()}" creado`);
-      }
+      toast.success(`Empleado "${form.fullName.trim()}" creado`);
     } catch { setCreateError('Error de red'); toast.error('Error de red'); }
     finally { setCreateLoading(false); }
   }
@@ -797,26 +789,6 @@ export default function BarbersClient({ initialBarbers }: { initialBarbers: Barb
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ── Modal contraseña temporal ───────────────────── */}
-      <Modal
-        open={!!tempPassword}
-        title={<span><Key size={16} style={{ marginRight: 6 }} />Contraseña temporal generada</span>}
-        onCancel={() => setTempPassword(null)}
-        footer={[<Button key="ok" type="primary" onClick={() => setTempPassword(null)}>Entendido</Button>]}
-      >
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <p style={{ marginBottom: 8, color: 'hsl(var(--text-muted))', fontSize: 13 }}>
-            Comparte esta contraseña con el empleado. Puede cambiarla desde su perfil.
-          </p>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, background: 'hsl(var(--bg-muted))', padding: '12px 24px', borderRadius: 8, display: 'inline-block', fontFamily: 'monospace' }}>
-            {tempPassword}
-          </div>
-          <p style={{ marginTop: 10, color: '#d97706', fontSize: 12 }}>
-            ⚠ Esta contraseña no se volverá a mostrar. Anótala ahora.
-          </p>
-        </div>
-      </Modal>
 
       {/* ── Modal CRUD cargo ─────────────────────────────── */}
       <Modal open={!!modalCargo}

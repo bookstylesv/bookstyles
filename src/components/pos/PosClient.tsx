@@ -153,7 +153,9 @@ export default function PosClient({
   // Modal crear CCF
   const [modalCrearCCF, setModalCrearCCF] = useState(false)
   const [creandoCCF, setCreandoCCF] = useState(false)
-  const [formCCF, setFormCCF] = useState({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' })
+  const [formCCF, setFormCCF] = useState({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '', departamentoCod: '', municipioCod: '', complemento: '', descActividad: '' })
+  const [departamentosCCF, setDepartamentosCCF] = useState<{ codigo: string; nombre: string }[]>([])
+  const [municipiosCCF, setMunicipiosCCF] = useState<{ codigo: string; nombre: string }[]>([])
   const [loadingCobrar, setLoadingCobrar] = useState(false)
   const [modalExito, setModalExito] = useState<{ numero: number; total: number; codigoGen: string; dte: DTEJsonViewer | null } | null>(null)
   const [barberoActivo, setBarberoActivo] = useState<{ id: number; nombre: string } | null>(null)
@@ -213,6 +215,24 @@ export default function PosClient({
 
   // ── Clientes CCF ───────────────────────────────────────────────────────────
 
+  const cargarDepartamentosCCF = useCallback(async () => {
+    if (departamentosCCF.length > 0) return
+    try {
+      const res = await fetch('/api/settings/departamentos')
+      const data = await res.json()
+      setDepartamentosCCF(data.data ?? [])
+    } catch { /* silent */ }
+  }, [departamentosCCF.length])
+
+  const cargarMunicipiosCCF = useCallback(async (deptCod: string) => {
+    if (!deptCod) { setMunicipiosCCF([]); return }
+    try {
+      const res = await fetch(`/api/settings/municipios?departamento=${deptCod}`)
+      const data = await res.json()
+      setMunicipiosCCF(data.data ?? [])
+    } catch { /* silent */ }
+  }, [])
+
   const cargarClientesCCF = useCallback(async () => {
     if (todosClientesCCF.length > 0) return
     setLoadingCCF(true)
@@ -262,6 +282,10 @@ export default function PosClient({
           numDocumento:    formCCF.nit,
           nrc:             formCCF.nrc,
           email:           formCCF.email || null,
+          descActividad:   formCCF.descActividad || null,
+          departamentoCod: formCCF.departamentoCod || null,
+          municipioCod:    formCCF.municipioCod || null,
+          complemento:     formCCF.complemento || null,
         }),
       })
       const data = await res.json()
@@ -269,7 +293,7 @@ export default function PosClient({
       seleccionarClienteCCF(data.data)
       setTodosClientesCCF([])  // forzar recarga
       setModalCrearCCF(false)
-      setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' })
+      setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '', departamentoCod: '', municipioCod: '', complemento: '', descActividad: '' })
       toast.success('Cliente CCF creado y seleccionado')
     } catch (e: any) {
       toast.error(e.message)
@@ -1865,13 +1889,14 @@ export default function PosClient({
       {/* ── Modal: Crear cliente CCF rápido ──────────────────────── */}
       <Modal
         open={modalCrearCCF}
-        onCancel={() => { setModalCrearCCF(false); setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' }) }}
+        onCancel={() => { setModalCrearCCF(false); setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '', departamentoCod: '', municipioCod: '', complemento: '', descActividad: '' }) }}
         onOk={crearClienteCCF}
         confirmLoading={creandoCCF}
         okText="Crear y usar"
         cancelText="Cancelar"
         title={<Space><PlusOutlined />Crear cliente CCF</Space>}
-        width={480}
+        width={520}
+        afterOpenChange={open => { if (open) cargarDepartamentosCCF() }}
       >
         <Form layout="vertical" style={{ marginTop: 12 }}>
           <Row gutter={12}>
@@ -1902,6 +1927,48 @@ export default function PosClient({
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item label="Giro / Actividad económica" style={{ marginBottom: 10 }}>
+            <Input placeholder="Ej: Servicios de estética y barbería" value={formCCF.descActividad}
+              onChange={e => setFormCCF(f => ({ ...f, descActividad: e.target.value }))} />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="Departamento" style={{ marginBottom: 10 }}>
+                <Select
+                  placeholder="Seleccionar"
+                  value={formCCF.departamentoCod || undefined}
+                  options={departamentosCCF.map(d => ({ value: d.codigo, label: d.nombre }))}
+                  showSearch
+                  filterOption={(input, opt) => (opt?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                  onChange={cod => {
+                    setFormCCF(f => ({ ...f, departamentoCod: cod, municipioCod: '' }))
+                    cargarMunicipiosCCF(cod)
+                  }}
+                  style={{ width: '100%' }}
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Municipio" style={{ marginBottom: 10 }}>
+                <Select
+                  placeholder="Seleccionar"
+                  value={formCCF.municipioCod || undefined}
+                  options={municipiosCCF.map(m => ({ value: m.codigo, label: m.nombre }))}
+                  showSearch
+                  filterOption={(input, opt) => (opt?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                  disabled={!formCCF.departamentoCod}
+                  onChange={cod => setFormCCF(f => ({ ...f, municipioCod: cod }))}
+                  style={{ width: '100%' }}
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Complemento de dirección" style={{ marginBottom: 10 }}>
+            <Input placeholder="Col. Escalón, Calle Principal #10, Apto 2" value={formCCF.complemento}
+              onChange={e => setFormCCF(f => ({ ...f, complemento: e.target.value }))} />
+          </Form.Item>
           <Form.Item label="Email de facturación" style={{ marginBottom: 0 }}>
             <Input placeholder="facturacion@empresa.com" value={formCCF.email}
               prefix={<MailOutlined />}
