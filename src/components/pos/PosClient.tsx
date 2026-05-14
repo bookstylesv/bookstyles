@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Row, Col, Card, Button, Select, InputNumber, Tag, Statistic,
-  Modal, Alert, Divider, Badge, Tooltip, Space, Input, Avatar, AutoComplete
+  Modal, Alert, Divider, Badge, Tooltip, Space, Input, Avatar, AutoComplete,
+  Drawer, Form, Spin,
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined, CheckOutlined,
@@ -11,7 +12,7 @@ import {
   AppstoreOutlined, UnorderedListOutlined, ShoppingCartOutlined, UserOutlined,
   LockOutlined, DollarOutlined, WarningOutlined, GiftOutlined,
   ScissorOutlined, InboxOutlined, TagOutlined, StarOutlined,
-  CreditCardOutlined, BankOutlined, QrcodeOutlined,
+  CreditCardOutlined, BankOutlined, QrcodeOutlined, MailOutlined, SearchOutlined,
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { abrirFacturaCompleta, abrirTicket, type DTEJsonViewer } from '@/lib/dte-viewer'
@@ -45,6 +46,15 @@ interface PagoItem {
   monto: number
   recibido?: number
   referencia?: string
+}
+interface ClienteCCF {
+  id: number
+  fullName: string
+  email: string
+  nombreComercial: string | null
+  numDocumento: string | null
+  nrc: string | null
+  tipoDocumento: string | null
 }
 interface TurnoInfo {
   id: number
@@ -131,8 +141,19 @@ export default function PosClient({
   const [tipoDte, setTipoDte] = useState<'01' | '03'>('01')
   const [conFactura, setConFactura] = useState(false)
   const [clienteNombre, setClienteNombre] = useState('')
+  const [clienteEmail, setClienteEmail] = useState('')
   const [clienteDocumento, setClienteDocumento] = useState('')
   const [clienteNrc, setClienteNrc] = useState('')
+  const [clienteId, setClienteId] = useState<number | null>(null)
+  // CCF search
+  const [busquedaCCF, setBusquedaCCF] = useState('')
+  const [resultadosCCF, setResultadosCCF] = useState<ClienteCCF[]>([])
+  const [todosClientesCCF, setTodosClientesCCF] = useState<ClienteCCF[]>([])
+  const [loadingCCF, setLoadingCCF] = useState(false)
+  // Modal crear CCF
+  const [modalCrearCCF, setModalCrearCCF] = useState(false)
+  const [creandoCCF, setCreandoCCF] = useState(false)
+  const [formCCF, setFormCCF] = useState({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' })
   const [loadingCobrar, setLoadingCobrar] = useState(false)
   const [modalExito, setModalExito] = useState<{ numero: number; total: number; codigoGen: string; dte: DTEJsonViewer | null } | null>(null)
   const [barberoActivo, setBarberoActivo] = useState<{ id: number; nombre: string } | null>(null)
@@ -189,6 +210,71 @@ export default function PosClient({
     cargarTurno()
     cargarVentasRecientes()
   }, [cargarTurno, cargarVentasRecientes])
+
+  // ── Clientes CCF ───────────────────────────────────────────────────────────
+
+  const cargarClientesCCF = useCallback(async () => {
+    if (todosClientesCCF.length > 0) return
+    setLoadingCCF(true)
+    try {
+      const res = await fetch('/api/clients')
+      const data = await res.json()
+      const lista = (data.data ?? []).filter((c: ClienteCCF) => c.numDocumento || c.nrc)
+      setTodosClientesCCF(lista)
+    } finally { setLoadingCCF(false) }
+  }, [todosClientesCCF.length])
+
+  const filtrarCCF = useCallback((q: string) => {
+    if (!q.trim()) { setResultadosCCF([]); return }
+    const lower = q.toLowerCase()
+    setResultadosCCF(
+      todosClientesCCF.filter(c =>
+        (c.fullName || '').toLowerCase().includes(lower) ||
+        (c.nombreComercial || '').toLowerCase().includes(lower) ||
+        (c.numDocumento || '').includes(q) ||
+        (c.nrc || '').includes(q),
+      ).slice(0, 8),
+    )
+  }, [todosClientesCCF])
+
+  const seleccionarClienteCCF = (c: ClienteCCF) => {
+    setBusquedaCCF(c.nombreComercial || c.fullName)
+    setClienteNombre(c.nombreComercial || c.fullName)
+    setClienteDocumento(c.numDocumento || '')
+    setClienteNrc(c.nrc || '')
+    if (c.email && !c.email.includes('@interno.noemail')) setClienteEmail(c.email)
+    setClienteId(c.id)
+  }
+
+  const crearClienteCCF = async () => {
+    if (!formCCF.nombre.trim()) { toast.error('Nombre es obligatorio'); return }
+    if (!formCCF.nit.trim())    { toast.error('NIT es obligatorio'); return }
+    if (!formCCF.nrc.trim())    { toast.error('NRC es obligatorio'); return }
+    setCreandoCCF(true)
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName:        formCCF.nombre,
+          nombreComercial: formCCF.nombreComercial || null,
+          tipoDocumento:   '36',
+          numDocumento:    formCCF.nit,
+          nrc:             formCCF.nrc,
+          email:           formCCF.email || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error?.message || 'Error al crear cliente')
+      seleccionarClienteCCF(data.data)
+      setTodosClientesCCF([])  // forzar recarga
+      setModalCrearCCF(false)
+      setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' })
+      toast.success('Cliente CCF creado y seleccionado')
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally { setCreandoCCF(false) }
+  }
 
   // ── Clientes con descuento ──────────────────────────────────────────────────
 
@@ -430,7 +516,9 @@ export default function PosClient({
       const body = {
         turnoId: turno.id,
         tipoDte,
-        clienteNombre: conFactura ? clienteNombre || 'Consumidor Final' : 'Consumidor Final',
+        clienteNombre: clienteNombre.trim() || 'Consumidor Final',
+        clienteEmail:  clienteEmail.trim() || undefined,
+        clienteId:     clienteId ?? undefined,
         clienteDocumento: conFactura ? clienteDocumento : undefined,
         clienteNrc: conFactura && tipoDte === '03' ? clienteNrc : undefined,
         items: lineas.map(l => ({
@@ -492,8 +580,12 @@ export default function PosClient({
       setPagos([{ key: '1', metodo: 'CASH', monto: 0 }])
       setConFactura(false)
       setClienteNombre('')
+      setClienteEmail('')
       setClienteDocumento('')
       setClienteNrc('')
+      setClienteId(null)
+      setBusquedaCCF('')
+      setResultadosCCF([])
       setDescuentoActivo(null)
       setBusquedaDescuento('')
       cargarTurno()
@@ -757,7 +849,7 @@ export default function PosClient({
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(min(120px, 44%), 1fr))',
                         gap: 6,
-                        maxHeight: 'clamp(160px, 30vh, 240px)',
+                        maxHeight: 'calc(100vh - 380px)',
                         overflowY: 'auto',
                         padding: '2px 2px 4px',
                       }}>
@@ -828,7 +920,7 @@ export default function PosClient({
 
                     {/* ── VISTA LISTA ── */}
                     {viewMode === 'list' && (
-                      <div style={{ maxHeight: 'clamp(160px, 30vh, 240px)', overflowY: 'auto' }}>
+                      <div style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                           <thead>
                             <tr style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -1374,46 +1466,116 @@ export default function PosClient({
               )}
             </div>
 
-            {/* Factura (opcional) */}
+            {/* Nombre + Email (siempre visible) */}
+            <div style={{ marginBottom: 10 }}>
+              <Row gutter={8}>
+                <Col span={14}>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Nombre cliente</div>
+                  <Input size="small" placeholder="Consumidor Final" value={clienteNombre}
+                    prefix={<UserOutlined style={{ color: C.textMuted }} />}
+                    onChange={e => setClienteNombre(e.target.value)} />
+                </Col>
+                <Col span={10}>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Email recibo</div>
+                  <Input size="small" placeholder="correo@ejemplo.com" value={clienteEmail}
+                    prefix={<MailOutlined style={{ color: C.textMuted }} />}
+                    onChange={e => setClienteEmail(e.target.value)} />
+                </Col>
+              </Row>
+            </div>
+
+            {/* Documento tributario (opcional) */}
             <div style={{ marginBottom: 12 }}>
               <Button size="small" type={conFactura ? 'primary' : 'dashed'}
                 icon={<FileTextOutlined />}
-                onClick={() => setConFactura(v => !v)}>
-                {conFactura ? 'Con factura' : 'Cliente quiere factura'}
+                onClick={() => {
+                  setConFactura(v => !v)
+                  if (conFactura) { setTipoDte('01'); setClienteDocumento(''); setClienteNrc(''); setClienteId(null); setBusquedaCCF(''); setResultadosCCF([]) }
+                }}>
+                {conFactura ? 'Con documento tributario' : '¿Necesita documento tributario?'}
               </Button>
 
               {conFactura && (
                 <Card size="small" style={{ marginTop: 8, background: C.bgPrimaryLow, borderColor: `${primary}40` }}>
-                  <Row gutter={8} style={{ marginBottom: 6 }}>
-                    <Col span={12}>
-                      <div style={{ fontSize: 11, color: C.textMuted }}>Tipo</div>
-                      <Select size="small" value={tipoDte} onChange={v => setTipoDte(v)} style={{ width: '100%' }}>
-                        <Select.Option value="01">Factura Consumidor Final</Select.Option>
-                        <Select.Option value="03">Crédito Fiscal (CCF)</Select.Option>
-                      </Select>
-                    </Col>
-                    <Col span={12}>
-                      <div style={{ fontSize: 11, color: C.textMuted }}>Nombre</div>
-                      <Input size="small" placeholder="Consumidor Final" value={clienteNombre}
-                        onChange={e => setClienteNombre(e.target.value)} />
-                    </Col>
-                  </Row>
-                  <Row gutter={8}>
-                    <Col span={12}>
-                      <div style={{ fontSize: 11, color: C.textMuted }}>{tipoDte === '03' ? 'NIT' : 'DUI'}</div>
-                      <Input size="small" placeholder={tipoDte === '03' ? '0614-123456-001-5' : '12345678-9'}
-                        value={clienteDocumento} onChange={e => setClienteDocumento(e.target.value)} />
-                    </Col>
-                    {tipoDte === '03' && (
-                      <Col span={12}>
-                        <div style={{ fontSize: 11, color: C.textMuted }}>NRC</div>
-                        <Input size="small" placeholder="123456-7" value={clienteNrc}
-                          onChange={e => setClienteNrc(e.target.value)} />
-                      </Col>
-                    )}
-                  </Row>
+                  {/* Tipo de documento */}
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Tipo de documento</div>
+                    <Select size="small" value={tipoDte} style={{ width: '100%' }}
+                      onChange={v => {
+                        setTipoDte(v)
+                        setClienteDocumento('')
+                        setClienteNrc('')
+                        setClienteId(null)
+                        setBusquedaCCF('')
+                        setResultadosCCF([])
+                      }}>
+                      <Select.Option value="01">Factura Consumidor Final (01)</Select.Option>
+                      <Select.Option value="03">Crédito Fiscal CCF (03)</Select.Option>
+                    </Select>
+                  </div>
+
+                  {/* Factura tipo 01: DUI opcional */}
+                  {tipoDte === '01' && (
+                    <div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>DUI (opcional)</div>
+                      <Input size="small" placeholder="12345678-9" value={clienteDocumento}
+                        onChange={e => setClienteDocumento(e.target.value)} />
+                    </div>
+                  )}
+
+                  {/* CCF tipo 03 */}
+                  {tipoDte === '03' && (
+                    <>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Buscar cliente CCF existente</div>
+                        <AutoComplete
+                          style={{ width: '100%' }}
+                          size="small"
+                          value={busquedaCCF}
+                          onFocus={cargarClientesCCF}
+                          onChange={v => { setBusquedaCCF(v); filtrarCCF(v) }}
+                          onSelect={(_: string, opt: any) => seleccionarClienteCCF(opt.cliente)}
+                          options={resultadosCCF.map(c => ({
+                            value: c.nombreComercial || c.fullName,
+                            cliente: c,
+                            label: (
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span><strong>{c.nombreComercial || c.fullName}</strong></span>
+                                <span style={{ fontSize: 11, color: C.textMuted }}>NIT: {c.numDocumento}</span>
+                              </div>
+                            ),
+                          }))}
+                          notFoundContent={loadingCCF ? <Spin size="small" /> : busquedaCCF ? 'Sin resultados' : null}
+                          placeholder="Nombre, NIT o NRC..."
+                        >
+                          <Input size="small" prefix={<SearchOutlined />} />
+                        </AutoComplete>
+                        {clienteId && (
+                          <div style={{ fontSize: 11, color: '#52c41a', marginTop: 3 }}>✓ Cliente del sistema seleccionado</div>
+                        )}
+                      </div>
+                      <Row gutter={8} style={{ marginBottom: 8 }}>
+                        <Col span={12}>
+                          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>NIT</div>
+                          <Input size="small" placeholder="0614-123456-001-5" value={clienteDocumento}
+                            onChange={e => { setClienteDocumento(e.target.value); setClienteId(null) }} />
+                        </Col>
+                        <Col span={12}>
+                          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>NRC</div>
+                          <Input size="small" placeholder="123456-7" value={clienteNrc}
+                            onChange={e => { setClienteNrc(e.target.value); setClienteId(null) }} />
+                        </Col>
+                      </Row>
+                      <Button size="small" type="dashed" icon={<PlusOutlined />}
+                        onClick={() => setModalCrearCCF(true)}
+                        style={{ width: '100%', fontSize: 12 }}>
+                        + Crear cliente CCF nuevo
+                      </Button>
+                    </>
+                  )}
+
                   <Alert type="info" showIcon style={{ marginTop: 8, fontSize: 11 }}
-                    message="Modo simulación activo — El documento se guardará como JSON pero no se envía al MH" />
+                    message="Simulación — JSON guardado, no se envía al MH" />
                 </Card>
               )}
             </div>
@@ -1698,6 +1860,54 @@ export default function PosClient({
             </div>
           )
         })()}
+      </Modal>
+
+      {/* ── Modal: Crear cliente CCF rápido ──────────────────────── */}
+      <Modal
+        open={modalCrearCCF}
+        onCancel={() => { setModalCrearCCF(false); setFormCCF({ nombre: '', nombreComercial: '', nit: '', nrc: '', email: '' }) }}
+        onOk={crearClienteCCF}
+        confirmLoading={creandoCCF}
+        okText="Crear y usar"
+        cancelText="Cancelar"
+        title={<Space><PlusOutlined />Crear cliente CCF</Space>}
+        width={480}
+      >
+        <Form layout="vertical" style={{ marginTop: 12 }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="Nombre / Razón social" required style={{ marginBottom: 10 }}>
+                <Input placeholder="Empresa S.A. de C.V." value={formCCF.nombre}
+                  onChange={e => setFormCCF(f => ({ ...f, nombre: e.target.value }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Nombre comercial" style={{ marginBottom: 10 }}>
+                <Input placeholder="Nombre comercial" value={formCCF.nombreComercial}
+                  onChange={e => setFormCCF(f => ({ ...f, nombreComercial: e.target.value }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="NIT" required style={{ marginBottom: 10 }}>
+                <Input placeholder="0614-123456-001-5" value={formCCF.nit}
+                  onChange={e => setFormCCF(f => ({ ...f, nit: e.target.value }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="NRC" required style={{ marginBottom: 10 }}>
+                <Input placeholder="123456-7" value={formCCF.nrc}
+                  onChange={e => setFormCCF(f => ({ ...f, nrc: e.target.value }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Email de facturación" style={{ marginBottom: 0 }}>
+            <Input placeholder="facturacion@empresa.com" value={formCCF.email}
+              prefix={<MailOutlined />}
+              onChange={e => setFormCCF(f => ({ ...f, email: e.target.value }))} />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   )
