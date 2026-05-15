@@ -117,17 +117,17 @@ function generarHtmlFactura(dte: DTEJsonViewer): string {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#222;background:#e5e7eb}
     @media print{
-      body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      html,body{margin:0!important;padding:0!important;background:#fff!important;height:auto!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       *{color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;word-wrap:break-word!important;overflow-wrap:break-word!important}
       .no-print{display:none!important}
-      .page{width:100%!important;margin:0!important;padding:10mm!important;box-shadow:none!important;min-height:auto!important}
+      .page{width:100%!important;margin:0!important;padding:0!important;box-shadow:none!important;min-height:0!important;height:auto!important}
       th{background:#333!important;color:#fff!important}
       .header{border-bottom-color:#333!important}
       .receptor{border-left-color:#333!important;background:#f5f5f5!important}
       .trow.final{border-top-color:#333!important;font-size:14px!important}
       tr:nth-child(even) td{background:#f5f5f5!important}
       .footer{color:#555!important;border-top-color:#999!important}
-      @page{size:letter;margin:12mm}
+      @page{size:letter;margin:15mm}
     }
     .toolbar{background:#1f2937;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
     .toolbar span{flex:1;font-size:13px;font-weight:600}
