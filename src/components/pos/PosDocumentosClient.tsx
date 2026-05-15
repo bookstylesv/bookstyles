@@ -352,7 +352,7 @@ export default function PosDocumentosClient({
                     rowKey="id"
                     size="small"
                     scroll={{ x: 800 }}
-                    pagination={{ pageSize: 20, size: 'small' }}
+                    pagination={{ pageSize: 20, size: 'small', showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (t, range) => `${range[0]}–${range[1]} de ${t} documentos` }}
                     rowClassName={r => r.estado === 'ANULADA' ? 'opacity-50' : ''}
                     expandable={{
                       expandedRowRender: (r: Venta) => (
@@ -378,7 +378,7 @@ export default function PosDocumentosClient({
               <Card size="small">
                 <div style={{ overflowX: 'auto' }}>
                   <Table dataSource={nc} columns={columnasNC} rowKey="id" size="small"
-                    scroll={{ x: 600 }} pagination={{ pageSize: 20, size: 'small' }} />
+                    scroll={{ x: 600 }} pagination={{ pageSize: 20, size: 'small', showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (t, range) => `${range[0]}–${range[1]} de ${t} notas` }} />
                 </div>
               </Card>
             ),
