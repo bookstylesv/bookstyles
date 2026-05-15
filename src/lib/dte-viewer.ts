@@ -269,7 +269,8 @@ function generarHtmlTicket(dte: DTEJsonViewer): string {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',Courier,monospace;font-size:12px;color:#111;background:#d1d5db}
     @media print{
-      body{background:#fff}
+      body{background:#fff;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .no-print{display:none!important}
       @page{size:80mm auto;margin:3mm 2mm}
     }
