@@ -269,12 +269,16 @@ function generarHtmlTicket(dte: DTEJsonViewer): string {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',Courier,monospace;font-size:12px;color:#111;background:#d1d5db}
     @media print{
-      html,body{width:80mm;margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px}
-      *{color:#000!important;background:transparent!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      html,body{width:80mm;margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:500}
+      *{color:#000!important;background:transparent!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif!important}
       .no-print{display:none!important}
       .ticket{width:100%!important;margin:0!important;padding:4mm 3mm!important;box-shadow:none!important;background:#fff!important}
+      .muted{font-size:11px!important;font-weight:500!important}
+      .item-barb{font-size:11px!important}
+      .info{font-size:11px!important}
+      .codigo{font-size:8px!important}
       .sep,.sep-dotted{border-top-color:#000!important}
-      .total-final{border-top-color:#000!important}
+      .total-final{border-top-color:#000!important;font-size:15px!important}
       @page{size:80mm auto;margin:0}
     }
     .toolbar{background:#1f2937;color:#fff;padding:8px 12px;display:flex;align-items:center;gap:8px;position:sticky;top:0}
