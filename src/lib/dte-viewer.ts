@@ -270,7 +270,7 @@ function generarHtmlTicket(dte: DTEJsonViewer): string {
     body{font-family:'Courier New',Courier,monospace;font-size:12px;color:#111;background:#d1d5db}
     @media print{
       html,body{width:80mm;margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:500}
-      *{color:#000!important;background:transparent!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif!important}
+      *{color:#000!important;background:transparent!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif!important;word-wrap:break-word!important;overflow-wrap:break-word!important;white-space:normal!important}
       .no-print{display:none!important}
       .ticket{width:100%!important;margin:0!important;padding:4mm 3mm!important;box-shadow:none!important;background:#fff!important}
       .muted{font-size:11px!important;font-weight:500!important}
