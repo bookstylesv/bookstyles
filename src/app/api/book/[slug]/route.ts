@@ -73,7 +73,7 @@ export async function GET(
   const tenant = await prisma.barberTenant.findUnique({
     where: { slug },
     // Solo campos necesarios para la página pública
-    select: { id: true, name: true, slug: true, phone: true, address: true, city: true, logoUrl: true },
+    select: { id: true, name: true, slug: true, phone: true, address: true, city: true, logoUrl: true, businessHours: true },
   });
   if (!tenant) return NextResponse.json({ error: 'Barbería no encontrada' }, { status: 404 });
 
@@ -101,6 +101,7 @@ export async function GET(
 
   return NextResponse.json({
     tenant,
+    businessHours: Array.isArray(tenant.businessHours) ? tenant.businessHours : [],
     services: services.map(s => ({ ...s, price: Number(s.price) })),
     barbers:  barbers.map(b => ({
       id: b.id, name: b.user.fullName,
