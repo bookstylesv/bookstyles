@@ -2,8 +2,9 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Dirección from — cambiar por tu dominio verificado en Resend cuando lo tengas
-const FROM = 'BookStyle <onboarding@resend.dev>';
+// Dirección from — configurar RESEND_FROM en variables de entorno con dominio verificado
+// Ejemplo: 'noreply@tudiominio.com' verificado en resend.com/domains
+const FROM = process.env.RESEND_FROM || 'BookStyle <onboarding@resend.dev>';
 
 interface BookingConfirmationParams {
   to:          string;

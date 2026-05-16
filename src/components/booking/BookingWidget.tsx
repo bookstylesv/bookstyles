@@ -463,7 +463,7 @@ export default function BookingWidget({ tenant, services, barbers, branches = []
       </div>
 
       {/* Contenido del paso */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 16px 80px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 16px', paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* ── PASO 0: Servicio ── */}
         {step === 0 && (
