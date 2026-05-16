@@ -29,6 +29,17 @@ export async function getTurnoActivo(tenantId: number) {
   const turno = await repo.getTurnoActivo(tenantId)
   if (!turno) return null
 
+  let totalEfectivo = 0, totalTarjeta = 0, totalTransferencia = 0, totalQR = 0
+  for (const v of turno.ventas) {
+    for (const p of v.pagos) {
+      const monto = p.monto.toNumber()
+      if (p.metodo === 'CASH') totalEfectivo += monto
+      else if (p.metodo === 'CARD') totalTarjeta += monto
+      else if (p.metodo === 'TRANSFER') totalTransferencia += monto
+      else if (p.metodo === 'QR') totalQR += monto
+    }
+  }
+
   const barberosHoy = await repo.getBarberosHoy(tenantId, turno.id)
 
   return {
@@ -36,7 +47,12 @@ export async function getTurnoActivo(tenantId: number) {
     fechaApertura: turno.fechaApertura.toISOString(),
     montoInicial: turno.montoInicial.toNumber(),
     usuarioApertura: turno.usuarioApertura.fullName,
-    totalVentas: turno._count.ventas,
+    totalVentasCount: turno._count.ventas,
+    totalEfectivo: parseFloat(totalEfectivo.toFixed(2)),
+    totalTarjeta: parseFloat(totalTarjeta.toFixed(2)),
+    totalTransferencia: parseFloat(totalTransferencia.toFixed(2)),
+    totalQR: parseFloat(totalQR.toFixed(2)),
+    totalVentas: parseFloat((totalEfectivo + totalTarjeta + totalTransferencia + totalQR).toFixed(2)),
     barberosHoy,
   }
 }

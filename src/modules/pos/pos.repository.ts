@@ -10,7 +10,8 @@ export async function getTurnoActivo(tenantId: number, branchId?: number | null)
     where: { tenantId, ...branchWhere(branchId), estado: 'ABIERTO' },
     include: {
       usuarioApertura: { select: { fullName: true } },
-      _count: { select: { ventas: true } },
+      _count: { select: { ventas: { where: { estado: 'ACTIVA' } } } },
+      ventas: { where: { estado: 'ACTIVA' }, include: { pagos: true } },
     },
     orderBy: { fechaApertura: 'desc' },
   })
