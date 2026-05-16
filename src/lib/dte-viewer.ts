@@ -246,6 +246,163 @@ function generarHtmlFactura(dte: DTEJsonViewer): string {
 </html>`
 }
 
+// ─── Cierre de Turno (carta) ──────────────────────────────────────────────────
+
+export interface CierreTurnoViewer {
+  tenantName: string
+  id: number
+  fechaApertura: string
+  fechaCierre: string | null
+  usuarioApertura: string
+  usuarioCierre: string | null
+  montoInicial: number
+  totalEfectivo: number
+  totalTarjeta: number
+  totalTransferencia: number
+  totalQR: number
+  totalVentas: number
+  cantidadServicios: number
+  montoEsperado: number | null
+  montoContado: number | null
+  diferencia: number | null
+  notasCierre: string | null
+  totalVentasCount: number
+  arqueoCaja: { billetes?: Record<string, number>; monedas?: Record<string, number>; totalContado?: number } | null
+}
+
+export function abrirCierrePDF(cierre: CierreTurnoViewer) {
+  const html = generarHtmlCierre(cierre)
+  const win = window.open('', '_blank')
+  if (win) { win.document.write(html); win.document.close() }
+}
+
+const BILLETES_CIERRE = [100, 50, 20, 10, 5, 1]
+const MONEDAS_CIERRE = [0.25, 0.10, 0.05, 0.01]
+
+function generarHtmlCierre(c: CierreTurnoViewer): string {
+  const fmtDate = (s: string | null) => s ? new Date(s).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+  const fmtMoney = (n: number | null | undefined) => n != null ? `$${Number(n).toFixed(2)}` : '$0.00'
+  const diferencia = c.diferencia ?? 0
+  const difColor = diferencia > 0 ? '#16a34a' : diferencia < 0 ? '#dc2626' : '#0d9488'
+  const difLabel = diferencia > 0 ? 'SOBRANTE' : diferencia < 0 ? 'FALTANTE' : 'EXACTO'
+
+  const billetesHtml = BILLETES_CIERRE.map(b => {
+    const cant = c.arqueoCaja?.billetes?.[String(b)] || 0
+    if (!cant) return ''
+    return `<tr><td>$${b}.00</td><td style="text-align:center">${cant}</td><td style="text-align:right">${fmtMoney(b * cant)}</td></tr>`
+  }).filter(Boolean).join('') || '<tr><td colspan="3" style="color:#888;font-style:italic">Sin registro</td></tr>'
+
+  const monedasHtml = MONEDAS_CIERRE.map(m => {
+    const cant = c.arqueoCaja?.monedas?.[String(m)] || 0
+    if (!cant) return ''
+    return `<tr><td>$${m.toFixed(2)}</td><td style="text-align:center">${cant}</td><td style="text-align:right">${fmtMoney(m * cant)}</td></tr>`
+  }).filter(Boolean).join('') || '<tr><td colspan="3" style="color:#888;font-style:italic">Sin registro</td></tr>'
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cierre de Caja #${c.id} — ${c.tenantName}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#222;background:#e5e7eb}
+    @media print{
+      html,body{margin:0!important;padding:0!important;background:#fff!important;height:auto!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      *{color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;word-wrap:break-word!important}
+      .no-print{display:none!important}
+      .page{width:100%!important;margin:0!important;padding:0!important;box-shadow:none!important;min-height:0!important}
+      th{background:#333!important;color:#fff!important}
+      @page{size:letter;margin:15mm}
+    }
+    .toolbar{background:#1f2937;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+    .toolbar span{flex:1;font-size:13px;font-weight:600}
+    .btn{padding:7px 18px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+    .btn-print{background:#0d9488;color:#fff}
+    .btn-close{background:#6b7280;color:#fff}
+    .page{width:210mm;background:#fff;margin:20px auto;padding:14mm;box-shadow:0 4px 16px rgba(0,0,0,0.15)}
+    .header{border-bottom:3px solid #0d9488;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start}
+    .tenant-name{font-size:22px;font-weight:800;color:#0d9488}
+    .doc-box{border:2px solid #0d9488;border-radius:8px;padding:10px 14px;text-align:right}
+    .doc-tipo{font-size:14px;font-weight:800;color:#0d9488}
+    .doc-sub{font-size:11px;color:#555;margin-top:4px}
+    .info-row{display:flex;gap:24px;background:#f8fafc;border-left:4px solid #0d9488;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap}
+    .info-item{flex:1;min-width:120px}
+    .info-label{font-size:9px;color:#888;text-transform:uppercase;font-weight:700;letter-spacing:.5px}
+    .info-value{font-size:12px;font-weight:600;color:#111;margin-top:2px}
+    h3{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#0d9488;color:#fff;padding:6px 8px;text-align:left;font-size:10px}
+    td{padding:5px 8px;border-bottom:1px solid #f0f0f0}
+    .totales{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 16px;margin-bottom:16px}
+    .trow{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
+    .trow:last-child{border-bottom:none;border-top:2px solid #0d9488;margin-top:6px;padding-top:8px;font-size:15px;font-weight:800}
+    .dif-box{border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .footer{margin-top:24px;padding-top:10px;border-top:1px dashed #d1d5db;text-align:center;color:#9ca3af;font-size:9px}
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <span>🗃️ Cierre #${c.id} — ${c.tenantName}</span>
+    <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
+    <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
+  </div>
+  <div class="page">
+    <div class="header">
+      <div>
+        <div class="tenant-name">${c.tenantName}</div>
+        <div style="color:#555;font-size:11px;margin-top:4px">Resumen de Cierre de Caja</div>
+      </div>
+      <div class="doc-box">
+        <div class="doc-tipo">CIERRE #${c.id}</div>
+        <div class="doc-sub">Apertura: ${fmtDate(c.fechaApertura)}</div>
+        <div class="doc-sub">Cierre: ${fmtDate(c.fechaCierre)}</div>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-item"><div class="info-label">Cajero apertura</div><div class="info-value">${c.usuarioApertura}</div></div>
+      <div class="info-item"><div class="info-label">Cajero cierre</div><div class="info-value">${c.usuarioCierre || '—'}</div></div>
+      <div class="info-item"><div class="info-label">Ventas realizadas</div><div class="info-value">${c.totalVentasCount}</div></div>
+      <div class="info-item"><div class="info-label">Fondo inicial</div><div class="info-value">${fmtMoney(c.montoInicial)}</div></div>
+    </div>
+
+    <h3>Ingresos por método de pago</h3>
+    <div class="totales">
+      <div class="trow"><span>Efectivo</span><span>${fmtMoney(c.totalEfectivo)}</span></div>
+      <div class="trow"><span>Tarjeta</span><span>${fmtMoney(c.totalTarjeta)}</span></div>
+      <div class="trow"><span>Transferencia</span><span>${fmtMoney(c.totalTransferencia)}</span></div>
+      <div class="trow"><span>QR / Pago electrónico</span><span>${fmtMoney(c.totalQR)}</span></div>
+      <div class="trow"><span>TOTAL VENTAS</span><span>${fmtMoney(c.totalVentas)}</span></div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <h3>Arqueo — Billetes</h3>
+        <table><thead><tr><th>Denominación</th><th style="text-align:center">Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>${billetesHtml}</tbody></table>
+      </div>
+      <div>
+        <h3>Arqueo — Monedas</h3>
+        <table><thead><tr><th>Denominación</th><th style="text-align:center">Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>${monedasHtml}</tbody></table>
+      </div>
+    </div>
+
+    <div class="dif-box" style="background:${diferencia === 0 ? '#f0fdf4' : diferencia > 0 ? '#fefce8' : '#fef2f2'};border:1px solid ${diferencia === 0 ? '#86efac' : diferencia > 0 ? '#fde047' : '#fca5a5'}">
+      <div><div style="font-size:11px;color:#666">Total contado</div><div style="font-size:22px;font-weight:800">${fmtMoney(c.montoContado)}</div></div>
+      <div><div style="font-size:11px;color:#666">Esperado</div><div style="font-size:16px;font-weight:600">${fmtMoney(c.montoEsperado)}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#666">Diferencia</div><div style="font-size:22px;font-weight:800;color:${difColor}">${diferencia >= 0 ? '+' : ''}${fmtMoney(diferencia)}</div><div style="font-size:11px;font-weight:700;color:${difColor}">${difLabel}</div></div>
+    </div>
+
+    ${c.notasCierre ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px"><div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:4px">Notas de cierre</div><div style="font-size:12px">${c.notasCierre}</div></div>` : ''}
+
+    <div class="footer">Documento generado el ${new Date().toLocaleString('es-SV', { dateStyle: 'full', timeStyle: 'short' })} — ${c.tenantName}</div>
+  </div>
+</body>
+</html>`
+}
+
 // ─── Factura Ticket (80mm térmica) ───────────────────────────────────────────
 
 function generarHtmlTicket(dte: DTEJsonViewer): string {

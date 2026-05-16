@@ -3,15 +3,19 @@
 import { useState } from 'react'
 import {
   Card, Row, Col, Button, InputNumber, Table, Tag, Statistic,
-  Modal, Descriptions, Alert, Space, Divider, Input, theme,
+  Modal, Descriptions, Alert, Space, Divider, Input, theme, Typography,
 } from 'antd'
 import {
   LockOutlined, UnlockOutlined, DollarCircleOutlined,
   ShoppingCartOutlined, CreditCardOutlined,
   CalculatorOutlined, BankOutlined, QrcodeOutlined, FileTextOutlined,
+  EyeOutlined, FilePdfOutlined,
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { useBarberTheme } from '@/context/ThemeContext'
+import { abrirCierrePDF } from '@/lib/dte-viewer'
+
+const { Text } = Typography
 
 interface Turno {
   id: number
@@ -48,9 +52,11 @@ function calcTotal(arqueo: Record<string, number>, denominaciones: number[]) {
 export default function PosTurnosClient({
   turnoActivo,
   historial: historialProp,
+  tenantName,
 }: {
   turnoActivo: Turno | null
   historial: Turno[]
+  tenantName: string
 }) {
   const { theme: barberTheme } = useBarberTheme()
   const primary = barberTheme.colorPrimary
@@ -141,6 +147,9 @@ export default function PosTurnosClient({
     }
   }
 
+  // ── Modal detalle cierre ─────────────────────────────────────────────────────
+  const [turnoDetalle, setTurnoDetalle] = useState<Turno | null>(null)
+
   // ── Columnas historial ───────────────────────────────────────────────────────
   const columns = [
     {
@@ -187,6 +196,20 @@ export default function PosTurnosClient({
         const color = v > 0 ? C.colorSuccess : v < 0 ? C.colorError : primary
         return <b style={{ color }}>{v >= 0 ? '+' : ''}{fmt(v)}</b>
       },
+    },
+    {
+      title: '',
+      key: 'acciones',
+      width: 90,
+      render: (_: unknown, record: Turno) => (
+        <Space size={4}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => setTurnoDetalle(record)} />
+          {record.estado === 'CERRADO' && (
+            <Button size="small" icon={<FilePdfOutlined />} style={{ color: primary, borderColor: primary }}
+              onClick={() => abrirCierrePDF({ tenantName, ...record })} />
+          )}
+        </Space>
+      ),
     },
   ]
 
@@ -292,6 +315,68 @@ export default function PosTurnosClient({
             autoFocus
           />
         </div>
+      </Modal>
+
+      {/* Modal detalle cierre */}
+      <Modal
+        open={!!turnoDetalle}
+        title={turnoDetalle ? `Detalle — Cierre #${turnoDetalle.id}` : ''}
+        onCancel={() => setTurnoDetalle(null)}
+        footer={[
+          turnoDetalle?.estado === 'CERRADO' && (
+            <Button key="pdf" icon={<FilePdfOutlined />} style={{ background: primary, borderColor: primary, color: '#fff' }}
+              onClick={() => turnoDetalle && abrirCierrePDF({ tenantName, ...turnoDetalle })}>
+              Exportar PDF
+            </Button>
+          ),
+          <Button key="close" onClick={() => setTurnoDetalle(null)}>Cerrar</Button>,
+        ]}
+        width={600}
+      >
+        {turnoDetalle && (
+          <>
+            <Descriptions size="small" column={2} bordered style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Estado"><Tag color={turnoDetalle.estado === 'ABIERTO' ? 'green' : 'default'}>{turnoDetalle.estado}</Tag></Descriptions.Item>
+              <Descriptions.Item label="Cajero apertura">{turnoDetalle.usuarioApertura}</Descriptions.Item>
+              <Descriptions.Item label="Apertura">{new Date(turnoDetalle.fechaApertura).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })}</Descriptions.Item>
+              <Descriptions.Item label="Cierre">{turnoDetalle.fechaCierre ? new Date(turnoDetalle.fechaCierre).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</Descriptions.Item>
+              <Descriptions.Item label="Cajero cierre">{turnoDetalle.usuarioCierre || '—'}</Descriptions.Item>
+              <Descriptions.Item label="Ventas">{turnoDetalle.totalVentasCount}</Descriptions.Item>
+            </Descriptions>
+            <Card size="small" style={{ marginBottom: 12, background: C.bgSubtle }}>
+              <Row gutter={[8, 8]}>
+                <Col xs={12} sm={6}><Statistic title="Fondo inicial" value={turnoDetalle.montoInicial} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                <Col xs={12} sm={6}><Statistic title="Efectivo" value={turnoDetalle.totalEfectivo} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                <Col xs={12} sm={6}><Statistic title="Tarjeta" value={turnoDetalle.totalTarjeta} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                <Col xs={12} sm={6}><Statistic title="QR / Transfer." value={(turnoDetalle.totalQR || 0) + (turnoDetalle.totalTransferencia || 0)} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+              </Row>
+              <Divider style={{ margin: '8px 0' }} />
+              <Row gutter={[8, 8]}>
+                <Col xs={8}><Statistic title="Total ventas" value={turnoDetalle.totalVentas} prefix="$" precision={2} valueStyle={{ fontSize: 14, color: primary, fontWeight: 700 }} /></Col>
+                <Col xs={8}><Statistic title="Esperado en caja" value={turnoDetalle.montoEsperado ?? 0} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                <Col xs={8}><Statistic title="Contado" value={turnoDetalle.montoContado ?? 0} prefix="$" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+              </Row>
+            </Card>
+            {turnoDetalle.diferencia != null && (
+              <Card size="small" style={{ marginBottom: 12, background: turnoDetalle.diferencia === 0 ? C.bgPrimaryLow : turnoDetalle.diferencia > 0 ? C.colorWarningBg : C.colorErrorBg }}>
+                <Row justify="space-between" align="middle">
+                  <Col><Text strong>Diferencia</Text></Col>
+                  <Col>
+                    <Text strong style={{ fontSize: 18, color: turnoDetalle.diferencia === 0 ? primary : turnoDetalle.diferencia > 0 ? C.colorWarning : C.colorError }}>
+                      {turnoDetalle.diferencia >= 0 ? '+' : ''}{fmt(turnoDetalle.diferencia)}
+                      {turnoDetalle.diferencia > 0 && ' (SOBRANTE)'}
+                      {turnoDetalle.diferencia < 0 && ' (FALTANTE)'}
+                      {turnoDetalle.diferencia === 0 && ' (EXACTO)'}
+                    </Text>
+                  </Col>
+                </Row>
+              </Card>
+            )}
+            {turnoDetalle.notasCierre && (
+              <Card size="small" title="Notas de cierre"><Text>{turnoDetalle.notasCierre}</Text></Card>
+            )}
+          </>
+        )}
       </Modal>
 
       {/* Modal cerrar turno con arqueo */}

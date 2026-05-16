@@ -1,6 +1,7 @@
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getTurnoActivo, getTurnos } from '@/modules/pos/pos.service'
+import { prisma } from '@/lib/prisma'
 import PosTurnosClient from '@/components/pos/PosTurnosClient'
 
 export const dynamic = 'force-dynamic'
@@ -10,10 +11,12 @@ export default async function PosTurnosPage() {
   if (!user) redirect('/login')
   if (user.role === 'OWNER') redirect('/dashboard')
 
-  const [turnoData, historialData] = await Promise.all([
+  const [turnoData, historialData, tenant] = await Promise.all([
     getTurnoActivo(user.tenantId),
     getTurnos(user.tenantId, 1),
+    prisma.barberTenant.findFirst({ where: { id: user.tenantId }, select: { name: true } }),
   ])
+  const tenantName = tenant?.name || ''
 
   // Turno activo serializado para el cliente
   const turnoActivo = turnoData ? {
@@ -42,6 +45,7 @@ export default async function PosTurnosPage() {
     <PosTurnosClient
       turnoActivo={turnoActivo}
       historial={historialData.items}
+      tenantName={tenantName}
     />
   )
 }
