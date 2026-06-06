@@ -1,19 +1,13 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { ok } from '@/lib/response'
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors'
+import { withTenantAuth } from '@/lib/with-tenant-auth'
 import { acumularLoyalty } from '@/modules/loyalty/loyalty.service'
 
 export const dynamic = 'force-dynamic'
 
-type Params = { params: Promise<{ codigo: string }> }
+export const POST = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+  const { codigo } = await routeCtx.params
 
-export async function POST(req: NextRequest, { params }: Params) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (user.role === 'OWNER') throw new ForbiddenError()
-
-  const { codigo } = await params
   const body = await req.json()
   const { ventaId, totalVenta } = body
 
@@ -23,7 +17,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const result = await acumularLoyalty(
-      user.tenantId,
+      ctx.tenantId,
       codigo,
       Number(ventaId),
       Number(totalVenta),
@@ -33,4 +27,4 @@ export async function POST(req: NextRequest, { params }: Params) {
     const msg = e instanceof Error ? e.message : 'Error al acumular'
     return Response.json({ error: { message: msg } }, { status: 400 })
   }
-}
+}, { requiredModule: 'loyalty' })

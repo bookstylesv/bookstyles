@@ -3,10 +3,10 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError, NotFoundError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { NotFoundError } from '@/lib/errors';
 import { prisma } from '@/lib/prisma';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,16 +17,11 @@ type ScheduleEntry = {
   active:    boolean;
 };
 
-export async function PUT(req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
+export const PUT = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const barberId = Number(id);
 
-    const barber = await prisma.barber.findFirst({ where: { id: barberId, tenantId: user.tenantId } });
+    const barber = await prisma.barber.findFirst({ where: { id: barberId, tenantId: ctx.tenantId } });
     if (!barber) throw new NotFoundError('Barbero');
 
     const hours = await req.json() as ScheduleEntry[];
@@ -52,7 +47,4 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     });
 
     return ok(updated);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

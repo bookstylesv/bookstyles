@@ -5,23 +5,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { getCompra } from '@/modules/compras/compras.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
-    const compra = await getCompra(Number(id), user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
+    const compra = await getCompra(Number(id), ctx.tenantId);
     return ok(compra);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })

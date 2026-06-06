@@ -6,38 +6,21 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { historialPagos, registrarPago } from '@/modules/compras/compras.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
-    const pagos = await historialPagos(user.tenantId, Number(id));
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
+    const pagos = await historialPagos(ctx.tenantId, Number(id));
     return ok(pagos);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })
 
-export async function POST(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
+export const POST = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const body = await req.json();
-    const pago = await registrarPago(user.tenantId, Number(id), body);
+    const pago = await registrarPago(ctx.tenantId, Number(id), body);
     return created(pago);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })

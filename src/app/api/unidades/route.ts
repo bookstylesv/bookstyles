@@ -1,24 +1,16 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { ok, created } from '@/lib/response'
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors'
+import { withTenantAuth } from '@/lib/with-tenant-auth'
 import { listUnidades, createUnidad } from '@/modules/unidades/unidades.service'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
-  const unidades = await listUnidades(user.tenantId)
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+  const unidades = await listUnidades(ctx.tenantId)
   return ok(unidades)
-}
+}, { requiredModule: 'inventario' })
 
-export async function POST(req: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
   const body = await req.json()
   const { nombre, simbolo } = body
 
@@ -27,7 +19,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const unidad = await createUnidad(user.tenantId, { nombre, simbolo })
+    const unidad = await createUnidad(ctx.tenantId, { nombre, simbolo })
     return created(unidad)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error al crear unidad'
@@ -37,4 +29,4 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     )
   }
-}
+}, { requiredModule: 'inventario' })

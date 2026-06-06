@@ -4,33 +4,16 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { listAppointments, createAppointment } from '@/modules/appointments/appointments.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const appointments = await listAppointments(user.tenantId, query);
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const appointments = await listAppointments(ctx.tenantId, query);
     return ok(appointments);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const body = await req.json();
-    const appointment = await createAppointment(user.tenantId, body);
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {    const body = await req.json();
+    const appointment = await createAppointment(ctx.tenantId, body);
     return created(appointment);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

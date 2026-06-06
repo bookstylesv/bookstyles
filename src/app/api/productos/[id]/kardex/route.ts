@@ -5,23 +5,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { getKardexProducto } from '@/modules/productos/productos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
+export const GET = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
     const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const result = await getKardexProducto(Number(id), user.tenantId, query, user.branchId);
+    const result = await getKardexProducto(Number(id), ctx.tenantId, query, ctx.branchId);
     return ok(result);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })

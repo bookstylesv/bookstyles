@@ -6,17 +6,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { ForbiddenError } from '@/lib/errors';
 import { prisma } from '@/lib/prisma';
 import { DEPARTAMENTOS, MUNICIPIOS } from '@/lib/catalogs/mh-catalog';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function POST(_req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
+export const POST = withTenantAuth(async (_req: NextRequest, ctx) => {    if (ctx.user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     // Limpiar catálogo anterior (los códigos cambiaron en V1.2)
     await prisma.barberMunicipio.deleteMany({});
@@ -40,7 +36,4 @@ export async function POST(_req: NextRequest) {
     const totalMunis  = await prisma.barberMunicipio.count();
 
     return ok({ departamentos: totalDeptos, municipios: totalMunis });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })

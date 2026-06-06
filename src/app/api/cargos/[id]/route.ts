@@ -4,34 +4,19 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { updateCargo, deleteCargo } from '@/modules/cargos/cargos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PUT(req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-    const { id } = await params;
+export const PUT = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const body = await req.json();
-    return ok(await updateCargo(Number(id), user.tenantId, body));
-  } catch (err) {
-    return apiError(err);
-  }
-}
+    return ok(await updateCargo(Number(id), ctx.tenantId, body));
+}, { requiredModule: 'planilla' })
 
-export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-    const { id } = await params;
-    return ok(await deleteCargo(Number(id), user.tenantId));
-  } catch (err) {
-    return apiError(err);
-  }
-}
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
+    return ok(await deleteCargo(Number(id), ctx.tenantId));
+}, { requiredModule: 'planilla' })

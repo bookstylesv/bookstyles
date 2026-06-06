@@ -5,63 +5,38 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import {
   getClientById,
   updateClientUser,
   setClientActive,
   removeClient,
 } from '@/modules/clients/clients.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
-    const client = await getClientById(user.tenantId, Number(id));
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
+    const client = await getClientById(ctx.tenantId, Number(id));
     return ok(client);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'clients' })
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role === 'OWNER') throw new ForbiddenError();
-
-    const { id } = await params;
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const body = await req.json();
 
     // Soporte para toggle active
     if (typeof body.active === 'boolean') {
-      const client = await setClientActive(user.tenantId, Number(id), body.active);
+      const client = await setClientActive(ctx.tenantId, Number(id), body.active);
       return ok(client);
     }
 
-    const client = await updateClientUser(user.tenantId, Number(id), body);
+    const client = await updateClientUser(ctx.tenantId, Number(id), body);
     return ok(client);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'clients' })
 
-export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
-    await removeClient(user.tenantId, Number(id));
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
+    await removeClient(ctx.tenantId, Number(id));
     return ok({ deleted: true });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'clients' })

@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { signAccessToken, resolveBranchForLogin, type JwtPayload } from '@/lib/auth'
+import { signAccessToken, signRefreshToken, resolveBranchForLogin, type JwtPayload } from '@/lib/auth'
 import { getPlanLimits, moduleAccessFromPlanModules } from '@/lib/plan-guard'
 
 export const dynamic = 'force-dynamic'
@@ -113,7 +113,24 @@ export async function GET(req: NextRequest) {
     }
     const newAccessToken = await signAccessToken(payload)
 
-    // ── 4. Redirigir a destino original con la nueva cookie ───────────────
+    // ── 4. Refresh token rotation ────────────────────────────────────────
+    // Generate new refresh token and invalidate the old one to prevent reuse.
+    const newRefreshToken = await signRefreshToken(session.user.id)
+    await prisma.$transaction([
+      prisma.barberSession.delete({ where: { id: session.id } }),
+      prisma.barberSession.create({
+        data: {
+          userId:       session.user.id,
+          tenantId:     session.tenant.id,
+          refreshToken: newRefreshToken,
+          expiresAt:    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          ipAddress:    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined,
+          userAgent:    req.headers.get('user-agent') ?? undefined,
+        },
+      }),
+    ])
+
+    // ── 5. Redirigir a destino original con las nuevas cookies ───────────
     const destination = new URL(
       redirectParam.startsWith('/') ? redirectParam : `/${redirectParam}`,
       req.url
@@ -125,6 +142,13 @@ export async function GET(req: NextRequest) {
       sameSite: IS_PROD ? 'none' : 'lax',
       path:     '/',
       maxAge:   15 * 60, // 15 minutos
+    })
+    res.cookies.set('barber_refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure:   IS_PROD,
+      sameSite: IS_PROD ? 'none' : 'lax',
+      path:     '/',
+      maxAge:   7 * 24 * 60 * 60, // 7 días
     })
 
     return res

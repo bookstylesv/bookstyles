@@ -4,36 +4,19 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { getBarber, updateBarber } from '@/modules/barbers/barbers.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
-    const barber = await getBarber(Number(id), user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
+    const barber = await getBarber(Number(id), ctx.tenantId);
     return ok(barber);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function PATCH(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
     const body = await req.json();
-    const barber = await updateBarber(Number(id), user.tenantId, body);
+    const barber = await updateBarber(Number(id), ctx.tenantId, body);
     return ok(barber);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

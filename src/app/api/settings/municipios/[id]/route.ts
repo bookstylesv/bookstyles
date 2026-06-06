@@ -4,38 +4,24 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { ForbiddenError } from '@/lib/errors';
 import { updateMunicipio, deleteMunicipio } from '@/modules/settings/territorios.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {    if (ctx.user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
-    const { id } = await params;
+    const { id } = await routeCtx.params;
     const body = await req.json();
     const data = await updateMunicipio(Number(id), body);
     return ok(data);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })
 
-export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    if (ctx.user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
-    const { id } = await params;
+    const { id } = await routeCtx.params;
     await deleteMunicipio(Number(id));
     return ok({ deleted: true });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })

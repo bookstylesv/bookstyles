@@ -4,11 +4,11 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { ValidationError, UnauthorizedError, ForbiddenError } from '@/lib/errors';
 import { tenantsRepository, type BusinessHourEntry } from '@/modules/tenants/tenants.repository';
 import { prisma } from '@/lib/prisma';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 const DEFAULT_HOURS: BusinessHourEntry[] = [
   { dayOfWeek: 0, active: false, startTime: '08:00', endTime: '17:00' }, // Dom
@@ -34,26 +34,14 @@ function parseHours(raw: unknown): BusinessHourEntry[] {
   });
 }
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const tenant = await tenantsRepository.findById(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const tenant = await tenantsRepository.findById(ctx.tenantId);
     if (!tenant) throw new UnauthorizedError();
 
     const hours = parseHours(tenant.businessHours);
     return ok(hours);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })
 
-export async function PUT(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['SUPERADMIN', 'OWNER'].includes(user.role)) throw new ForbiddenError();
+export const PUT = withTenantAuth(async (req: NextRequest, ctx) => {    if (!['SUPERADMIN', 'OWNER'].includes(ctx.user.role)) throw new ForbiddenError();
 
     const body = await req.json() as unknown;
     if (!Array.isArray(body)) throw new ValidationError('Se esperaba un array de horarios');
@@ -61,12 +49,12 @@ export async function PUT(req: NextRequest) {
     const hours = parseHours(body);
 
     // 1. Guardar en tenant
-    await tenantsRepository.updateBusinessHours(user.tenantId, hours);
+    await tenantsRepository.updateBusinessHours(ctx.tenantId, hours);
 
     // 2. Sincronizar BarberSchedule para todos los barberos activos del tenant
     //    — Cada barbero hereda el horario general del negocio
     const barbers = await prisma.barber.findMany({
-      where: { tenantId: user.tenantId, active: true },
+      where: { tenantId: ctx.tenantId, active: true },
       select: { id: true },
     });
 
@@ -89,7 +77,4 @@ export async function PUT(req: NextRequest) {
     }
 
     return ok(hours);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })

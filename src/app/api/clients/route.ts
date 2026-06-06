@@ -4,36 +4,23 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
+import { ForbiddenError } from '@/lib/errors';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 import { listClients, createClientUser, listClientsWithDescuento } from '@/modules/clients/clients.service';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
+  const conDescuento = req.nextUrl.searchParams.get('conDescuento') === 'true';
+  const clients = conDescuento
+    ? await listClientsWithDescuento(ctx.tenantId)
+    : await listClients(ctx.tenantId);
+  return ok(clients);
+}, { requiredModule: 'clients' });
 
-    const conDescuento = req.nextUrl.searchParams.get('conDescuento') === 'true';
-    const clients = conDescuento
-      ? await listClientsWithDescuento(user.tenantId)
-      : await listClients(user.tenantId);
-    return ok(clients);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
+  if (ctx.user.role === 'OWNER') throw new ForbiddenError();
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role === 'OWNER') throw new ForbiddenError();
-
-    const body = await req.json();
-    const client = await createClientUser(user.tenantId, body);
-    return created(client);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+  const body = await req.json();
+  const client = await createClientUser(ctx.tenantId, body);
+  return created(client);
+}, { requiredModule: 'clients' });

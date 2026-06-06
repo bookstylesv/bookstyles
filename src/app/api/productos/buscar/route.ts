@@ -5,20 +5,11 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { searchProductos } from '@/modules/productos/productos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const q = req.nextUrl.searchParams.get('q') ?? '';
-    const results = await searchProductos(user.tenantId, q);
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const q = req.nextUrl.searchParams.get('q') ?? '';
+    const results = await searchProductos(ctx.tenantId, q);
     return ok(results);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })

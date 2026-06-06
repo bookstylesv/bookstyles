@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 // PATCH /api/productos/categorias/[id]
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: { message: 'No autorizado' } }, { status: 401 });
-
-    const { id } = await params;
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+const { id } = await routeCtx.params;
     const catId = parseInt(id);
 
     const cat = await prisma.barberCategoriaProducto.findFirst({
-        where: { id: catId, tenantId: user.tenantId },
+        where: { id: catId, tenantId: ctx.tenantId },
     });
     if (!cat) return NextResponse.json({ error: { message: 'Categoría no encontrada' } }, { status: 404 });
 
@@ -25,18 +22,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         },
     });
     return NextResponse.json({ data: updated });
-}
+}, { requiredModule: 'inventario' })
 
 // DELETE /api/productos/categorias/[id]
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: { message: 'No autorizado' } }, { status: 401 });
-
-    const { id } = await params;
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+const { id } = await routeCtx.params;
     const catId = parseInt(id);
 
     const cat = await prisma.barberCategoriaProducto.findFirst({
-        where: { id: catId, tenantId: user.tenantId },
+        where: { id: catId, tenantId: ctx.tenantId },
     });
     if (!cat) return NextResponse.json({ error: { message: 'Categoría no encontrada' } }, { status: 404 });
 
@@ -46,4 +40,4 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         data: { activa: false },
     });
     return NextResponse.json({ data: { ok: true } });
-}
+}, { requiredModule: 'inventario' })

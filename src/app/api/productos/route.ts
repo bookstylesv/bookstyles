@@ -4,34 +4,17 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { listProductos, createProducto } from '@/modules/productos/productos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const result = await listProductos(user.tenantId, query);
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const result = await listProductos(ctx.tenantId, query);
     return ok(result);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede crear productos');
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
     const body = await req.json();
-    const producto = await createProducto(user.tenantId, body);
+    const producto = await createProducto(ctx.tenantId, body);
     return created(producto);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })

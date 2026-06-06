@@ -1,34 +1,19 @@
+import { NextRequest } from 'next/server';
 /**
  * GET  /api/barbers — Listar barberos del tenant
  * POST /api/barbers — Crear nuevo barbero (con usuario)
  */
 
-import { getCurrentUser } from '@/lib/auth';
-import { created, ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { created, ok } from '@/lib/response';
 import { listBarbers, createBarber } from '@/modules/barbers/barbers.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const barbers = await listBarbers(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const barbers = await listBarbers(ctx.tenantId);
     return ok(barbers);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const body = await request.json();
-    const barber = await createBarber(user.tenantId, body);
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
+    const body = await req.json();
+    const barber = await createBarber(ctx.tenantId, body);
     return created(barber);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

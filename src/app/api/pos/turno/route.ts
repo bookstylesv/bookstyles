@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
 import { getTurnoActivo } from '@/modules/pos/pos.service'
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
   try {
-    const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-    const turno = await getTurnoActivo(user.tenantId)
+const turno = await getTurnoActivo(ctx.tenantId)
     return NextResponse.json({ turno })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
-}
+}, { requiredModule: 'pos' })

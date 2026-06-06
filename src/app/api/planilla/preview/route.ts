@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
 import { getConfigPlanilla, getBarberosParaPlanilla } from '@/modules/planilla/planilla.repository';
 import { buildConfigMap } from '@/modules/planilla/planilla.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
-  const [configRows, barberos] = await Promise.all([
-    getConfigPlanilla(user.tenantId),
-    getBarberosParaPlanilla(user.tenantId),
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+const [configRows, barberos] = await Promise.all([
+    getConfigPlanilla(ctx.tenantId),
+    getBarberosParaPlanilla(ctx.tenantId),
   ]);
 
   const cfg = buildConfigMap(configRows);
@@ -32,4 +29,4 @@ export async function GET() {
   void cfg;
 
   return NextResponse.json({ items, hasConfig: configRows.length > 0 });
-}
+}, { requiredModule: 'planilla' })

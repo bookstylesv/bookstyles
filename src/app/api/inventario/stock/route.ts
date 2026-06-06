@@ -5,25 +5,17 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 import { getStockPorSucursal } from '@/modules/inventario/inventario.service';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
+  const sp = req.nextUrl.searchParams;
+  const queryBranchId = sp.get('branchId') ? Number(sp.get('branchId')) : null;
 
-    const sp = req.nextUrl.searchParams;
-    const queryBranchId = sp.get('branchId') ? Number(sp.get('branchId')) : null;
+  // Prioridad: query param > JWT branchId > null (OWNER ve todo)
+  const effectiveBranchId = queryBranchId ?? ctx.branchId ?? null;
 
-    // Prioridad: query param > JWT branchId > null (OWNER ve todo)
-    const effectiveBranchId = queryBranchId ?? user.branchId ?? null;
-
-    const result = await getStockPorSucursal(user.tenantId, effectiveBranchId);
-    return ok(result);
-  } catch (e) {
-    return apiError(e);
-  }
-}
+  const result = await getStockPorSucursal(ctx.tenantId, effectiveBranchId);
+  return ok(result);
+}, { requiredModule: 'inventario' });

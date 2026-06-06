@@ -5,53 +5,28 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { branchesService } from '@/modules/branches/branches.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
-    const barbers = await branchesService.getBarbersForBranch(Number(id), user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
+    const barbers = await branchesService.getBarbersForBranch(Number(id), ctx.tenantId);
     return ok(barbers);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'branches' })
 
-export async function POST(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede asignar barberos');
-
-    const { id } = await params;
+export const POST = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const { barberId, isPrimary = false } = await req.json() as { barberId: number; isPrimary?: boolean };
-    const assignment = await branchesService.assignBarber(Number(id), user.tenantId, barberId, isPrimary);
+    const assignment = await branchesService.assignBarber(Number(id), ctx.tenantId, barberId, isPrimary);
     return created(assignment);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'branches' })
 
-export async function DELETE(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede quitar barberos');
-
-    const { id } = await params;
+export const DELETE = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const { searchParams } = new URL(req.url);
     const barberId = Number(searchParams.get('barberId'));
-    await branchesService.removeBarber(Number(id), user.tenantId, barberId);
+    await branchesService.removeBarber(Number(id), ctx.tenantId, barberId);
     return ok({ removed: true });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'branches' })

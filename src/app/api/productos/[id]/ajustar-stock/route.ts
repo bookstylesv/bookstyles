@@ -5,24 +5,15 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { ajustarStock } from '@/modules/productos/productos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function POST(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede ajustar el stock');
-
-    const { id } = await params;
+export const POST = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const body = await req.json();
-    const updated = await ajustarStock(Number(id), user.tenantId, body, user.branchId);
+    const updated = await ajustarStock(Number(id), ctx.tenantId, body, ctx.branchId);
     return ok(updated);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })

@@ -6,35 +6,18 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { listCompras, createCompra } from '@/modules/compras/compras.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
     const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const result = await listCompras(user.tenantId, query);
+    const result = await listCompras(ctx.tenantId, query);
     return ok(result.data);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
     const body = await req.json();
-    const compra = await createCompra(user.tenantId, body);
+    const compra = await createCompra(ctx.tenantId, body);
     return created(compra);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })

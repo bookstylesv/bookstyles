@@ -4,34 +4,17 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { listPayments, registerPayment } from '@/modules/billing/billing.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
-    const payments = await listPayments(user.tenantId, query);
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const query = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const payments = await listPayments(ctx.tenantId, query);
     return ok(payments);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'facturacion' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role === 'OWNER') throw new ForbiddenError();
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
     const body = await req.json();
-    const payment = await registerPayment(user.tenantId, body);
+    const payment = await registerPayment(ctx.tenantId, body);
     return created(payment);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'facturacion' })

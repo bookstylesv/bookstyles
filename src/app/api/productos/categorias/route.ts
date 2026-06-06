@@ -4,33 +4,16 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { listCategorias, createCategoria } from '@/modules/productos/productos.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const categorias = await listCategorias(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const categorias = await listCategorias(ctx.tenantId);
     return ok(categorias);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede crear categorías');
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
     const body = await req.json();
-    const categoria = await createCategoria(user.tenantId, body);
+    const categoria = await createCategoria(ctx.tenantId, body);
     return created(categoria);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'inventario' })

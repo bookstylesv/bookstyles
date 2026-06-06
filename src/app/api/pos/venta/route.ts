@@ -1,16 +1,10 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { ok, created, apiError } from '@/lib/response'
-import { UnauthorizedError } from '@/lib/errors'
+import { ok, created } from '@/lib/response';
 import { createVenta, getVentas } from '@/modules/pos/pos.service'
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser()
-    if (!user) throw new UnauthorizedError()
-
-    const sp = req.nextUrl.searchParams
-    const result = await getVentas(user.tenantId, {
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const sp = req.nextUrl.searchParams
+    const result = await getVentas(ctx.tenantId, {
       estado: sp.get('estado') || undefined,
       tipoDte: sp.get('tipoDte') || undefined,
       turnoId: sp.get('turnoId') ? Number(sp.get('turnoId')) : undefined,
@@ -19,20 +13,9 @@ export async function GET(req: NextRequest) {
       page: Number(sp.get('page') || '1'),
     })
     return ok(result)
-  } catch (e) {
-    return apiError(e)
-  }
-}
+}, { requiredModule: 'pos' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser()
-    if (!user) throw new UnauthorizedError()
-
-    const body = await req.json()
-    const result = await createVenta(user.tenantId, body)
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {    const body = await req.json()
+    const result = await createVenta(ctx.tenantId, body)
     return created(result)
-  } catch (e) {
-    return apiError(e)
-  }
-}
+}, { requiredModule: 'pos' })

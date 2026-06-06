@@ -4,32 +4,15 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import * as svc from '@/modules/services/services.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const services = await svc.listServices(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const services = await svc.listServices(ctx.tenantId);
     return ok(services);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const body = await req.json();
-    const service = await svc.createService(user.tenantId, body);
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {    const body = await req.json();
+    const service = await svc.createService(ctx.tenantId, body);
     return created(service);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

@@ -5,49 +5,24 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import * as svc from '@/modules/services/services.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
-    const service = await svc.getService(Number(id), user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
+    const service = await svc.getService(Number(id), ctx.tenantId);
     return ok(service);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function PATCH(req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
     const body = await req.json();
-    const service = await svc.updateService(Number(id), user.tenantId, body);
+    const service = await svc.updateService(Number(id), ctx.tenantId, body);
     return ok(service);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const { id } = await params;
-    await svc.removeService(Number(id), user.tenantId);
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {    const { id } = await routeCtx.params;
+    await svc.removeService(Number(id), ctx.tenantId);
     return ok({ deleted: true });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

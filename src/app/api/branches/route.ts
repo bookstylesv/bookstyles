@@ -4,33 +4,16 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
 import { branchesService } from '@/modules/branches/branches.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const branches = await branchesService.listBranches(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const branches = await branchesService.listBranches(ctx.tenantId);
     return ok(branches);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'branches' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede crear sucursales');
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
     const body = await req.json();
-    const branch = await branchesService.createBranch(user.tenantId, body);
+    const branch = await branchesService.createBranch(ctx.tenantId, body);
     return created(branch);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'branches' })

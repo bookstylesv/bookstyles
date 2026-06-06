@@ -1,13 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
 import { getBarberosParaPlanilla } from '@/modules/planilla/planilla.repository';
 import { calcularVacaciones } from '@/modules/planilla/planilla.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
-  const barberos   = await getBarberosParaPlanilla(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+const barberos   = await getBarberosParaPlanilla(ctx.tenantId);
   const fechaCorte = new Date(); // hoy como fecha de corte
 
   const items = barberos
@@ -33,4 +30,4 @@ export async function GET() {
     totalVacaciones: Math.round(totalVacaciones * 100) / 100,
     totalBarberos:   items.length,
   });
-}
+}, { requiredModule: 'planilla' })

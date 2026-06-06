@@ -1,26 +1,21 @@
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role === 'OWNER') throw new ForbiddenError();
-
-    const { id } = await params;
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const clientId = parseInt(id);
-    if (isNaN(clientId)) return apiError({ status: 400, message: 'ID inválido' });
+    if (isNaN(clientId)) return Response.json({ error: { message: 'ID inválido' } }, { status: 400 });
 
     const client = await prisma.barberUser.findFirst({
-      where: { id: clientId, tenantId: user.tenantId },
+      where: { id: clientId, tenantId: ctx.tenantId },
       select: { fullName: true },
     });
-    if (!client) return apiError({ status: 404, message: 'Cliente no encontrado' });
+    if (!client) return Response.json({ error: { message: 'Cliente no encontrado' } }, { status: 404 });
 
     const appointments = await prisma.barberAppointment.findMany({
-      where: { clientId, tenantId: user.tenantId },
+      where: { clientId, tenantId: ctx.tenantId },
       include: {
         service: { select: { name: true, price: true, category: true } },
         barber:  { include: { user: { select: { fullName: true } } } },
@@ -76,8 +71,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       },
       appointments: lista,
     });
-  } catch (err) {
-    console.error('[GET /api/clients/[id]/history]', err);
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'clients' })

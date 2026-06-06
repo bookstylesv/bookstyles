@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { getConfigsBarberos, upsertConfigBarbero } from '@/modules/planilla/planilla.repository';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const configs = await getConfigsBarberos(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+const configs = await getConfigsBarberos(ctx.tenantId);
   return NextResponse.json(configs.map(cfg => ({
     ...cfg,
     salarioBase:        cfg.salarioBase.toNumber(),
@@ -13,15 +11,12 @@ export async function GET() {
     porcentajeServicio: cfg.porcentajeServicio.toNumber(),
     fechaIngreso:       cfg.fechaIngreso?.toISOString() ?? null,
   })));
-}
+}, { requiredModule: 'planilla' })
 
-export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
   const { barberoId, tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta, fechaIngreso } = await req.json();
 
-  const result = await upsertConfigBarbero(user.tenantId, barberoId, {
+  const result = await upsertConfigBarbero(ctx.tenantId, barberoId, {
     tipoPago, salarioBase, valorPorUnidad, porcentajeServicio, aplicaRenta,
     fechaIngreso: fechaIngreso ? new Date(fechaIngreso) : null,
   });
@@ -33,4 +28,4 @@ export async function POST(req: NextRequest) {
     porcentajeServicio: result.porcentajeServicio.toNumber(),
     fechaIngreso:       result.fechaIngreso?.toISOString() ?? null,
   });
-}
+}, { requiredModule: 'planilla' })

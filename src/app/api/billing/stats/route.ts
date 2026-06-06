@@ -3,18 +3,10 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { getStats } from '@/modules/billing/billing.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(_req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    const stats = await getStats(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const stats = await getStats(ctx.tenantId);
     return ok(stats);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'facturacion' })

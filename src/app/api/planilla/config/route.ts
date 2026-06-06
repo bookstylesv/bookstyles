@@ -1,29 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { getConfigPlanilla, upsertConfigPlanilla, seedConfigPlanilla } from '@/modules/planilla/planilla.repository';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const config = await getConfigPlanilla(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+const config = await getConfigPlanilla(ctx.tenantId);
   return NextResponse.json(config.map(c => ({
     ...c,
     valor:      c.valor.toNumber(),
     topeMaximo: c.topeMaximo?.toNumber() ?? null,
   })));
-}
+}, { requiredModule: 'planilla' })
 
-export async function PUT(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+export const PUT = withTenantAuth(async (req: NextRequest, ctx) => {
   const items = await req.json();
-  await upsertConfigPlanilla(user.tenantId, items);
+  await upsertConfigPlanilla(ctx.tenantId, items);
   return NextResponse.json({ ok: true });
-}
+}, { requiredModule: 'planilla' })
 
-export async function POST() {
-  const user = await getCurrentUser();
-  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  await seedConfigPlanilla(user.tenantId);
+export const POST = withTenantAuth(async (_req: NextRequest, ctx) => {
+  await seedConfigPlanilla(ctx.tenantId);
   return NextResponse.json({ ok: true });
-}
+}, { requiredModule: 'planilla' })

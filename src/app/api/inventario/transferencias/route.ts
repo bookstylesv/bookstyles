@@ -1,45 +1,29 @@
 /**
  * GET  /api/inventario/transferencias — Listar transferencias de stock
- * POST /api/inventario/transferencias — Crear transferencia (OWNER only)
+ * POST /api/inventario/transferencias — Crear transferencia
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 import { transferirStock, listTransferencias } from '@/modules/inventario/inventario.service';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
+  const sp = req.nextUrl.searchParams;
+  const query: Record<string, string> = {};
+  sp.forEach((v, k) => { query[k] = v; });
 
-    const sp = req.nextUrl.searchParams;
-    const query: Record<string, string> = {};
-    sp.forEach((v, k) => { query[k] = v; });
-
-    // Si el usuario tiene branchId en el JWT, usarlo como filtro por defecto
-    if (!query.branchId && user.branchId != null) {
-      query.branchId = String(user.branchId);
-    }
-
-    const result = await listTransferencias(user.tenantId, query);
-    return ok(result);
-  } catch (e) {
-    return apiError(e);
+  // Si el usuario tiene branchId en el JWT, usarlo como filtro por defecto
+  if (!query.branchId && ctx.branchId != null) {
+    query.branchId = String(ctx.branchId);
   }
-}
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError('Solo el propietario puede transferir stock');
+  const result = await listTransferencias(ctx.tenantId, query);
+  return ok(result);
+}, { requiredModule: 'inventario' });
 
-    const body = await req.json();
-    const result = await transferirStock(user.tenantId, body);
-    return created(result);
-  } catch (e) {
-    return apiError(e);
-  }
-}
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
+  const body = await req.json();
+  const result = await transferirStock(ctx.tenantId, body);
+  return created(result);
+}, { requiredModule: 'inventario' });

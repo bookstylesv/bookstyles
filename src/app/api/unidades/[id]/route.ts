@@ -1,19 +1,12 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { ok } from '@/lib/response'
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors'
+import { withTenantAuth } from '@/lib/with-tenant-auth'
 import { updateUnidad, deleteUnidad } from '@/modules/unidades/unidades.service'
 
 export const dynamic = 'force-dynamic'
 
-type Params = { params: Promise<{ id: string }> }
-
-export async function PUT(req: NextRequest, { params }: Params) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
-
-  const { id } = await params
+export const PUT = withTenantAuth(async (req: NextRequest, ctx, routeCtx) => {
+  const { id } = await routeCtx.params
   const body = await req.json()
   const { nombre, simbolo } = body
 
@@ -22,26 +15,22 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const unidad = await updateUnidad(user.tenantId, Number(id), { nombre, simbolo })
+    const unidad = await updateUnidad(ctx.tenantId, Number(id), { nombre, simbolo })
     return ok(unidad)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error al actualizar unidad'
     return Response.json({ error: { message: msg } }, { status: 400 })
   }
-}
+}, { requiredModule: 'inventario' })
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
-
-  const { id } = await params
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+  const { id } = await routeCtx.params
 
   try {
-    await deleteUnidad(user.tenantId, Number(id))
+    await deleteUnidad(ctx.tenantId, Number(id))
     return ok({ message: 'Unidad desactivada' })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error al eliminar unidad'
     return Response.json({ error: { message: msg } }, { status: 400 })
   }
-}
+}, { requiredModule: 'inventario' })

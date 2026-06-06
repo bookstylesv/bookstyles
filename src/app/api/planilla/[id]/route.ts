@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { getPlanillaById, eliminarPlanilla } from '@/modules/planilla/planilla.repository';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ser(p: any) {
@@ -26,24 +26,20 @@ function ser(p: any) {
   };
 }
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const { id } = await params;
-  const planilla = await getPlanillaById(user.tenantId, parseInt(id));
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+const { id } = await routeCtx.params;
+  const planilla = await getPlanillaById(ctx.tenantId, parseInt(id));
   if (!planilla) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
   return NextResponse.json(ser(planilla));
-}
+}, { requiredModule: 'planilla' })
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser();
-  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const { id } = await params;
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+  const { id } = await routeCtx.params;
   try {
-    await eliminarPlanilla(user.tenantId, parseInt(id));
+    await eliminarPlanilla(ctx.tenantId, parseInt(id));
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Error desconocido';
     return NextResponse.json({ error: message }, { status: 400 });
   }
-}
+}, { requiredModule: 'planilla' })

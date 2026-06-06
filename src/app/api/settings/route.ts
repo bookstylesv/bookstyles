@@ -4,17 +4,12 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
+import { ok } from '@/lib/response';
 import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
 import { tenantsRepository } from '@/modules/tenants/tenants.repository';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(_req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const tenant = await tenantsRepository.findById(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {    const tenant = await tenantsRepository.findById(ctx.tenantId);
     if (!tenant) throw new UnauthorizedError();
 
     return ok({
@@ -34,16 +29,9 @@ export async function GET(_req: NextRequest) {
       trialEndsAt:  tenant.trialEndsAt,
       paidUntil:    tenant.paidUntil,
     });
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
+export const PATCH = withTenantAuth(async (req: NextRequest, ctx) => {    if (ctx.user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     const body = await req.json() as Record<string, unknown>;
 
@@ -56,22 +44,19 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    let tenant = await tenantsRepository.findById(user.tenantId);
+    let tenant = await tenantsRepository.findById(ctx.tenantId);
     if (!tenant) throw new UnauthorizedError();
 
     if (Object.keys(infoUpdate).length > 0) {
-      tenant = await tenantsRepository.updateInfo(user.tenantId, infoUpdate);
+      tenant = await tenantsRepository.updateInfo(ctx.tenantId, infoUpdate);
     }
 
     // Actualizar tema
     if (body.themeConfig && typeof body.themeConfig === 'object') {
       const currentTheme = (tenant?.themeConfig ?? {}) as Record<string, string>;
       const newTheme = { ...currentTheme, ...(body.themeConfig as Record<string, string>) };
-      tenant = await tenantsRepository.updateTheme(user.tenantId, newTheme);
+      tenant = await tenantsRepository.updateTheme(ctx.tenantId, newTheme);
     }
 
     return ok(tenant);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })

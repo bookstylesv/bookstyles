@@ -1,42 +1,31 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { ok } from '@/lib/response'
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors'
+import { withTenantAuth } from '@/lib/with-tenant-auth'
 import { getTarjetaByCodigo, deleteTarjeta } from '@/modules/loyalty/loyalty.service'
 
 export const dynamic = 'force-dynamic'
 
-type Params = { params: Promise<{ codigo: string }> }
-
-export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (user.role === 'OWNER') throw new ForbiddenError()
-
-  const { codigo } = await params
-  const tarjeta = await getTarjetaByCodigo(user.tenantId, codigo)
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+  const { codigo } = await routeCtx.params
+  const tarjeta = await getTarjetaByCodigo(ctx.tenantId, codigo)
   if (!tarjeta) {
     return Response.json({ error: { message: 'Tarjeta no encontrada' } }, { status: 404 })
   }
   return ok(tarjeta)
-}
+}, { requiredModule: 'loyalty' })
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await getCurrentUser()
-  if (!user) throw new UnauthorizedError()
-  if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError()
-
-  const { codigo } = await params
-  const tarjeta = await getTarjetaByCodigo(user.tenantId, codigo)
+export const DELETE = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+  const { codigo } = await routeCtx.params
+  const tarjeta = await getTarjetaByCodigo(ctx.tenantId, codigo)
   if (!tarjeta) {
     return Response.json({ error: { message: 'Tarjeta no encontrada' } }, { status: 404 })
   }
 
   try {
-    await deleteTarjeta(user.tenantId, tarjeta.id)
+    await deleteTarjeta(ctx.tenantId, tarjeta.id)
     return ok({ message: 'Tarjeta eliminada' })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error al eliminar'
     return Response.json({ error: { message: msg } }, { status: 400 })
   }
-}
+}, { requiredModule: 'loyalty' })

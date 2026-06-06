@@ -1,28 +1,23 @@
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
-    const { id } = await params;
+export const GET = withTenantAuth(async (_req: NextRequest, ctx, routeCtx) => {
+    const { id } = await routeCtx.params;
     const barberId = parseInt(id);
-    if (isNaN(barberId)) return apiError({ status: 400, message: 'ID inválido' });
+    if (isNaN(barberId)) return Response.json({ error: { message: 'ID inválido' } }, { status: 400 });
 
     // Verificar que el barbero pertenece al tenant
     const barber = await prisma.barber.findFirst({
-      where: { id: barberId, tenantId: user.tenantId },
+      where: { id: barberId, tenantId: ctx.tenantId },
       include: { user: { select: { fullName: true } } },
     });
-    if (!barber) return apiError({ status: 404, message: 'Barbero no encontrado' });
+    if (!barber) return Response.json({ error: { message: 'Barbero no encontrado' } }, { status: 404 });
 
     // Citas del barbero
     const appointments = await prisma.barberAppointment.findMany({
-      where: { barberId, tenantId: user.tenantId },
+      where: { barberId, tenantId: ctx.tenantId },
       include: {
         service: { select: { name: true, price: true } },
         payment: { select: { amount: true, status: true } },
@@ -80,8 +75,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       topServicios,
       meses,
     });
-  } catch (err) {
-    console.error('[GET /api/barbers/[id]/analytics]', err);
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'citas' })

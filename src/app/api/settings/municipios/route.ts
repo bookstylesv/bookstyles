@@ -4,34 +4,19 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, created, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok, created } from '@/lib/response';
+import { ForbiddenError } from '@/lib/errors';
 import { listMunicipios, createMunicipio } from '@/modules/settings/territorios.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-
-    const departamentoCod = req.nextUrl.searchParams.get('departamento') ?? undefined;
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {    const departamentoCod = req.nextUrl.searchParams.get('departamento') ?? undefined;
     const data = await listMunicipios(departamentoCod);
     return ok(data);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (user.role !== 'SUPERADMIN') throw new ForbiddenError();
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {    if (ctx.user.role !== 'SUPERADMIN') throw new ForbiddenError();
 
     const body = await req.json();
     const data = await createMunicipio(body);
     return created(data);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'settings' })

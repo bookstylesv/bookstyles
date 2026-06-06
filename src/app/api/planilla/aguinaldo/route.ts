@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { getBarberosParaPlanilla } from '@/modules/planilla/planilla.repository';
 import { calcularAguinaldo } from '@/modules/planilla/planilla.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
-  const { searchParams } = new URL(req.url);
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
+const { searchParams } = new URL(req.url);
   const anio     = parseInt(searchParams.get('anio') || String(new Date().getFullYear()));
   const completo = searchParams.get('completo') === 'true';
 
-  const barberos = await getBarberosParaPlanilla(user.tenantId);
+  const barberos = await getBarberosParaPlanilla(ctx.tenantId);
   const fechaCorte = new Date(anio, 11, 31); // 31 dic del año indicado
 
   const items = barberos
@@ -37,4 +34,4 @@ export async function GET(req: NextRequest) {
     totalAguinaldo: Math.round(totalAguinaldo * 100) / 100,
     totalBarberos:  items.length,
   });
-}
+}, { requiredModule: 'planilla' })

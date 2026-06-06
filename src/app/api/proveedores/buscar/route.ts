@@ -4,21 +4,12 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { ok, apiError } from '@/lib/response';
-import { UnauthorizedError, ForbiddenError } from '@/lib/errors';
+import { ok } from '@/lib/response';
 import { quickSearchProveedores } from '@/modules/proveedores/proveedores.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new UnauthorizedError();
-    if (!['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) throw new ForbiddenError();
-
+export const GET = withTenantAuth(async (req: NextRequest, ctx) => {
     const q = req.nextUrl.searchParams.get('q') ?? '';
-    const results = await quickSearchProveedores(user.tenantId, q);
+    const results = await quickSearchProveedores(ctx.tenantId, q);
     return ok(results);
-  } catch (err) {
-    return apiError(err);
-  }
-}
+}, { requiredModule: 'compras' })

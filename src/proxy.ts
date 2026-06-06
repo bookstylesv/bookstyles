@@ -47,8 +47,64 @@ function isPublicRoute(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix));
 }
 
+// ── CSRF Protection ─────────────────────────────────────────────────────────
+// Validates Origin header for state-changing methods to prevent cross-site
+// request forgery. Safe methods (GET/HEAD/OPTIONS) are exempt.
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+// Paths exempt from CSRF (server-to-server or public endpoints)
+const CSRF_EXEMPT_PREFIXES = [
+  '/api/auth/login',
+  '/api/auth/refresh',
+  '/api/book',
+  '/api/superadmin/',
+  '/api/cron/',
+  '/api/public/',
+];
+
+function isCsrfExempt(pathname: string): boolean {
+  return CSRF_EXEMPT_PREFIXES.some(prefix => pathname.startsWith(prefix));
+}
+
+function validateCsrf(req: NextRequest): NextResponse | null {
+  if (SAFE_METHODS.has(req.method)) return null;
+  if (!req.nextUrl.pathname.startsWith('/api/')) return null;
+  if (isCsrfExempt(req.nextUrl.pathname)) return null;
+
+  const origin = req.headers.get('origin');
+  // Requests with cookies but no Origin header are suspicious (possible CSRF)
+  if (!origin && req.cookies.has('barber_access_token')) {
+    return NextResponse.json(
+      { success: false, error: { message: 'Origin header requerido', code: 'CSRF_REJECTED' } },
+      { status: 403 },
+    );
+  }
+
+  if (origin) {
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_APP_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean);
+
+    const isAllowed = allowedOrigins.some(allowed => origin === allowed);
+    if (!isAllowed) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Origen no permitido', code: 'CSRF_REJECTED' } },
+        { status: 403 },
+      );
+    }
+  }
+
+  return null;
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ── CSRF check for mutation endpoints ──────────────────────────────────
+  const csrfResponse = validateCsrf(req);
+  if (csrfResponse) return csrfResponse;
 
   // Rutas públicas — sin verificación
   if (isPublicRoute(pathname)) return NextResponse.next();

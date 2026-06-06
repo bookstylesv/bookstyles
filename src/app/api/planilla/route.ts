@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import {
   listarPlanillas, crearPlanilla,
   getConfigPlanilla, getBarberosParaPlanilla
@@ -8,6 +7,7 @@ import {
   buildConfigMap, calcularSalarioBruto,
   calcularDeduccionesEmpleado, calcularAportePatronal
 } from '@/modules/planilla/planilla.service';
+import { withTenantAuth } from '@/lib/with-tenant-auth';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializePlanilla(p: any) {
@@ -44,27 +44,22 @@ function serializePlanilla(p: any) {
   };
 }
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const planillas = await listarPlanillas(user.tenantId);
+export const GET = withTenantAuth(async (_req: NextRequest, ctx) => {
+const planillas = await listarPlanillas(ctx.tenantId);
   return NextResponse.json(planillas.map(serializePlanilla));
-}
+}, { requiredModule: 'planilla' })
 
-export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || !['OWNER','SUPERADMIN','GERENTE','USERS'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
   const { periodo, barberos: barberoInputs } = await req.json();
   // barberoInputs: Array<{ barberoId: number; unidades: number }>
 
   // Obtener config del tenant
-  const configRows = await getConfigPlanilla(user.tenantId);
+  const configRows = await getConfigPlanilla(ctx.tenantId);
   if (!configRows.length) return NextResponse.json({ error: 'Configure los parámetros de planilla primero' }, { status: 400 });
   const cfg = buildConfigMap(configRows);
 
   // Obtener barberos activos con su config
-  const barberos = await getBarberosParaPlanilla(user.tenantId);
+  const barberos = await getBarberosParaPlanilla(ctx.tenantId);
   if (!barberos.length) return NextResponse.json({ error: 'No hay barberos activos' }, { status: 400 });
 
   const detalles = [];
@@ -128,7 +123,7 @@ export async function POST(req: NextRequest) {
   if (!detalles.length) return NextResponse.json({ error: 'No hay barberos con configuración de pago y salario > 0' }, { status: 400 });
 
   const planilla = await crearPlanilla(
-    user.tenantId, periodo,
+    ctx.tenantId, periodo,
     {
       totalBruto: Math.round(totalBruto * 100) / 100,
       totalISS:   Math.round(totalISS * 100) / 100,
@@ -144,4 +139,4 @@ export async function POST(req: NextRequest) {
   );
 
   return NextResponse.json(serializePlanilla(planilla), { status: 201 });
-}
+}, { requiredModule: 'planilla' })
